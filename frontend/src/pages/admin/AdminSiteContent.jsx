@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Save, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
 
@@ -9,6 +9,7 @@ const SECTIONS = [
   { key: 'hero', label: 'Hero' },
   { key: 'about', label: 'About' },
   { key: 'promo', label: 'Promo banner' },
+  { key: 'home', label: 'Home page' },
   { key: 'contact', label: 'Contact & social' },
   { key: 'footer', label: 'Footer & newsletter' },
   { key: 'coming_soon', label: 'Coming Soon mode' },
@@ -116,6 +117,151 @@ export const AdminSiteContent = () => {
             </div>
           </div>
         )}
+        {tab === 'home' && (
+          <div className="space-y-8" data-testid="admin-home-tab">
+            <div>
+              <p className="font-serif text-xl mb-1">Home page sections</p>
+              <p className="text-sm text-[color:var(--brand-text-muted)]">Edit the eyebrow, title & subtitle for each section, and toggle any section on/off.</p>
+            </div>
+
+            {/* Section visibility */}
+            <div>
+              <p className="eyebrow mb-2">SECTION VISIBILITY</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ToggleRow label="Services grid" hint="Shows six featured services on the home page." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
+                <ToggleRow label="Gallery preview" hint="Recent work strip linking to the full gallery." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
+                <ToggleRow label="Process timeline" hint="Numbered step-by-step timeline." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
+                <ToggleRow label="Testimonials" hint="Client testimonials with rating." checked={data.home_testimonials_active !== false} onChange={v => set({ home_testimonials_active: v })} />
+                <ToggleRow label="Meet the designer" hint="Designer bio + photo block." checked={data.home_designer_active !== false} onChange={v => set({ home_designer_active: v })} />
+                <ToggleRow label="FAQ preview" hint="Common questions grid + link to full FAQ." checked={data.home_faq_active !== false} onChange={v => set({ home_faq_active: v })} />
+                <ToggleRow label="Final call-to-action" hint="Closing 'Ready to plan something dreamy?' card." checked={data.home_final_cta_active !== false} onChange={v => set({ home_final_cta_active: v })} />
+              </div>
+            </div>
+
+            {/* Section labels */}
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="eyebrow mb-2">SERVICES SECTION</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_services_eyebrow || ''} onChange={e => set({ home_services_eyebrow: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_services_title || ''} onChange={e => set({ home_services_title: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">SUBTITLE</label><input className="input-cream" value={data.home_services_subtitle || ''} onChange={e => set({ home_services_subtitle: e.target.value })} /></div>
+              </div>
+            </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="eyebrow mb-2">GALLERY SECTION</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_gallery_eyebrow || ''} onChange={e => set({ home_gallery_eyebrow: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_gallery_title || ''} onChange={e => set({ home_gallery_title: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">SUBTITLE</label><input className="input-cream" value={data.home_gallery_subtitle || ''} onChange={e => set({ home_gallery_subtitle: e.target.value })} /></div>
+              </div>
+            </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="eyebrow mb-2">PROCESS SECTION</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_process_eyebrow || ''} onChange={e => set({ home_process_eyebrow: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_process_title || ''} onChange={e => set({ home_process_title: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">SUBTITLE</label><input className="input-cream" value={data.home_process_subtitle || ''} onChange={e => set({ home_process_subtitle: e.target.value })} /></div>
+              </div>
+
+              {/* Process steps editor */}
+              <div className="mt-5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="eyebrow">TIMELINE STEPS</p>
+                  <button
+                    type="button"
+                    className="btn-secondary !h-8 text-xs"
+                    onClick={() => set({ home_process_steps: [...(data.home_process_steps || []), { title: 'New step', description: '' }] })}
+                    data-testid="admin-process-step-add"
+                  ><Plus className="h-3.5 w-3.5" /> Add step</button>
+                </div>
+                <div className="space-y-2" data-testid="admin-process-steps-list">
+                  {(data.home_process_steps || []).map((step, idx) => (
+                    <div key={idx} className="card-cream p-3 grid grid-cols-1 md:grid-cols-[auto_1fr_2fr_auto] gap-2 items-start" data-testid={`admin-process-step-${idx}`}>
+                      <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
+                      <input
+                        className="input-cream !h-9"
+                        placeholder="Title"
+                        value={step.title || ''}
+                        onChange={e => {
+                          const next = [...data.home_process_steps];
+                          next[idx] = { ...next[idx], title: e.target.value };
+                          set({ home_process_steps: next });
+                        }}
+                        data-testid={`admin-process-step-${idx}-title`}
+                      />
+                      <input
+                        className="input-cream !h-9"
+                        placeholder="Description"
+                        value={step.description || ''}
+                        onChange={e => {
+                          const next = [...data.home_process_steps];
+                          next[idx] = { ...next[idx], description: e.target.value };
+                          set({ home_process_steps: next });
+                        }}
+                        data-testid={`admin-process-step-${idx}-desc`}
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                          disabled={idx === 0}
+                          onClick={() => {
+                            const next = [...data.home_process_steps];
+                            [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                            set({ home_process_steps: next });
+                          }}
+                          aria-label="Move up"
+                        ><ArrowUp className="h-3.5 w-3.5" /></button>
+                        <button
+                          type="button"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                          disabled={idx === (data.home_process_steps || []).length - 1}
+                          onClick={() => {
+                            const next = [...data.home_process_steps];
+                            [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                            set({ home_process_steps: next });
+                          }}
+                          aria-label="Move down"
+                        ><ArrowDown className="h-3.5 w-3.5" /></button>
+                        <button
+                          type="button"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            const next = data.home_process_steps.filter((_, i) => i !== idx);
+                            set({ home_process_steps: next });
+                          }}
+                          aria-label="Delete"
+                          data-testid={`admin-process-step-${idx}-delete`}
+                        ><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </div>
+                  ))}
+                  {(!data.home_process_steps || data.home_process_steps.length === 0) && (
+                    <p className="text-sm text-[color:var(--brand-text-muted)] italic">No steps yet — click "Add step" to create your first one.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="eyebrow mb-2">TESTIMONIALS SECTION</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_testimonials_eyebrow || ''} onChange={e => set({ home_testimonials_eyebrow: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_testimonials_title || ''} onChange={e => set({ home_testimonials_title: e.target.value })} /></div>
+              </div>
+            </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="eyebrow mb-2">FAQ SECTION</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_faq_eyebrow || ''} onChange={e => set({ home_faq_eyebrow: e.target.value })} /></div>
+                <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_faq_title || ''} onChange={e => set({ home_faq_title: e.target.value })} /></div>
+              </div>
+            </div>
+          </div>
+        )}
         {tab === 'contact' && (
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -131,10 +277,33 @@ export const AdminSiteContent = () => {
           </div>
         )}
         {tab === 'footer' && (
-          <div className="space-y-3">
+          <div className="space-y-6">
             <div><label className="eyebrow block mb-1">FOOTER BLURB</label><textarea className="input-cream textarea-cream" rows={2} value={data.footer_blurb} onChange={e => set({ footer_blurb: e.target.value })} /></div>
             <div><label className="eyebrow block mb-1">NEWSLETTER TITLE</label><input className="input-cream" value={data.newsletter_title} onChange={e => set({ newsletter_title: e.target.value })} /></div>
             <div><label className="eyebrow block mb-1">NEWSLETTER SUBTITLE</label><input className="input-cream" value={data.newsletter_subtitle} onChange={e => set({ newsletter_subtitle: e.target.value })} /></div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="font-serif text-xl mb-1">Show / hide footer elements</p>
+              <p className="text-sm text-[color:var(--brand-text-muted)] mb-4">Toggle any block off to hide it from the site footer.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ToggleRow label="Logo & tagline column" checked={data.footer_show_logo !== false} onChange={v => set({ footer_show_logo: v })} />
+                <ToggleRow label="Explore links column" checked={data.footer_show_explore !== false} onChange={v => set({ footer_show_explore: v })} />
+                <ToggleRow label="Contact info column" checked={data.footer_show_contact_block !== false} onChange={v => set({ footer_show_contact_block: v })} />
+                <ToggleRow label="Newsletter column" checked={data.footer_show_newsletter !== false} onChange={v => set({ footer_show_newsletter: v })} />
+                <ToggleRow label="Email address" checked={data.footer_show_email !== false} onChange={v => set({ footer_show_email: v })} hint="Only shown when contact column is on." />
+                <ToggleRow label="Phone number" checked={data.footer_show_phone !== false} onChange={v => set({ footer_show_phone: v })} />
+                <ToggleRow label="Location" checked={data.footer_show_location !== false} onChange={v => set({ footer_show_location: v })} />
+                <ToggleRow label="Hours" checked={data.footer_show_hours !== false} onChange={v => set({ footer_show_hours: v })} />
+                <ToggleRow label="Social icons" checked={data.footer_show_social !== false} onChange={v => set({ footer_show_social: v })} />
+                <ToggleRow label="Privacy / Terms links" checked={data.footer_show_legal_links !== false} onChange={v => set({ footer_show_legal_links: v })} />
+              </div>
+            </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="eyebrow mb-1">COPYRIGHT OVERRIDE</p>
+              <p className="text-sm text-[color:var(--brand-text-muted)] mb-2">Leave blank for auto: <em>© {new Date().getFullYear()} {data.business_name || 'business name'}. All rights reserved.</em></p>
+              <input className="input-cream" value={data.footer_copyright_override || ''} onChange={e => set({ footer_copyright_override: e.target.value })} placeholder="(auto-generated if blank)" data-testid="admin-footer-copyright-override" />
+            </div>
           </div>
         )}
         {tab === 'coming_soon' && (

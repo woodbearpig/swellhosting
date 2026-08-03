@@ -1,42 +1,26 @@
 [
   {
-    "content": "Phase 2: Backend - Models, auth, all CRUD routes, seed data",
+    "content": "Wire PaletteProvider into App.js and add /admin/palettes route",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend - Theme setup (fonts, index.css, tailwind)",
+    "content": "Add Palettes nav link inside AdminLayout.jsx",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend - Public site (Home, About, Services, Gallery, Testimonials, FAQ, Blog, Contact)",
+    "content": "Update HomePage.jsx to use dynamic eyebrows/titles/subtitles, honor home_*_active toggles, and render dynamic home_process_steps",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend - Inquiry Wizard with conditional logic + uploads",
+    "content": "Update AdminSiteContent.jsx: add 'Home page' tab (eyebrows/titles/subtitles + process steps editor + section visibility) and expose Footer visibility toggles + copyright override",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend - Consultation Booking",
+    "content": "Restart frontend, verify no build errors, and smoke test with screenshots",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend - Admin login + Layout + Dashboard",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 2: Frontend - Admin CMS (Services, Gallery, Testimonials, FAQ, Blog, Site Content)",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 2: Frontend - Admin Inquiries + Clients + Consultations + Availability + Settings",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 3: Docker + Nginx + Certbot + deploy.sh + README for AlmaLinux 10",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 2: End to End Testing with testing_agent_v3 - 100% pass",
-    "status": "completed"
+    "content": "Run testing_agent (backend palettes + admin site-content CRUD; frontend palette apply flow and home page toggles)",
+    "status": "in_progress"
   }
 ]

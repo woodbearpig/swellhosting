@@ -660,9 +660,208 @@ def main():
     tester.token = temp_token
     
     # ========================================
-    # 26. CLEANUP (Delete test data)
+    # 26. PALETTES (NEW FEATURE)
     # ========================================
-    print("\n\n📍 SECTION 26: Cleanup")
+    print("\n\n📍 SECTION 26: Palettes (NEW FEATURE)")
+    print("-"*60)
+    
+    # Test public palette endpoints (no auth required)
+    tester.token = None
+    success, palettes_data = tester.test("Get all palettes", "GET", "/palettes", 200)
+    if success:
+        categories = palettes_data.get('categories', [])
+        palettes = palettes_data.get('palettes', [])
+        print(f"   Categories: {len(categories)}")
+        print(f"   Palettes: {len(palettes)}")
+        
+        # Verify we have 20+ palettes
+        if len(palettes) >= 20:
+            print(f"   ✓ Has 20+ palettes ({len(palettes)} total)")
+        else:
+            print(f"   ⚠️  Expected 20+ palettes, got {len(palettes)}")
+        
+        # Verify categories
+        expected_categories = ['signature', 'spring', 'summer', 'fall', 'winter', 'wedding', 'holiday']
+        category_keys = [c.get('key') for c in categories]
+        print(f"   Category keys: {category_keys}")
+        
+        # Check if each palette has required fields
+        if palettes:
+            sample = palettes[0]
+            has_id = 'id' in sample
+            has_name = 'name' in sample
+            has_category = 'category' in sample
+            has_colors = 'colors' in sample
+            print(f"   Sample palette has id: {has_id}, name: {has_name}, category: {has_category}, colors: {has_colors}")
+    
+    # Test get active palette (should default to 'signature')
+    success, active_palette = tester.test("Get active palette", "GET", "/palettes/active", 200)
+    if success:
+        print(f"   Active palette ID: {active_palette.get('id', 'N/A')}")
+        print(f"   Active palette name: {active_palette.get('name', 'N/A')}")
+        print(f"   Has colors: {'colors' in active_palette}")
+    
+    # Test admin palette endpoints (requires auth)
+    tester.token = temp_token
+    
+    # Test unauthorized access
+    tester.token = None
+    tester.test("Set active palette without auth", "PUT", "/admin/palettes/active", 401, data={'palette_id': 'halloween'})
+    tester.token = temp_token
+    
+    # Test setting active palette to 'halloween'
+    success, set_response = tester.test("Set active palette to 'halloween'", "PUT", "/admin/palettes/active", 200, data={'palette_id': 'halloween'})
+    if success:
+        print(f"   Palette set: {set_response.get('ok', False)}")
+        returned_palette = set_response.get('palette', {})
+        print(f"   Returned palette ID: {returned_palette.get('id', 'N/A')}")
+    
+    # Verify the change persisted
+    tester.token = None
+    success, active_after_change = tester.test("Verify active palette changed to 'halloween'", "GET", "/palettes/active", 200)
+    if success:
+        if active_after_change.get('id') == 'halloween':
+            print(f"   ✓ Active palette correctly changed to 'halloween'")
+        else:
+            print(f"   ⚠️  Expected 'halloween', got '{active_after_change.get('id', 'N/A')}'")
+    
+    tester.token = temp_token
+    
+    # Test setting unknown palette (should return 404)
+    success, error_response = tester.test("Set active palette to unknown ID", "PUT", "/admin/palettes/active", 404, data={'palette_id': 'nonexistent_palette_xyz'})
+    if success:
+        print(f"   ✓ Correctly returned 404 for unknown palette")
+    
+    # Reset to signature palette
+    success, reset_response = tester.test("Reset active palette to 'signature'", "PUT", "/admin/palettes/active", 200, data={'palette_id': 'signature'})
+    if success:
+        print(f"   ✓ Reset to signature palette")
+    
+    # ========================================
+    # 27. SITE CONTENT - NEW HOME PAGE FIELDS
+    # ========================================
+    print("\n\n📍 SECTION 27: Site Content - New Home Page Fields")
+    print("-"*60)
+    
+    # Get site content and verify new fields
+    tester.token = None
+    success, site_content = tester.test("Get site content with new home page fields", "GET", "/site-content", 200)
+    if success:
+        # Check for active_palette_id
+        has_active_palette_id = 'active_palette_id' in site_content
+        print(f"   ✓ active_palette_id: {has_active_palette_id} (value: {site_content.get('active_palette_id', 'N/A')})")
+        
+        # Check for home_process_steps
+        has_process_steps = 'home_process_steps' in site_content
+        process_steps = site_content.get('home_process_steps', [])
+        print(f"   ✓ home_process_steps: {has_process_steps} (count: {len(process_steps) if isinstance(process_steps, list) else 'N/A'})")
+        
+        # Check for section visibility flags
+        visibility_flags = [
+            'home_services_active', 'home_gallery_active', 'home_process_active',
+            'home_testimonials_active', 'home_designer_active', 'home_faq_active', 'home_final_cta_active'
+        ]
+        for flag in visibility_flags:
+            has_flag = flag in site_content
+            print(f"   ✓ {flag}: {has_flag} (value: {site_content.get(flag, 'N/A')})")
+        
+        # Check for section labels (eyebrow/title/subtitle)
+        label_fields = [
+            'home_services_eyebrow', 'home_services_title', 'home_services_subtitle',
+            'home_gallery_eyebrow', 'home_gallery_title', 'home_gallery_subtitle',
+            'home_process_eyebrow', 'home_process_title', 'home_process_subtitle',
+            'home_testimonials_eyebrow', 'home_testimonials_title',
+            'home_faq_eyebrow', 'home_faq_title'
+        ]
+        missing_labels = [f for f in label_fields if f not in site_content]
+        if missing_labels:
+            print(f"   ⚠️  Missing label fields: {missing_labels}")
+        else:
+            print(f"   ✓ All section label fields present")
+        
+        # Check for footer visibility flags
+        footer_flags = [
+            'footer_show_logo', 'footer_show_explore', 'footer_show_contact_block',
+            'footer_show_email', 'footer_show_phone', 'footer_show_location', 'footer_show_hours',
+            'footer_show_social', 'footer_show_newsletter', 'footer_show_legal_links'
+        ]
+        missing_footer = [f for f in footer_flags if f not in site_content]
+        if missing_footer:
+            print(f"   ⚠️  Missing footer flags: {missing_footer}")
+        else:
+            print(f"   ✓ All footer visibility flags present")
+        
+        # Check for footer_copyright_override
+        has_copyright_override = 'footer_copyright_override' in site_content
+        print(f"   ✓ footer_copyright_override: {has_copyright_override}")
+    
+    tester.token = temp_token
+    
+    # Test updating home page fields
+    home_page_update = {
+        'home_services_active': False,
+        'home_services_eyebrow': 'TEST EYEBROW',
+        'home_services_title': 'Test Title',
+        'home_services_subtitle': 'Test subtitle',
+        'home_process_steps': [
+            {'title': 'Step 1', 'description': 'First step'},
+            {'title': 'Step 2', 'description': 'Second step'},
+            {'title': 'Step 3', 'description': 'Third step'}
+        ]
+    }
+    success, update_response = tester.test("Update home page fields", "PUT", "/admin/site-content", 200, data=home_page_update)
+    if success:
+        print(f"   ✓ home_services_active: {update_response.get('home_services_active', 'N/A')}")
+        print(f"   ✓ home_services_eyebrow: {update_response.get('home_services_eyebrow', 'N/A')}")
+        print(f"   ✓ home_process_steps count: {len(update_response.get('home_process_steps', []))}")
+    
+    # Verify persistence
+    tester.token = None
+    success, verify_content = tester.test("Verify home page updates persisted", "GET", "/site-content", 200)
+    if success:
+        if verify_content.get('home_services_active') == False:
+            print(f"   ✓ home_services_active correctly set to False")
+        if verify_content.get('home_services_eyebrow') == 'TEST EYEBROW':
+            print(f"   ✓ home_services_eyebrow correctly updated")
+        if len(verify_content.get('home_process_steps', [])) == 3:
+            print(f"   ✓ home_process_steps correctly has 3 steps")
+    
+    tester.token = temp_token
+    
+    # Test updating footer fields
+    footer_update = {
+        'footer_show_newsletter': False,
+        'footer_copyright_override': 'Test Copyright Override 2025'
+    }
+    success, footer_response = tester.test("Update footer fields", "PUT", "/admin/site-content", 200, data=footer_update)
+    if success:
+        print(f"   ✓ footer_show_newsletter: {footer_response.get('footer_show_newsletter', 'N/A')}")
+        print(f"   ✓ footer_copyright_override: {footer_response.get('footer_copyright_override', 'N/A')}")
+    
+    # Reset to defaults for normal operation
+    reset_update = {
+        'home_services_active': True,
+        'home_services_eyebrow': 'WHAT WE DO',
+        'home_services_title': 'Designed for the moments that matter',
+        'home_services_subtitle': 'We style celebrations end-to-end — from balloons to florals, backdrops to signage.',
+        'footer_show_newsletter': True,
+        'footer_copyright_override': '',
+        'home_process_steps': [
+            {'title': 'Inquiry', 'description': 'Tell us about your event via our smart form.'},
+            {'title': 'Design call', 'description': 'A relaxed conversation to align on the vision.'},
+            {'title': 'Proposal', 'description': 'A tailored proposal with pricing + palette.'},
+            {'title': 'Install', 'description': 'We handle the build, delivery, and on-site setup.'},
+            {'title': 'Enjoy', 'description': "You show up and take it all in. That's it."}
+        ]
+    }
+    success, reset_resp = tester.test("Reset site content to defaults (cleanup)", "PUT", "/admin/site-content", 200, data=reset_update)
+    if success:
+        print(f"   ✓ Site content reset to defaults")
+    
+    # ========================================
+    # 28. CLEANUP (Delete test data)
+    # ========================================
+    print("\n\n📍 SECTION 28: Cleanup")
     print("-"*60)
     
     if inquiry_id:

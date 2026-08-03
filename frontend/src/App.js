@@ -5,6 +5,7 @@ import PublicLayout from '@/components/PublicLayout';
 import { SiteProvider } from '@/context/SiteContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { PaletteProvider } from '@/context/PaletteContext';
 
 import HomePage from '@/pages/HomePage';
 import ServicesPage from '@/pages/ServicesPage';
@@ -30,12 +31,14 @@ import AdminBlog from '@/pages/admin/AdminBlog';
 import AdminSiteContent from '@/pages/admin/AdminSiteContent';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminIntegrations from '@/pages/admin/AdminIntegrations';
+import AdminPalettes from '@/pages/admin/AdminPalettes';
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <SiteProvider>
+          <PaletteProvider>
           <div className="App">
             <BrowserRouter>
               <Routes>
@@ -73,12 +76,14 @@ function App() {
                   <Route path="faqs" element={<AdminFAQs />} />
                   <Route path="blog" element={<AdminBlog />} />
                   <Route path="site-content" element={<AdminSiteContent />} />
+                  <Route path="palettes" element={<AdminPalettes />} />
                   <Route path="integrations" element={<AdminIntegrations />} />
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
               </Routes>
             </BrowserRouter>
           </div>
+          </PaletteProvider>
         </SiteProvider>
       </AuthProvider>
     </ThemeProvider>
