@@ -21,6 +21,6 @@
   },
   {
     "content": "Run testing_agent (backend palettes + admin site-content CRUD; frontend palette apply flow and home page toggles)",
-    "status": "in_progress"
+    "status": "completed"
   }
 ]

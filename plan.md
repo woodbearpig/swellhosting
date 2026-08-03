@@ -49,7 +49,7 @@
 
 #### Current focus (enhancements)
 
-### Phase A (P0) — Palette wiring + dynamic Home Page & Footer editors (IN PROGRESS)
+### Phase A (P0) — Palette wiring + dynamic Home Page & Footer editors (COMPLETED ✅)
 **Goal:** Enable site-wide seasonal/holiday/wedding color themes and make Home/Footer sections fully editable & toggleable from admin.
 
 1) **Frontend wiring (routing + providers)**
