@@ -98,6 +98,23 @@ class SiteContent(Base):
     coming_soon_message: str = "A boutique event styling studio launching soon in Los Angeles \u2014 custom balloon installations, thoughtful florals, and dreamy details for weddings, showers, birthdays, and brand moments."
     coming_soon_launch_date: str = ""
 
+    # Coming Soon page — independent visibility toggles + custom content
+    coming_soon_show_logo: bool = True
+    coming_soon_show_newsletter: bool = True
+    coming_soon_show_email: bool = True
+    coming_soon_show_phone: bool = True
+    coming_soon_show_instagram: bool = True
+    coming_soon_show_footer: bool = True
+    coming_soon_show_admin_link: bool = True
+    # Optional overrides (leave empty to fall back to main contact fields)
+    coming_soon_email_override: str = ""
+    coming_soon_phone_override: str = ""
+    coming_soon_instagram_override: str = ""
+    coming_soon_instagram_label: str = "Follow along"
+    coming_soon_footer_text: str = ""  # empty = auto-generate "© {year} {business_name} · {location}"
+    coming_soon_newsletter_placeholder: str = "you@email.com"
+    coming_soon_newsletter_button: str = "Notify me"
+
     updated_at: datetime = Field(default_factory=_now)
 
 

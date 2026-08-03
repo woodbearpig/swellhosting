@@ -14,6 +14,26 @@ const SECTIONS = [
   { key: 'coming_soon', label: 'Coming Soon mode' },
 ];
 
+const ToggleRow = ({ label, checked, onChange, hint }) => (
+  <label className="flex items-center justify-between gap-3 card-cream p-3 cursor-pointer hover:bg-[color:var(--brand-sage-tint)]/40 transition-colors">
+    <div className="flex-1">
+      <p className="text-sm font-medium">{label}</p>
+      {hint && <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">{hint}</p>}
+    </div>
+    <div className={`relative w-11 h-6 rounded-full transition-colors ${checked ? 'bg-[color:var(--brand-sage)]' : 'bg-[color:var(--brand-border)]'}`}>
+      <input type="checkbox" className="sr-only" checked={!!checked} onChange={e => onChange(e.target.checked)} />
+      <div className={`absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-5' : ''}`} />
+    </div>
+  </label>
+);
+
+const ToggleTextField = ({ label, textValue, onText, placeholder }) => (
+  <div>
+    <label className="eyebrow block mb-1">{label}</label>
+    <input className="input-cream" value={textValue || ''} onChange={e => onText(e.target.value)} placeholder={placeholder} />
+  </div>
+);
+
 export const AdminSiteContent = () => {
   const { refresh } = useSite();
   const [data, setData] = useState(null);
@@ -118,11 +138,12 @@ export const AdminSiteContent = () => {
           </div>
         )}
         {tab === 'coming_soon' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm">
               <p className="font-medium mb-1">⚠️ Coming Soon mode</p>
-              <p className="text-[color:var(--brand-text-muted)]">When enabled, all public pages are hidden and replaced with a beautiful Coming Soon page. Your admin panel remains fully accessible at <code>/admin/login</code>. Turn this off anytime to reveal the full site.</p>
+              <p className="text-[color:var(--brand-text-muted)]">When enabled, all public pages are hidden and replaced with a Coming Soon page. Your admin panel remains fully accessible at <code>/admin/login</code>. Every element below can be toggled and edited independently.</p>
             </div>
+
             <label className="flex items-center gap-3 card-cream p-4 cursor-pointer">
               <input type="checkbox" className="h-5 w-5" checked={!!data.coming_soon_active} onChange={e => set({ coming_soon_active: e.target.checked })} data-testid="admin-coming-soon-toggle" />
               <div>
@@ -130,11 +151,89 @@ export const AdminSiteContent = () => {
                 <p className="text-xs text-[color:var(--brand-text-muted)]">Public visitors see only the coming-soon page. Admin still works.</p>
               </div>
             </label>
-            <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.coming_soon_eyebrow || ''} onChange={e => set({ coming_soon_eyebrow: e.target.value })} placeholder="SOMETHING BEAUTIFUL IS COMING" /></div>
-            <div><label className="eyebrow block mb-1">HEADLINE</label><textarea className="input-cream textarea-cream" rows={2} value={data.coming_soon_title || ''} onChange={e => set({ coming_soon_title: e.target.value })} placeholder="We're styling something dreamy." /></div>
-            <div><label className="eyebrow block mb-1">SCRIPT ACCENT (handwritten line)</label><input className="input-cream" value={data.coming_soon_script || ''} onChange={e => set({ coming_soon_script: e.target.value })} placeholder="stay tuned" /></div>
-            <div><label className="eyebrow block mb-1">MESSAGE</label><textarea className="input-cream textarea-cream" rows={4} value={data.coming_soon_message || ''} onChange={e => set({ coming_soon_message: e.target.value })} /></div>
-            <div><label className="eyebrow block mb-1">LAUNCH DATE (optional, free-form)</label><input className="input-cream" value={data.coming_soon_launch_date || ''} onChange={e => set({ coming_soon_launch_date: e.target.value })} placeholder="e.g. Fall 2026" /></div>
+
+            {/* CONTENT SECTION */}
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="font-serif text-xl mb-4">Page content</p>
+              <div className="space-y-4">
+                <ToggleTextField label="EYEBROW (small caps line above headline)" enabledKey="__always" active={true} textValue={data.coming_soon_eyebrow} onText={v => set({ coming_soon_eyebrow: v })} placeholder="SOMETHING BEAUTIFUL IS COMING" />
+                <div>
+                  <label className="eyebrow block mb-1">HEADLINE</label>
+                  <textarea className="input-cream textarea-cream" rows={2} value={data.coming_soon_title || ''} onChange={e => set({ coming_soon_title: e.target.value })} placeholder="Leave blank to hide" />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">SCRIPT ACCENT (handwritten line)</label>
+                  <input className="input-cream" value={data.coming_soon_script || ''} onChange={e => set({ coming_soon_script: e.target.value })} placeholder="e.g. stay tuned — leave blank to hide" />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">MESSAGE / DESCRIPTION</label>
+                  <textarea className="input-cream textarea-cream" rows={4} value={data.coming_soon_message || ''} onChange={e => set({ coming_soon_message: e.target.value })} placeholder="Leave blank to hide" />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">LAUNCH DATE BADGE (optional)</label>
+                  <input className="input-cream" value={data.coming_soon_launch_date || ''} onChange={e => set({ coming_soon_launch_date: e.target.value })} placeholder="e.g. Fall 2026 — leave blank to hide" />
+                </div>
+              </div>
+            </div>
+
+            {/* VISIBILITY TOGGLES */}
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="font-serif text-xl mb-1">Show / hide elements</p>
+              <p className="text-sm text-[color:var(--brand-text-muted)] mb-4">Toggle any element off to hide it from the Coming Soon page.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ToggleRow label="Logo" checked={data.coming_soon_show_logo !== false} onChange={v => set({ coming_soon_show_logo: v })} />
+                <ToggleRow label="Newsletter signup form" checked={data.coming_soon_show_newsletter !== false} onChange={v => set({ coming_soon_show_newsletter: v })} />
+                <ToggleRow label="Email link" checked={data.coming_soon_show_email !== false} onChange={v => set({ coming_soon_show_email: v })} />
+                <ToggleRow label="Phone number" checked={data.coming_soon_show_phone !== false} onChange={v => set({ coming_soon_show_phone: v })} />
+                <ToggleRow label="Instagram link" checked={data.coming_soon_show_instagram !== false} onChange={v => set({ coming_soon_show_instagram: v })} />
+                <ToggleRow label="Footer / copyright line" checked={data.coming_soon_show_footer !== false} onChange={v => set({ coming_soon_show_footer: v })} />
+                <ToggleRow label="Discreet admin link (bottom-right)" checked={data.coming_soon_show_admin_link !== false} onChange={v => set({ coming_soon_show_admin_link: v })} />
+              </div>
+            </div>
+
+            {/* NEWSLETTER SETTINGS */}
+            {data.coming_soon_show_newsletter !== false && (
+              <div className="border-t border-[color:var(--brand-border)] pt-6">
+                <p className="font-serif text-xl mb-4">Newsletter form</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><label className="eyebrow block mb-1">INPUT PLACEHOLDER</label><input className="input-cream" value={data.coming_soon_newsletter_placeholder || ''} onChange={e => set({ coming_soon_newsletter_placeholder: e.target.value })} placeholder="you@email.com" /></div>
+                  <div><label className="eyebrow block mb-1">BUTTON LABEL</label><input className="input-cream" value={data.coming_soon_newsletter_button || ''} onChange={e => set({ coming_soon_newsletter_button: e.target.value })} placeholder="Notify me" /></div>
+                </div>
+              </div>
+            )}
+
+            {/* CONTACT OVERRIDES */}
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <p className="font-serif text-xl mb-1">Contact info on this page</p>
+              <p className="text-sm text-[color:var(--brand-text-muted)] mb-4">Leave overrides blank to use the main site contact info from the Contact tab. Fill any field to show a different value only on the Coming Soon page.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="eyebrow block mb-1">EMAIL OVERRIDE</label>
+                  <input className="input-cream" value={data.coming_soon_email_override || ''} onChange={e => set({ coming_soon_email_override: e.target.value })} placeholder={`(defaults to ${data.contact_email || 'contact email'})`} />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">PHONE OVERRIDE</label>
+                  <input className="input-cream" value={data.coming_soon_phone_override || ''} onChange={e => set({ coming_soon_phone_override: e.target.value })} placeholder={`(defaults to ${data.contact_phone || 'contact phone'})`} />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">INSTAGRAM URL OVERRIDE</label>
+                  <input className="input-cream" value={data.coming_soon_instagram_override || ''} onChange={e => set({ coming_soon_instagram_override: e.target.value })} placeholder="(defaults to site Instagram)" />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">INSTAGRAM LINK LABEL</label>
+                  <input className="input-cream" value={data.coming_soon_instagram_label || ''} onChange={e => set({ coming_soon_instagram_label: e.target.value })} placeholder="Follow along" />
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER OVERRIDE */}
+            {data.coming_soon_show_footer !== false && (
+              <div className="border-t border-[color:var(--brand-border)] pt-6">
+                <p className="font-serif text-xl mb-1">Footer text</p>
+                <p className="text-sm text-[color:var(--brand-text-muted)] mb-3">Leave blank for auto: <em>© {new Date().getFullYear()} {data.business_name || 'business name'} · {data.contact_location || 'location'}</em></p>
+                <input className="input-cream" value={data.coming_soon_footer_text || ''} onChange={e => set({ coming_soon_footer_text: e.target.value })} placeholder="(auto-generated if blank)" />
+              </div>
+            )}
           </div>
         )}
       </div>
