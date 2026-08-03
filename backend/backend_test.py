@@ -371,9 +371,157 @@ def main():
         print(f"  ✓ Test inquiry deleted")
 
     # =========================================================
+    # WHITE-LABEL PURGE: Bug Fix Tests
+    # =========================================================
+
+    def test_site_content_no_emergent_urls():
+        """GET /api/site-content should have NO emergent URLs in image fields"""
+        r = requests.get(f"{BASE_URL}/site-content")
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        data = r.json()
+        image_fields = ["logo_url", "hero_image_url", "about_image_url", 
+                       "coming_soon_bg_url", "og_image_url", "favicon_url"]
+        
+        emergent_hosts = ["emergentagent.net", "emergentagent.com", "customer-assets"]
+        
+        for field in image_fields:
+            value = data.get(field, "")
+            print(f"  → {field}: {value[:80] if value else '(empty)'}")
+            if value:
+                for host in emergent_hosts:
+                    assert host not in value, f"Field {field} contains emergent host '{host}': {value}"
+        
+        print(f"  ✓ All image fields clean (no emergent URLs)")
+
+    def test_public_html_no_emergent_urls():
+        """Public site HTML should NOT contain emergent URLs"""
+        # Get the frontend URL from backend URL
+        frontend_url = BASE_URL.replace("/api", "")
+        print(f"  → Fetching public HTML from: {frontend_url}")
+        
+        r = requests.get(frontend_url)
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        html = r.text
+        emergent_patterns = ["emergentagent.net", "emergentagent.com", "customer-assets"]
+        
+        for pattern in emergent_patterns:
+            if pattern in html:
+                # Find context around the match
+                idx = html.find(pattern)
+                context = html[max(0, idx-100):min(len(html), idx+100)]
+                print(f"  ❌ Found '{pattern}' in HTML at position {idx}")
+                print(f"  Context: ...{context}...")
+                assert False, f"Public HTML contains emergent pattern '{pattern}'"
+        
+        print(f"  ✓ Public HTML clean (no emergent URLs)")
+
+    def test_migration_robustness():
+        """Inject fake emergent URL, restart backend, verify it's cleared"""
+        runner.login()
+        
+        # Step 1: Inject fake emergent URL
+        fake_url = "https://customer-assets-test.emergentagent.net/fake.png"
+        print(f"  → Injecting fake emergent URL: {fake_url}")
+        
+        r = requests.put(
+            f"{BASE_URL}/admin/site-content",
+            json={"logo_url": fake_url},
+            headers=runner.headers()
+        )
+        print(f"  → PUT status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        # Verify it was set
+        r2 = requests.get(f"{BASE_URL}/site-content")
+        data = r2.json()
+        print(f"  → logo_url after injection: {data.get('logo_url')}")
+        assert data.get("logo_url") == fake_url, "Fake URL should be set"
+        print(f"  ✓ Fake emergent URL injected")
+        
+        # Step 2: Restart backend to trigger migration
+        print(f"  → Restarting backend to trigger white-label purge migration...")
+        import subprocess
+        result = subprocess.run(
+            ["sudo", "supervisorctl", "restart", "backend"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        print(f"  → Restart output: {result.stdout}")
+        if result.stderr:
+            print(f"  → Restart stderr: {result.stderr}")
+        
+        # Wait for backend to come back up
+        print(f"  → Waiting 4 seconds for backend to restart...")
+        time.sleep(4)
+        
+        # Step 3: Verify logo_url is cleared
+        print(f"  → Checking if logo_url was purged...")
+        r3 = requests.get(f"{BASE_URL}/site-content")
+        print(f"  → GET status: {r3.status_code}")
+        assert r3.status_code == 200, f"Backend should be up, got {r3.status_code}"
+        
+        data = r3.json()
+        logo_url = data.get("logo_url", "")
+        print(f"  → logo_url after restart: '{logo_url}'")
+        
+        assert logo_url == "", f"logo_url should be empty after purge, got: {logo_url}"
+        print(f"  ✓ White-label purge migration cleared emergent URL")
+
+    def test_no_regressions():
+        """Verify previously working endpoints still function"""
+        runner.login()
+        
+        # Test /api/palettes
+        r1 = requests.get(f"{BASE_URL}/palettes")
+        print(f"  → GET /api/palettes: {r1.status_code}")
+        assert r1.status_code == 200, f"Expected 200, got {r1.status_code}"
+        palettes = r1.json()
+        assert "palettes" in palettes, "Should have palettes key"
+        print(f"  ✓ /api/palettes working ({len(palettes['palettes'])} palettes)")
+        
+        # Test /api/inquiry-form
+        r2 = requests.get(f"{BASE_URL}/inquiry-form")
+        print(f"  → GET /api/inquiry-form: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        form = r2.json()
+        assert "steps" in form, "Should have steps key"
+        print(f"  ✓ /api/inquiry-form working ({len(form['steps'])} steps)")
+        
+        # Test /api/auth/login (already tested, but verify again)
+        r3 = requests.post(f"{BASE_URL}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        print(f"  → POST /api/auth/login: {r3.status_code}")
+        assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
+        print(f"  ✓ /api/auth/login working")
+        
+        # Test /api/services
+        r4 = requests.get(f"{BASE_URL}/services")
+        print(f"  → GET /api/services: {r4.status_code}")
+        assert r4.status_code == 200, f"Expected 200, got {r4.status_code}"
+        services = r4.json()
+        assert isinstance(services, list), "Should return a list"
+        print(f"  ✓ /api/services working ({len(services)} services)")
+        
+        # Test /api/site-content (verify schema intact)
+        r5 = requests.get(f"{BASE_URL}/site-content")
+        print(f"  → GET /api/site-content: {r5.status_code}")
+        assert r5.status_code == 200, f"Expected 200, got {r5.status_code}"
+        site = r5.json()
+        required_fields = ["business_name", "tagline", "hero_headline", "hero_badges", 
+                          "active_palette_id", "inquiry_form_schema", "font_serif_id"]
+        for field in required_fields:
+            assert field in site, f"Missing required field: {field}"
+        print(f"  ✓ /api/site-content schema intact")
+
+    # =========================================================
     # Run all tests
     # =========================================================
     
+    # Original tests
     runner.test("Change credentials without JWT returns 401", test_change_credentials_no_jwt)
     runner.test("Change credentials with wrong password returns 401", test_change_credentials_wrong_password)
     runner.test("Change credentials updates name", test_change_credentials_update_name)
@@ -388,6 +536,12 @@ def main():
     runner.test("POST inquiry form reset restores default", test_inquiry_form_reset)
     
     runner.test("POST inquiry with custom fields persists correctly", test_inquiry_with_custom_fields)
+    
+    # White-label purge tests
+    runner.test("Site content has NO emergent URLs", test_site_content_no_emergent_urls)
+    runner.test("Public HTML has NO emergent URLs", test_public_html_no_emergent_urls)
+    runner.test("Migration robustness: inject + restart + verify purge", test_migration_robustness)
+    runner.test("No regressions in other endpoints", test_no_regressions)
     
     return runner.summary()
 

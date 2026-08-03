@@ -151,6 +151,26 @@ async def _startup():
                 await db.site_content.update_one({"id": "site_content_singleton"}, {"$set": to_doc(missing)})
                 logger.info("Migrated site content: added %d missing fields", len(missing))
 
+            # White-label safety: purge any emergent CDN URLs from image fields.
+            # These can appear if an early seed pointed at customer-assets-*.emergentagent.net.
+            # We clear the field so the UI falls back to text logo / default image.
+            EMERGENT_HOSTS = ("emergentagent.net", "emergentagent.com", "customer-assets")
+            IMAGE_FIELDS = (
+                "logo_url", "hero_image_url", "about_image_url",
+                "coming_soon_bg_url", "og_image_url", "favicon_url",
+            )
+            purge_updates = {}
+            for f in IMAGE_FIELDS:
+                v = existing.get(f)
+                if isinstance(v, str) and v and any(h in v for h in EMERGENT_HOSTS):
+                    purge_updates[f] = ""
+            if purge_updates:
+                await db.site_content.update_one(
+                    {"id": "site_content_singleton"},
+                    {"$set": purge_updates},
+                )
+                logger.info("White-label purge: cleared emergent CDN URLs from %s", list(purge_updates.keys()))
+
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
             logger.info("Seeded availability at startup")

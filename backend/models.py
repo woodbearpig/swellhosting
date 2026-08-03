@@ -45,7 +45,7 @@ class SiteContent(Base):
     id: str = Field(default_factory=lambda: "site_content_singleton")
     business_name: str = "swell design + media"
     tagline: str = "Custom balloon installations & event styling in Los Angeles"
-    logo_url: str = "https://customer-assets-v7afamib.emergentagent.net/job_balloon-decor-cms/artifacts/ql3sxydk_image.png"
+    logo_url: str = ""
 
     # Hero
     hero_eyebrow: str = "LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING"
