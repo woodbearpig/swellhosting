@@ -165,3 +165,79 @@ docker compose exec mongo mongosh swell_design_media
 
 ## Support
 For updates and issues, coordinate with your developer. Full source lives in this repository.
+
+---
+
+## Integrations (Google Calendar + Instagram)
+
+Both integrations are **plug-and-play from the admin panel** — no code changes required.
+
+### Google Calendar
+- Log into `/admin/integrations`
+- Follow the inline step-by-step guide (creates a Google Cloud OAuth app, ~5 min)
+- Paste Client ID + Client Secret
+- Click **Connect Google Calendar** and authorize
+- Done — new consultations auto-sync to her calendar; existing calendar events block conflicting time slots on the booking form
+
+### Instagram Feed
+- Log into `/admin/integrations`
+- Follow the inline step-by-step guide (creates a Meta developer app + long-lived access token, ~10 min)
+- Paste access token → click **Look up ID** to auto-detect her IG Business Account
+- Click **Save & fetch posts** — latest 12 Instagram posts appear on the homepage
+- Long-lived tokens last ~60 days; renew via the same flow when Instagram section shows an error
+
+**Required env vars for these (already in `.env.example`):**
+- `FERNET_KEY` — encrypts OAuth tokens at rest in MongoDB
+- `PUBLIC_BACKEND_URL` — used to build the OAuth redirect_uri (e.g. `https://swelldesignla.com`)
+- `PUBLIC_FRONTEND_URL` — where the user is redirected after Google authorizes (e.g. `https://swelldesignla.com`)
+
+---
+
+## GitHub push workflow (Emergent → GitHub → Hostinger)
+
+### One-time setup
+
+**In Emergent (this project):**
+1. Click **Save to GitHub** in the chat interface
+2. Authorize GitHub if prompted
+3. Choose **Create new repo** (e.g. `swell-design-media`) or select an existing one
+4. Push to `main`
+5. Note your repo URL: `https://github.com/YOUR_USERNAME/swell-design-media`
+
+**On your Hostinger VPS (AlmaLinux 10):**
+```bash
+ssh root@your-vps-ip
+cd /var/www
+git clone https://github.com/YOUR_USERNAME/swell-design-media.git swell
+cd swell
+chmod +x deploy.sh deploy/*.sh
+
+# Bootstrap the server (installs Docker + firewall)
+sudo ./deploy/install-almalinux.sh
+
+# Configure environment
+cp .env.example .env
+nano .env
+#   → JWT_SECRET: run `openssl rand -hex 48` and paste
+#   → FERNET_KEY: run `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` and paste
+#   → ADMIN_PASSWORD: change to something strong
+#   → PUBLIC_BACKEND_URL + PUBLIC_FRONTEND_URL: both set to https://swelldesignla.com
+#   → CORS_ORIGINS: https://swelldesignla.com,https://www.swelldesignla.com
+
+# Deploy
+./deploy.sh
+
+# After DNS is live, issue SSL certificate
+./deploy/issue-ssl.sh
+```
+
+Site is now live at `https://swelldesignla.com`.
+
+### Ongoing updates
+Every time you change code in Emergent and push to GitHub:
+```bash
+ssh root@your-vps-ip
+cd /var/www/swell
+git pull && ./deploy.sh
+```
+That's it — 2 commands. New code is built and deployed with zero downtime.

@@ -39,6 +39,10 @@ services:
       BUSINESS_EMAIL: "${BUSINESS_EMAIL:-hello@swelldesignla.com}"
       BUSINESS_PHONE: "${BUSINESS_PHONE:-}"
       BUSINESS_LOCATION: "${BUSINESS_LOCATION:-Los Angeles, CA}"
+      FERNET_KEY: "${FERNET_KEY:-}"
+      PUBLIC_BACKEND_URL: "${PUBLIC_BACKEND_URL:-https://swelldesignla.com}"
+      PUBLIC_FRONTEND_URL: "${PUBLIC_FRONTEND_URL:-https://swelldesignla.com}"
+      META_GRAPH_VERSION: "${META_GRAPH_VERSION:-v20.0}"
     volumes:
       - uploads_data:/app/uploads
     networks: [swell-net]

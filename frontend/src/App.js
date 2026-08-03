@@ -29,6 +29,7 @@ import AdminFAQs from '@/pages/admin/AdminFAQs';
 import AdminBlog from '@/pages/admin/AdminBlog';
 import AdminSiteContent from '@/pages/admin/AdminSiteContent';
 import AdminSettings from '@/pages/admin/AdminSettings';
+import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
                   <Route path="faqs" element={<AdminFAQs />} />
                   <Route path="blog" element={<AdminBlog />} />
                   <Route path="site-content" element={<AdminSiteContent />} />
+                  <Route path="integrations" element={<AdminIntegrations />} />
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
               </Routes>

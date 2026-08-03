@@ -468,9 +468,133 @@ def main():
         print(f"   Found {len(subscribers)} subscribers")
     
     # ========================================
-    # 23. CLEANUP (Delete test inquiry if created)
+    # 23. INTEGRATIONS - GOOGLE CALENDAR
     # ========================================
-    print("\n\n📍 SECTION 23: Cleanup")
+    print("\n\n📍 SECTION 23: Integrations - Google Calendar")
+    print("-"*60)
+    
+    # Test unauthorized access
+    temp_token = tester.token
+    tester.token = None
+    tester.test("Google Calendar status without auth", "GET", "/admin/integrations/google/status", 401)
+    tester.token = temp_token
+    
+    # Test initial status (should be not connected)
+    success, gcal_status = tester.test("Google Calendar status (initial)", "GET", "/admin/integrations/google/status", 200)
+    if success:
+        print(f"   Connected: {gcal_status.get('connected', False)}")
+        print(f"   Email: {gcal_status.get('email', 'N/A')}")
+    
+    # Test saving credentials
+    gcal_creds = {
+        'client_id': 'test_client_id_123.apps.googleusercontent.com',
+        'client_secret': 'test_client_secret_xyz'
+    }
+    success, save_response = tester.test("Save Google Calendar credentials", "POST", "/admin/integrations/google/settings", 200, data=gcal_creds)
+    if success:
+        print(f"   Credentials saved: {save_response.get('ok', False)}")
+    
+    # Test authorize endpoint (should return authorization URL)
+    success, auth_response = tester.test("Get Google Calendar authorization URL", "GET", "/admin/integrations/google/authorize", 200)
+    if success:
+        print(f"   Has authorization_url: {'authorization_url' in auth_response}")
+        print(f"   Has redirect_uri: {'redirect_uri' in auth_response}")
+    
+    # Test callback with missing code (public endpoint, no auth) - should redirect
+    # Note: The endpoint returns a RedirectResponse which the browser follows, but requests library
+    # will follow redirects by default and return 200 with the final page content
+    tester.token = None
+    print(f"\n   ℹ️  Skipping callback redirect test (requires browser to test properly)")
+    tester.token = temp_token
+    
+    # Test disconnect
+    success, disconnect_response = tester.test("Disconnect Google Calendar", "POST", "/admin/integrations/google/disconnect", 200)
+    if success:
+        print(f"   Disconnected: {disconnect_response.get('ok', False)}")
+    
+    # ========================================
+    # 24. INTEGRATIONS - INSTAGRAM
+    # ========================================
+    print("\n\n📍 SECTION 24: Integrations - Instagram")
+    print("-"*60)
+    
+    # Test unauthorized access
+    tester.token = None
+    tester.test("Instagram status without auth", "GET", "/admin/integrations/instagram/status", 401)
+    tester.token = temp_token
+    
+    # Test initial status (should be not configured)
+    success, ig_status = tester.test("Instagram status (initial)", "GET", "/admin/integrations/instagram/status", 200)
+    if success:
+        print(f"   Configured: {ig_status.get('configured', False)}")
+        print(f"   Username: {ig_status.get('username', 'N/A')}")
+        print(f"   Post count: {ig_status.get('post_count', 0)}")
+    
+    # Test public feed (should return empty array initially)
+    tester.token = None
+    success, feed = tester.test("Instagram public feed (empty)", "GET", "/instagram/feed", 200)
+    if success:
+        print(f"   Feed posts: {len(feed) if isinstance(feed, list) else 'N/A'}")
+    tester.token = temp_token
+    
+    # Test saving settings with invalid token (should fail with 400)
+    invalid_ig_settings = {
+        'ig_business_account_id': '12345678901234567',
+        'access_token': 'invalid_token_xyz'
+    }
+    success, ig_save_response = tester.test("Save Instagram settings with invalid token", "POST", "/admin/integrations/instagram/settings", 400, data=invalid_ig_settings)
+    if not success:
+        print(f"   Expected 400 validation error")
+    
+    # Test lookup with invalid token (should fail with 400)
+    invalid_lookup = {
+        'access_token': 'invalid_token_xyz'
+    }
+    success, lookup_response = tester.test("Instagram lookup with invalid token", "POST", "/admin/integrations/instagram/lookup", 400, data=invalid_lookup)
+    if not success:
+        print(f"   Expected 400 validation error")
+    
+    # Test disconnect
+    success, ig_disconnect = tester.test("Disconnect Instagram", "POST", "/admin/integrations/instagram/disconnect", 200)
+    if success:
+        print(f"   Disconnected: {ig_disconnect.get('ok', False)}")
+    
+    # ========================================
+    # 25. REGRESSION - AVAILABILITY & CONSULTATIONS
+    # ========================================
+    print("\n\n📍 SECTION 25: Regression - Availability & Consultations (without Google Calendar)")
+    print("-"*60)
+    
+    # Test that availability slots still work without Google Calendar connected
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    tester.token = None
+    success, slots = tester.test(f"Get available slots (no Google Calendar)", "GET", "/availability/slots", 200, params={'date': tomorrow})
+    if success:
+        print(f"   Slots returned: {len(slots.get('slots', [])) if isinstance(slots, dict) else 'N/A'}")
+    
+    # Test that consultation creation still works without Google Calendar
+    consultation_data_2 = {
+        'client_name': 'Test No GCal',
+        'client_email': f'nogcal_{datetime.now().strftime("%H%M%S")}@example.com',
+        'client_phone': '310-555-0102',
+        'consultation_type': 'phone',
+        'date': tomorrow,
+        'time': '14:00',
+        'notes': 'Test without Google Calendar'
+    }
+    success, consult_response_2 = tester.test("Create consultation (no Google Calendar)", "POST", "/consultations", 200, data=consultation_data_2)
+    consultation_id_2 = consult_response_2.get('id') if success else None
+    if success:
+        has_gcal_id = 'gcal_event_id' in consult_response_2
+        print(f"   Consultation created: {consultation_id_2}")
+        print(f"   Has gcal_event_id: {has_gcal_id} (should be False)")
+    
+    tester.token = temp_token
+    
+    # ========================================
+    # 26. CLEANUP (Delete test data)
+    # ========================================
+    print("\n\n📍 SECTION 26: Cleanup")
     print("-"*60)
     
     if inquiry_id:
@@ -478,6 +602,9 @@ def main():
     
     if consultation_id:
         tester.test(f"Delete test consultation: {consultation_id}", "DELETE", f"/admin/consultations/{consultation_id}", 200)
+    
+    if consultation_id_2:
+        tester.test(f"Delete test consultation 2: {consultation_id_2}", "DELETE", f"/admin/consultations/{consultation_id_2}", 200)
     
     # Print final summary
     success = tester.print_summary()

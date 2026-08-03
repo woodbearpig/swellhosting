@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, Heart, Calendar, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
 import { SectionHeader } from '@/components/SectionEyebrow';
+import { InstagramFeed } from '@/components/InstagramFeed';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 14 },
@@ -143,6 +144,10 @@ const HomePage = () => {
           ))}
         </div>
       </section>
+
+      {/* INSTAGRAM FEED (only renders if configured) */}
+      <InstagramFeed />
+
 
       {/* PROCESS */}
       <section className="container-narrow py-14 sm:py-18 lg:py-24">

@@ -22,6 +22,10 @@ from models import (
 )
 from auth import hash_password, verify_password, create_token, require_admin
 from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html
+from crypto_utils import encrypt, decrypt
+import google_calendar as gcal
+import instagram_service as ig
+from fastapi.responses import RedirectResponse
 
 # =========================================================
 # Setup
@@ -548,7 +552,11 @@ async def update_availability(payload: Dict[str, Any], admin=Depends(require_adm
 
 @api.get("/availability/slots")
 async def get_available_slots(date_str: str = Query(..., alias="date"), consultation_type: str = "phone"):
-    """Return available time slots for a date string YYYY-MM-DD."""
+    """Return available time slots for a date string YYYY-MM-DD.
+
+    Also consults Google Calendar (if connected) to prevent double-booking against
+    existing calendar events on that day.
+    """
     try:
         d = date.fromisoformat(date_str)
     except Exception:
@@ -583,6 +591,26 @@ async def get_available_slots(date_str: str = Query(..., alias="date"), consulta
             booked.append((start, end))
         except Exception:
             continue
+
+    # Google Calendar busy times
+    try:
+        gcal_busy = await gcal.list_busy(db, date_str)
+        for gb in gcal_busy:
+            try:
+                s = datetime.fromisoformat(gb["start"].replace("Z", "+00:00"))
+                e = datetime.fromisoformat(gb["end"].replace("Z", "+00:00"))
+                # Convert to naive local for comparison (approximation OK for slot blocking)
+                if s.tzinfo:
+                    s = s.astimezone().replace(tzinfo=None)
+                if e.tzinfo:
+                    e = e.astimezone().replace(tzinfo=None)
+                # Only block if same date
+                if s.date() == d or e.date() == d:
+                    booked.append((s, e))
+            except Exception:
+                continue
+    except Exception:
+        pass
 
     slots: List[str] = []
     for rg in ranges:
@@ -642,6 +670,23 @@ async def create_consultation(payload: Dict[str, Any]):
             subject=f"New consultation booked: {obj.client_name} — {obj.date} {obj.time}",
             html=f"<pre style='font-family: Menlo, monospace;'>{obj.model_dump_json(indent=2)}</pre>",
         )
+
+    # Sync to Google Calendar (if connected)
+    try:
+        start_dt = datetime.fromisoformat(f"{obj.date}T{obj.time}:00")
+        end_dt = start_dt + timedelta(minutes=obj.duration_minutes)
+        event = await gcal.create_event(
+            db,
+            summary=f"Consult ({obj.consultation_type.replace('_', ' ')}) with {obj.client_name}",
+            description=f"Booked via swelldesignla.com\nEmail: {obj.client_email}\nPhone: {obj.client_phone or '-'}\nNotes: {obj.notes or '-'}",
+            start_iso=start_dt.isoformat(),
+            end_iso=end_dt.isoformat(),
+            attendee_email=obj.client_email or None,
+        )
+        if event and event.get("id"):
+            await db.consultations.update_one({"id": obj.id}, {"$set": {"gcal_event_id": event["id"]}})
+    except Exception as e:
+        logger.warning("Google Calendar sync failed: %s", e)
 
     return {"id": obj.id, "ok": True}
 
@@ -710,6 +755,190 @@ async def admin_stats(admin=Depends(require_admin)):
         "today_consultations": today_consults,
         "total_clients": total_clients,
     }
+
+
+
+# =========================================================
+# Integrations: Google Calendar
+# =========================================================
+@api.get("/admin/integrations/google/status")
+async def gcal_status(admin=Depends(require_admin)):
+    doc = await db.integrations.find_one({"id": "google_calendar"}, {"_id": 0}) or {}
+    connected = bool(doc.get("refresh_token_enc"))
+    return {
+        "connected": connected,
+        "email": doc.get("email", ""),
+        "name": doc.get("name", ""),
+        "client_id": doc.get("client_id", ""),
+        "has_client_secret": bool(doc.get("client_secret_enc")),
+        "connected_at": doc.get("connected_at"),
+        "updated_at": doc.get("updated_at"),
+    }
+
+
+@api.post("/admin/integrations/google/settings")
+async def gcal_save_settings(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Save OAuth client credentials (client_id + client_secret) provided by the admin."""
+    client_id = (payload.get("client_id") or "").strip()
+    client_secret = (payload.get("client_secret") or "").strip()
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=400, detail="Both client_id and client_secret are required")
+    patch = {
+        "id": "google_calendar",
+        "client_id": client_id,
+        "client_secret_enc": encrypt(client_secret),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.integrations.update_one({"id": "google_calendar"}, {"$set": patch}, upsert=True)
+    return {"ok": True}
+
+
+@api.get("/admin/integrations/google/authorize")
+async def gcal_authorize(admin=Depends(require_admin)):
+    doc = await db.integrations.find_one({"id": "google_calendar"}, {"_id": 0}) or {}
+    client_id = doc.get("client_id") or os.environ.get("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="Google Client ID not configured. Save your OAuth credentials first.")
+    # Build redirect_uri from public URL header via env fallback
+    public_backend = os.environ.get("PUBLIC_BACKEND_URL", "").rstrip("/")
+    redirect_uri = f"{public_backend}/api/integrations/google/callback" if public_backend else "/api/integrations/google/callback"
+    state = uuid.uuid4().hex
+    await db.integrations.update_one({"id": "google_calendar"}, {"$set": {"oauth_state": state, "oauth_redirect_uri": redirect_uri}}, upsert=True)
+    url = gcal.build_auth_url(client_id, redirect_uri, state)
+    return {"authorization_url": url, "redirect_uri": redirect_uri}
+
+
+@api.get("/integrations/google/callback")
+async def gcal_callback(code: Optional[str] = None, state: Optional[str] = None, error: Optional[str] = None):
+    """Public callback endpoint (redirected to by Google). Exchanges code, stores refresh token, then redirects to /admin/integrations."""
+    frontend_url = os.environ.get("PUBLIC_FRONTEND_URL", "").rstrip("/") or "/"
+    if error:
+        return RedirectResponse(f"{frontend_url}/admin/integrations?gcal_error={error}")
+    if not code or not state:
+        return RedirectResponse(f"{frontend_url}/admin/integrations?gcal_error=missing_code")
+
+    doc = await db.integrations.find_one({"id": "google_calendar"}, {"_id": 0}) or {}
+    if state != doc.get("oauth_state"):
+        return RedirectResponse(f"{frontend_url}/admin/integrations?gcal_error=state_mismatch")
+
+    client_id = doc.get("client_id") or os.environ.get("GOOGLE_CLIENT_ID", "")
+    client_secret = decrypt(doc.get("client_secret_enc", "")) or os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    redirect_uri = doc.get("oauth_redirect_uri", "")
+    if not client_id or not client_secret or not redirect_uri:
+        return RedirectResponse(f"{frontend_url}/admin/integrations?gcal_error=missing_credentials")
+
+    try:
+        tokens = gcal.exchange_code_for_tokens(client_id, client_secret, redirect_uri, code)
+        access_token = tokens.get("access_token", "")
+        refresh_token = tokens.get("refresh_token", "")
+        info = gcal.get_userinfo(access_token) if access_token else {}
+        await db.integrations.update_one(
+            {"id": "google_calendar"},
+            {"$set": {
+                "access_token_enc": encrypt(access_token) if access_token else "",
+                "refresh_token_enc": encrypt(refresh_token) if refresh_token else doc.get("refresh_token_enc", ""),
+                "email": info.get("email", ""),
+                "name": info.get("name", ""),
+                "connected_at": datetime.now(timezone.utc).isoformat(),
+                "oauth_state": "",
+                "last_error": "",
+            }},
+            upsert=True,
+        )
+        return RedirectResponse(f"{frontend_url}/admin/integrations?gcal_connected=1")
+    except Exception as e:
+        logger.error("Google OAuth callback failed: %s", e)
+        await db.integrations.update_one({"id": "google_calendar"}, {"$set": {"last_error": str(e)}}, upsert=True)
+        return RedirectResponse(f"{frontend_url}/admin/integrations?gcal_error=exchange_failed")
+
+
+@api.post("/admin/integrations/google/disconnect")
+async def gcal_disconnect(admin=Depends(require_admin)):
+    await db.integrations.update_one(
+        {"id": "google_calendar"},
+        {"$set": {"access_token_enc": "", "refresh_token_enc": "", "email": "", "name": "", "connected_at": None}},
+    )
+    return {"ok": True}
+
+
+# =========================================================
+# Integrations: Instagram Graph API
+# =========================================================
+@api.get("/admin/integrations/instagram/status")
+async def ig_status(admin=Depends(require_admin)):
+    doc = await db.integrations.find_one({"id": "instagram"}, {"_id": 0}) or {}
+    return {
+        "configured": bool(doc.get("access_token_enc") and doc.get("ig_business_account_id")),
+        "ig_business_account_id": doc.get("ig_business_account_id", ""),
+        "username": doc.get("username", ""),
+        "post_count": doc.get("post_count", 0),
+        "last_success_at": doc.get("last_success_at"),
+        "last_error": doc.get("last_error", ""),
+        "updated_at": doc.get("updated_at"),
+    }
+
+
+@api.post("/admin/integrations/instagram/settings")
+async def ig_save_settings(payload: Dict[str, Any], admin=Depends(require_admin)):
+    ig_id = (payload.get("ig_business_account_id") or "").strip()
+    token = (payload.get("access_token") or "").strip()
+    if not ig_id or not token:
+        raise HTTPException(status_code=400, detail="Both IG Business Account ID and access token are required")
+    try:
+        info = ig._validate(ig_id, token)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Validation failed: {e}")
+    await ig.save_settings(db, {
+        "ig_business_account_id": ig_id,
+        "access_token_enc": encrypt(token),
+        "username": info.get("username", ""),
+        "account_type": info.get("account_type", ""),
+    })
+    try:
+        result = await ig.refresh_cache(db)
+        return {"ok": True, "username": info.get("username", ""), "post_count": result.get("count", 0)}
+    except Exception as e:
+        return {"ok": True, "warning": str(e)}
+
+
+@api.post("/admin/integrations/instagram/refresh")
+async def ig_refresh(admin=Depends(require_admin)):
+    try:
+        result = await ig.refresh_cache(db)
+        return {"ok": True, **result}
+    except Exception as e:
+        logger.warning("Instagram refresh failed: %s", e)
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@api.post("/admin/integrations/instagram/lookup")
+async def ig_lookup(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Helper to resolve IG Business Account ID from a user token by listing Pages."""
+    token = (payload.get("access_token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="access_token is required")
+    try:
+        results = await ig.try_lookup_ig_id(token)
+        return {"ok": True, "pages": results}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api.post("/admin/integrations/instagram/disconnect")
+async def ig_disconnect(admin=Depends(require_admin)):
+    await db.integrations.update_one(
+        {"id": "instagram"},
+        {"$set": {"access_token_enc": "", "ig_business_account_id": "", "username": "", "post_count": 0}},
+    )
+    await db.instagram_posts.delete_many({})
+    return {"ok": True}
+
+
+@api.get("/instagram/feed")
+async def instagram_feed_public():
+    posts = await ig.public_feed(db, limit=12)
+    return posts
+
 
 
 # =========================================================
