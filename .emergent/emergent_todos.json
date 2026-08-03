@@ -24,7 +24,7 @@
     "status": "completed"
   },
   {
-    "content": "Full testing_agent run: credentials change + form builder end-to-end + wizard renderer",
-    "status": "in_progress"
+    "content": "Full testing_agent + verify seed no longer overwrites password after restart",
+    "status": "completed"
   }
 ]
