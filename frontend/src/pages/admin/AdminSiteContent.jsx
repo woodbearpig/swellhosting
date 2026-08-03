@@ -94,6 +94,79 @@ export const AdminSiteContent = () => {
               <div><label className="eyebrow block mb-1">SECONDARY CTA LABEL</label><input className="input-cream" value={data.hero_secondary_cta_label} onChange={e => set({ hero_secondary_cta_label: e.target.value })} /></div>
               <div><label className="eyebrow block mb-1">SECONDARY CTA LINK</label><input className="input-cream" value={data.hero_secondary_cta_href} onChange={e => set({ hero_secondary_cta_href: e.target.value })} /></div>
             </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-5 mt-4 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="eyebrow mb-1">HERO BADGES</p>
+                  <p className="text-xs text-[color:var(--brand-text-muted)]">The small chip labels shown just below the hero buttons (e.g. "Fully custom", "On-site install", "LA + surrounding"). Add up to ~6 for best look.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary !h-8 text-xs"
+                  onClick={() => set({ hero_badges: [...(Array.isArray(data.hero_badges) ? data.hero_badges : []), 'New badge'] })}
+                  data-testid="admin-hero-badge-add"
+                ><Plus className="h-3.5 w-3.5" /> Add badge</button>
+              </div>
+
+              <ToggleRow
+                label="Show hero badges"
+                hint="Turn off to hide the whole row of chips."
+                checked={data.hero_badges_active !== false}
+                onChange={v => set({ hero_badges_active: v })}
+              />
+
+              <div className="space-y-2" data-testid="admin-hero-badges-list">
+                {(Array.isArray(data.hero_badges) ? data.hero_badges : ['Fully custom', 'On-site install', 'LA + surrounding']).map((badge, idx) => (
+                  <div key={idx} className="card-cream p-2 flex items-center gap-2" data-testid={`admin-hero-badge-${idx}`}>
+                    <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
+                    <input
+                      className="input-cream !h-9 flex-1"
+                      value={badge}
+                      onChange={e => {
+                        const next = [...(Array.isArray(data.hero_badges) ? data.hero_badges : ['Fully custom', 'On-site install', 'LA + surrounding'])];
+                        next[idx] = e.target.value;
+                        set({ hero_badges: next });
+                      }}
+                      data-testid={`admin-hero-badge-${idx}-text`}
+                      placeholder="Badge text (e.g. Fully custom)"
+                    />
+                    <button
+                      type="button"
+                      className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                      disabled={idx === 0}
+                      onClick={() => {
+                        const next = [...data.hero_badges];
+                        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                        set({ hero_badges: next });
+                      }}
+                      aria-label="Move up"
+                    ><ArrowUp className="h-3.5 w-3.5" /></button>
+                    <button
+                      type="button"
+                      className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                      disabled={idx === (data.hero_badges || []).length - 1}
+                      onClick={() => {
+                        const next = [...data.hero_badges];
+                        [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                        set({ hero_badges: next });
+                      }}
+                      aria-label="Move down"
+                    ><ArrowDown className="h-3.5 w-3.5" /></button>
+                    <button
+                      type="button"
+                      className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50"
+                      onClick={() => set({ hero_badges: (data.hero_badges || []).filter((_, i) => i !== idx) })}
+                      aria-label="Delete"
+                      data-testid={`admin-hero-badge-${idx}-delete`}
+                    ><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                ))}
+                {(!data.hero_badges || data.hero_badges.length === 0) && (
+                  <p className="text-sm text-[color:var(--brand-text-muted)] italic">No badges yet — click "Add badge" to add one.</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
         {tab === 'about' && (

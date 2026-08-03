@@ -56,6 +56,9 @@ class SiteContent(Base):
     hero_primary_cta_href: str = "/inquire"
     hero_secondary_cta_label: str = "View the gallery"
     hero_secondary_cta_href: str = "/gallery"
+    # Small chip badges below the hero CTA buttons ("Fully custom", "On-site install", etc.)
+    hero_badges_active: bool = True
+    hero_badges: List[str] = Field(default_factory=lambda: ["Fully custom", "On-site install", "LA + surrounding"])
 
     # About
     about_short: str = "A boutique LA-based studio designing dreamy, custom event installations — from intimate showers to weddings and brand launches."

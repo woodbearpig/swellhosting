@@ -75,11 +75,20 @@ const HomePage = () => {
                 {site?.hero_secondary_cta_label || 'View the gallery'}
               </Link>
             </div>
-            <div className="mt-8 flex flex-wrap items-center gap-2">
-              <span className="badge-soft">Fully custom</span>
-              <span className="badge-soft">On-site install</span>
-              <span className="badge-soft">LA + surrounding</span>
-            </div>
+            {site?.hero_badges_active !== false && Array.isArray(site?.hero_badges) && site.hero_badges.length > 0 && (
+              <div className="mt-8 flex flex-wrap items-center gap-2" data-testid="home-hero-badges">
+                {site.hero_badges.map((b, i) => (
+                  <span key={`${b}-${i}`} className="badge-soft">{b}</span>
+                ))}
+              </div>
+            )}
+            {site?.hero_badges_active !== false && !Array.isArray(site?.hero_badges) && (
+              <div className="mt-8 flex flex-wrap items-center gap-2" data-testid="home-hero-badges">
+                <span className="badge-soft">Fully custom</span>
+                <span className="badge-soft">On-site install</span>
+                <span className="badge-soft">LA + surrounding</span>
+              </div>
+            )}
           </motion.div>
 
           <motion.div className="lg:col-span-5" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
