@@ -32,6 +32,7 @@ import AdminSiteContent from '@/pages/admin/AdminSiteContent';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminPalettes from '@/pages/admin/AdminPalettes';
+import AdminInquiryForm from '@/pages/admin/AdminInquiryForm';
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
                   <Route path="faqs" element={<AdminFAQs />} />
                   <Route path="blog" element={<AdminBlog />} />
                   <Route path="site-content" element={<AdminSiteContent />} />
+                  <Route path="inquiry-form" element={<AdminInquiryForm />} />
                   <Route path="palettes" element={<AdminPalettes />} />
                   <Route path="integrations" element={<AdminIntegrations />} />
                   <Route path="settings" element={<AdminSettings />} />

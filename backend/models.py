@@ -203,6 +203,11 @@ class SiteContent(Base):
     #              repeats_yearly (bool), year (optional int for one-off) }
     palette_schedules: List[Dict[str, Any]] = Field(default_factory=list)
 
+    # Dynamic inquiry form schema (CMS-driven multi-step wizard)
+    # Structure: { version: int, steps: [ { id, title, description, fields: [ {id, type, label, ...} ] } ] }
+    # An empty dict means "use the default 8-step template".
+    inquiry_form_schema: Dict[str, Any] = Field(default_factory=dict)
+
     updated_at: datetime = Field(default_factory=_now)
 
 

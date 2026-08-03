@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
@@ -24,6 +24,7 @@ const groups = [
       { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
       { to: '/admin/blog', label: 'Journal', icon: BookOpen },
       { to: '/admin/site-content', label: 'Site content', icon: LayoutIcon },
+      { to: '/admin/inquiry-form', label: 'Inquiry form', icon: FileText },
       { to: '/admin/palettes', label: 'Palettes', icon: Palette },
     ],
   },

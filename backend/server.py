@@ -27,6 +27,7 @@ from crypto_utils import encrypt, decrypt
 import google_calendar as gcal
 import instagram_service as ig
 from palettes import PALETTES, CATEGORIES, get_palette
+from inquiry_form_schema import default_inquiry_form_schema, STANDARD_FIELD_IDS
 from datetime import date as _date_only
 from fastapi.responses import RedirectResponse
 
@@ -102,8 +103,13 @@ async def _startup():
         admin_email = os.environ.get("ADMIN_EMAIL", "admin@swelldesignla.com")
         admin_password = os.environ.get("ADMIN_PASSWORD", "swell2025")
         admin_name = os.environ.get("ADMIN_NAME", "Swell Admin")
+        force_reset = str(os.environ.get("ADMIN_FORCE_RESET", "")).lower() in {"1", "true", "yes"}
+
         existing = await db.admin_users.find_one({"email": admin_email}, {"_id": 0})
-        if not existing:
+        any_admin = await db.admin_users.find_one({}, {"_id": 0})
+
+        if not existing and not any_admin:
+            # First-ever boot: create initial admin from env.
             await db.admin_users.insert_one({
                 "id": "admin_root",
                 "email": admin_email,
@@ -112,12 +118,26 @@ async def _startup():
                 "role": "admin",
                 "created_at": datetime.now(timezone.utc).isoformat(),
             })
-            logger.info("Seeded admin user %s at startup", admin_email)
-        else:
+            logger.info("Seeded initial admin user %s", admin_email)
+        elif force_reset and existing:
+            # Emergency password reset requested via env flag.
             await db.admin_users.update_one(
                 {"email": admin_email},
                 {"$set": {"password_hash": hash_password(admin_password), "name": admin_name}},
             )
+            logger.warning("ADMIN_FORCE_RESET=1 detected — reset password for %s", admin_email)
+        elif force_reset and not existing and any_admin:
+            # Force reset requested but env email doesn't match any admin — recreate with env creds.
+            await db.admin_users.insert_one({
+                "id": "admin_root_" + uuid.uuid4().hex[:8],
+                "email": admin_email,
+                "name": admin_name,
+                "password_hash": hash_password(admin_password),
+                "role": "admin",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            logger.warning("ADMIN_FORCE_RESET=1 — created recovery admin %s", admin_email)
+        # Otherwise: admin exists, don't touch credentials — UI is source of truth.
 
         if not await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}):
             await db.site_content.insert_one(to_doc(SiteContent().model_dump()))
@@ -163,6 +183,56 @@ async def me(admin=Depends(require_admin)):
     return user
 
 
+@api.post("/admin/auth/change-credentials")
+async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Allow the logged-in admin to change their email/password/name.
+
+    Requires the current password for verification. Any of new_email/new_password/new_name
+    may be omitted (only fields that are provided will change).
+    """
+    current_password = (payload.get("current_password") or "").strip()
+    if not current_password:
+        raise HTTPException(status_code=400, detail="Current password is required")
+
+    user = await db.admin_users.find_one({"id": admin["sub"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    if not verify_password(current_password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    updates: Dict[str, Any] = {}
+
+    new_email = (payload.get("new_email") or "").strip().lower()
+    if new_email and new_email != user["email"]:
+        # Ensure new email isn't already used by another admin
+        collision = await db.admin_users.find_one({"email": new_email, "id": {"$ne": user["id"]}}, {"_id": 0})
+        if collision:
+            raise HTTPException(status_code=409, detail="An admin with this email already exists")
+        updates["email"] = new_email
+
+    new_name = payload.get("new_name")
+    if new_name is not None:
+        new_name = str(new_name).strip()
+        if new_name:
+            updates["name"] = new_name
+
+    new_password = payload.get("new_password")
+    if new_password:
+        new_password = str(new_password)
+        if len(new_password) < 8:
+            raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+        updates["password_hash"] = hash_password(new_password)
+
+    if not updates:
+        return {"ok": True, "changed": False, "user": {"id": user["id"], "email": user["email"], "name": user.get("name", "")}}
+
+    await db.admin_users.update_one({"id": user["id"]}, {"$set": updates})
+    refreshed = await db.admin_users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
+    # If email or password changed, issue a fresh token so the current session stays valid
+    new_token = create_token(refreshed) if ("email" in updates or "password_hash" in updates) else None
+    return {"ok": True, "changed": True, "user": refreshed, "token": new_token}
+
+
 # =========================================================
 # Uploads
 # =========================================================
@@ -206,6 +276,78 @@ async def update_site_content(payload: Dict[str, Any], admin=Depends(require_adm
     await db.site_content.update_one({"id": "site_content_singleton"}, {"$set": to_doc(payload)}, upsert=True)
     doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0})
     return doc
+
+
+# =========================================================
+# Dynamic Inquiry Form (CMS-driven wizard schema)
+# =========================================================
+@api.get("/inquiry-form")
+async def get_inquiry_form():
+    """Public: returns the current inquiry-form schema, or the default template if none saved."""
+    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "inquiry_form_schema": 1}) or {}
+    schema = doc.get("inquiry_form_schema") or {}
+    if not schema or not schema.get("steps"):
+        return default_inquiry_form_schema()
+    return schema
+
+
+@api.put("/admin/inquiry-form")
+async def update_inquiry_form(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Admin: replace the inquiry form schema. Payload = full schema {version, steps: [...]}."""
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="schema must be an object")
+    steps = payload.get("steps")
+    if not isinstance(steps, list):
+        raise HTTPException(status_code=400, detail="schema.steps must be a list")
+    # Basic sanitization
+    cleaned_steps = []
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        fields = []
+        for f in (s.get("fields") or []):
+            if not isinstance(f, dict) or not f.get("id") or not f.get("type"):
+                continue
+            fld = {
+                "id": str(f["id"]).strip(),
+                "type": str(f["type"]),
+                "label": str(f.get("label") or ""),
+                "help": str(f.get("help") or ""),
+                "placeholder": str(f.get("placeholder") or ""),
+                "required": bool(f.get("required", False)),
+            }
+            if "options" in f and isinstance(f["options"], list):
+                opts = []
+                for o in f["options"]:
+                    if isinstance(o, dict) and "value" in o and "label" in o:
+                        opts.append({"value": str(o["value"]), "label": str(o["label"])})
+                fld["options"] = opts
+            fields.append(fld)
+        cleaned_steps.append({
+            "id": str(s.get("id") or f"step-{uuid.uuid4().hex[:8]}"),
+            "title": str(s.get("title") or ""),
+            "description": str(s.get("description") or ""),
+            "fields": fields,
+        })
+    schema = {"version": int(payload.get("version") or 1), "steps": cleaned_steps}
+    await db.site_content.update_one(
+        {"id": "site_content_singleton"},
+        {"$set": {"inquiry_form_schema": schema, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return schema
+
+
+@api.post("/admin/inquiry-form/reset")
+async def reset_inquiry_form(admin=Depends(require_admin)):
+    """Admin: replace the schema with the default 8-step template."""
+    schema = default_inquiry_form_schema()
+    await db.site_content.update_one(
+        {"id": "site_content_singleton"},
+        {"$set": {"inquiry_form_schema": schema, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return schema
 
 
 # =========================================================
@@ -435,7 +577,20 @@ async def _get_or_create_client(name: str, email: str, phone: str, inquiry_id: s
 
 @api.post("/inquiries")
 async def create_inquiry(payload: Dict[str, Any]):
-    obj = Inquiry(**payload)
+    # Split known Inquiry fields from unknown custom form fields.
+    # Unknown fields land in `extra` so the dynamic form builder never loses data.
+    known: Dict[str, Any] = {}
+    extra: Dict[str, Any] = dict(payload.get("extra") or {})
+    for k, v in payload.items():
+        if k == "extra":
+            continue
+        if k in STANDARD_FIELD_IDS or k in {"source", "status", "admin_notes", "tags"}:
+            known[k] = v
+        else:
+            extra[k] = v
+    known["extra"] = extra
+
+    obj = Inquiry(**known)
     doc = to_doc(obj.model_dump())
     await db.inquiries.insert_one(doc)
 
