@@ -185,7 +185,7 @@
 
 ---
 
-### Phase C (P1) — Season Auto‑Switch (Scheduled palettes)
+### Phase C (P1) — Season Auto‑Switch (Scheduled palettes) (COMPLETED ✅)
 **Goal:** Allow palettes to auto-activate by date rules (yearly recurring or one-off).
 
 **Backend**
@@ -216,7 +216,7 @@
 
 ---
 
-### Phase D (P1/P2) — Palette From Photo (on-device)
+### Phase D (P1/P2) — Palette From Photo (on-device) (COMPLETED ✅)
 **Goal:** Owner can generate a custom palette from an uploaded inspiration image and save it as a reusable theme.
 
 **User-confirmed approach:** on-device extraction (ColorThief).

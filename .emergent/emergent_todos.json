@@ -41,6 +41,6 @@
   },
   {
     "content": "Full testing_agent run: FOUC, hide toggles, nav CRUD, schedules, palette-from-photo end-to-end",
-    "status": "in_progress"
+    "status": "completed"
   }
 ]
