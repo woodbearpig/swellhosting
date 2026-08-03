@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: swell_mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    networks: [swell-net]
+    # Not exposed to host by default; access only from internal Docker network.
+    # Uncomment to inspect from host: ports: ["127.0.0.1:27017:27017"]
+
+  backend:
+    build:
+      context: ./backend
+    container_name: swell_backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URL: "mongodb://mongo:27017"
+      DB_NAME: "${DB_NAME:-swell_design_media}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_ALG: "${JWT_ALG:-HS256}"
+      JWT_EXPIRE_HOURS: "${JWT_EXPIRE_HOURS:-168}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD}"
+      ADMIN_NAME: "${ADMIN_NAME:-Swell Admin}"
+      UPLOAD_DIR: "/app/uploads"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-hello@swelldesignla.com}"
+      SMTP_FROM_NAME: "${SMTP_FROM_NAME:-swell design + media}"
+      BUSINESS_NAME: "${BUSINESS_NAME:-swell design + media}"
+      BUSINESS_EMAIL: "${BUSINESS_EMAIL:-hello@swelldesignla.com}"
+      BUSINESS_PHONE: "${BUSINESS_PHONE:-}"
+      BUSINESS_LOCATION: "${BUSINESS_LOCATION:-Los Angeles, CA}"
+    volumes:
+      - uploads_data:/app/uploads
+    networks: [swell-net]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty means same-origin (nginx reverse proxy handles /api)
+        REACT_APP_BACKEND_URL: ""
+    container_name: swell_frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    networks: [swell-net]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: swell_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/certbot/www:/var/www/certbot:ro
+      - ./deploy/certbot/conf:/etc/letsencrypt:ro
+    depends_on: [frontend, backend]
+    networks: [swell-net]
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: swell_certbot
+    restart: unless-stopped
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    volumes:
+      - ./deploy/certbot/www:/var/www/certbot
+      - ./deploy/certbot/conf:/etc/letsencrypt
+
+volumes:
+  mongo_data:
+  uploads_data:
+
+networks:
+  swell-net:
+    driver: bridge

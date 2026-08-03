@@ -1,0 +1,42 @@
+[
+  {
+    "content": "Phase 2: Backend - Models, auth, all CRUD routes, seed data",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Theme setup (fonts, index.css, tailwind)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Public site (Home, About, Services, Gallery, Testimonials, FAQ, Blog, Contact)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Inquiry Wizard with conditional logic + uploads",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Consultation Booking",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Admin login + Layout + Dashboard",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Admin CMS (Services, Gallery, Testimonials, FAQ, Blog, Site Content)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Frontend - Admin Inquiries + Clients + Consultations + Availability + Settings",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 3: Docker + Nginx + Certbot + deploy.sh + README for AlmaLinux 10",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: End to End Testing with testing_agent_v3",
+    "status": "in_progress"
+  }
+]

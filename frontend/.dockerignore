@@ -1,0 +1,6 @@
+# Node modules should not be included in the docker build context
+node_modules
+build
+.git
+.env
+*.log
