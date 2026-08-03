@@ -1,30 +1,22 @@
 [
   {
-    "content": "Feature A backend: change seed logic + add change-credentials endpoint",
+    "content": "Backend: add font_serif_id/font_sans_id/font_script_id fields to SiteContent with sensible defaults",
     "status": "completed"
   },
   {
-    "content": "Feature A frontend: 'Change credentials' form on AdminSettings",
+    "content": "Frontend: create FONT_PRESETS list + FontContext that injects Google Fonts <link> and applies --font-* CSS variables from site content",
     "status": "completed"
   },
   {
-    "content": "Feature B backend: inquiry_form_schema field + default template + GET/PUT/reset endpoints + create_inquiry maps unknown fields to extra",
+    "content": "Frontend: register FontProvider in App.js inside SiteProvider",
     "status": "completed"
   },
   {
-    "content": "Feature B frontend: AdminInquiryForm page (steps + fields CRUD + reorder + preview button)",
+    "content": "Frontend admin: 'Typography' tab in AdminSiteContent with three dropdowns + live preview swatches",
     "status": "completed"
   },
   {
-    "content": "Feature B frontend: refactor InquiryWizardPage to render from schema",
-    "status": "completed"
-  },
-  {
-    "content": "Wire /admin/inquiry-form route + AdminLayout nav link",
-    "status": "completed"
-  },
-  {
-    "content": "Full testing_agent + verify seed no longer overwrites password after restart",
+    "content": "Test: verify font swap applies immediately + persists after reload",
     "status": "completed"
   }
 ]

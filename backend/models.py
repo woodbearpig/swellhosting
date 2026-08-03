@@ -211,6 +211,11 @@ class SiteContent(Base):
     # An empty dict means "use the default 8-step template".
     inquiry_form_schema: Dict[str, Any] = Field(default_factory=dict)
 
+    # Typography — preset ids that map to Google Fonts (see frontend fonts.js)
+    font_serif_id: str = "cormorant"   # Headings / display font
+    font_sans_id: str = "manrope"      # Body font
+    font_script_id: str = "allura"     # Accent / script font ("" to disable)
+
     updated_at: datetime = Field(default_factory=_now)
 
 

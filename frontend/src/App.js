@@ -6,6 +6,7 @@ import { SiteProvider } from '@/context/SiteContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { PaletteProvider } from '@/context/PaletteContext';
+import { FontProvider } from '@/context/FontContext';
 
 import HomePage from '@/pages/HomePage';
 import ServicesPage from '@/pages/ServicesPage';
@@ -40,6 +41,7 @@ function App() {
       <AuthProvider>
         <SiteProvider>
           <PaletteProvider>
+          <FontProvider>
           <div className="App">
             <BrowserRouter>
               <Routes>
@@ -85,6 +87,7 @@ function App() {
               </Routes>
             </BrowserRouter>
           </div>
+          </FontProvider>
           </PaletteProvider>
         </SiteProvider>
       </AuthProvider>
