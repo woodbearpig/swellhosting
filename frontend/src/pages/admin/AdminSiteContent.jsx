@@ -11,6 +11,7 @@ const SECTIONS = [
   { key: 'promo', label: 'Promo banner' },
   { key: 'contact', label: 'Contact & social' },
   { key: 'footer', label: 'Footer & newsletter' },
+  { key: 'coming_soon', label: 'Coming Soon mode' },
 ];
 
 export const AdminSiteContent = () => {
@@ -114,6 +115,26 @@ export const AdminSiteContent = () => {
             <div><label className="eyebrow block mb-1">FOOTER BLURB</label><textarea className="input-cream textarea-cream" rows={2} value={data.footer_blurb} onChange={e => set({ footer_blurb: e.target.value })} /></div>
             <div><label className="eyebrow block mb-1">NEWSLETTER TITLE</label><input className="input-cream" value={data.newsletter_title} onChange={e => set({ newsletter_title: e.target.value })} /></div>
             <div><label className="eyebrow block mb-1">NEWSLETTER SUBTITLE</label><input className="input-cream" value={data.newsletter_subtitle} onChange={e => set({ newsletter_subtitle: e.target.value })} /></div>
+          </div>
+        )}
+        {tab === 'coming_soon' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm">
+              <p className="font-medium mb-1">⚠️ Coming Soon mode</p>
+              <p className="text-[color:var(--brand-text-muted)]">When enabled, all public pages are hidden and replaced with a beautiful Coming Soon page. Your admin panel remains fully accessible at <code>/admin/login</code>. Turn this off anytime to reveal the full site.</p>
+            </div>
+            <label className="flex items-center gap-3 card-cream p-4 cursor-pointer">
+              <input type="checkbox" className="h-5 w-5" checked={!!data.coming_soon_active} onChange={e => set({ coming_soon_active: e.target.checked })} data-testid="admin-coming-soon-toggle" />
+              <div>
+                <p className="font-medium">Show Coming Soon page instead of the site</p>
+                <p className="text-xs text-[color:var(--brand-text-muted)]">Public visitors see only the coming-soon page. Admin still works.</p>
+              </div>
+            </label>
+            <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.coming_soon_eyebrow || ''} onChange={e => set({ coming_soon_eyebrow: e.target.value })} placeholder="SOMETHING BEAUTIFUL IS COMING" /></div>
+            <div><label className="eyebrow block mb-1">HEADLINE</label><textarea className="input-cream textarea-cream" rows={2} value={data.coming_soon_title || ''} onChange={e => set({ coming_soon_title: e.target.value })} placeholder="We're styling something dreamy." /></div>
+            <div><label className="eyebrow block mb-1">SCRIPT ACCENT (handwritten line)</label><input className="input-cream" value={data.coming_soon_script || ''} onChange={e => set({ coming_soon_script: e.target.value })} placeholder="stay tuned" /></div>
+            <div><label className="eyebrow block mb-1">MESSAGE</label><textarea className="input-cream textarea-cream" rows={4} value={data.coming_soon_message || ''} onChange={e => set({ coming_soon_message: e.target.value })} /></div>
+            <div><label className="eyebrow block mb-1">LAUNCH DATE (optional, free-form)</label><input className="input-cream" value={data.coming_soon_launch_date || ''} onChange={e => set({ coming_soon_launch_date: e.target.value })} placeholder="e.g. Fall 2026" /></div>
           </div>
         )}
       </div>

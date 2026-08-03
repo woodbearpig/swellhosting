@@ -458,6 +458,74 @@ def main():
     tester.test("Update site content", "PUT", "/admin/site-content", 200, data=site_content_update)
     
     # ========================================
+    # 21B. COMING SOON FEATURE (NEW)
+    # ========================================
+    print("\n\n📍 SECTION 21B: Coming Soon Feature (NEW)")
+    print("-"*60)
+    
+    # First, get site content and verify new fields exist
+    tester.token = None  # Public endpoint
+    success, site_content = tester.test("Get site content with new Coming Soon fields", "GET", "/site-content", 200)
+    if success:
+        has_coming_soon_active = 'coming_soon_active' in site_content
+        has_coming_soon_eyebrow = 'coming_soon_eyebrow' in site_content
+        has_coming_soon_title = 'coming_soon_title' in site_content
+        has_coming_soon_script = 'coming_soon_script' in site_content
+        has_coming_soon_message = 'coming_soon_message' in site_content
+        has_coming_soon_launch_date = 'coming_soon_launch_date' in site_content
+        
+        print(f"   ✓ coming_soon_active: {has_coming_soon_active} (value: {site_content.get('coming_soon_active', 'N/A')})")
+        print(f"   ✓ coming_soon_eyebrow: {has_coming_soon_eyebrow}")
+        print(f"   ✓ coming_soon_title: {has_coming_soon_title}")
+        print(f"   ✓ coming_soon_script: {has_coming_soon_script}")
+        print(f"   ✓ coming_soon_message: {has_coming_soon_message}")
+        print(f"   ✓ coming_soon_launch_date: {has_coming_soon_launch_date}")
+        
+        if not all([has_coming_soon_active, has_coming_soon_eyebrow, has_coming_soon_title, 
+                    has_coming_soon_script, has_coming_soon_message, has_coming_soon_launch_date]):
+            print("   ⚠️  WARNING: Some Coming Soon fields are missing!")
+    
+    tester.token = temp_token  # Restore admin token
+    
+    # Test updating coming_soon_active to true
+    coming_soon_enable = {
+        'coming_soon_active': True
+    }
+    success, response = tester.test("Enable Coming Soon mode", "PUT", "/admin/site-content", 200, data=coming_soon_enable)
+    if success:
+        print(f"   ✓ Coming Soon mode enabled: {response.get('coming_soon_active', False)}")
+    
+    # Test updating coming_soon content fields
+    coming_soon_content = {
+        'coming_soon_title': 'Test Coming Soon Title',
+        'coming_soon_message': 'This is a test coming soon message for automated testing.',
+        'coming_soon_eyebrow': 'TEST MODE',
+        'coming_soon_script': 'testing',
+        'coming_soon_launch_date': 'Spring 2026'
+    }
+    success, response = tester.test("Update Coming Soon content", "PUT", "/admin/site-content", 200, data=coming_soon_content)
+    if success:
+        print(f"   ✓ Title updated: {response.get('coming_soon_title', 'N/A')}")
+        print(f"   ✓ Message updated: {response.get('coming_soon_message', 'N/A')[:50]}...")
+    
+    # Verify the changes persisted
+    tester.token = None
+    success, site_content = tester.test("Verify Coming Soon changes persisted", "GET", "/site-content", 200)
+    if success:
+        print(f"   ✓ coming_soon_active: {site_content.get('coming_soon_active', False)}")
+        print(f"   ✓ coming_soon_title: {site_content.get('coming_soon_title', 'N/A')}")
+    
+    tester.token = temp_token
+    
+    # Disable Coming Soon mode for normal operation after tests
+    coming_soon_disable = {
+        'coming_soon_active': False
+    }
+    success, response = tester.test("Disable Coming Soon mode (cleanup)", "PUT", "/admin/site-content", 200, data=coming_soon_disable)
+    if success:
+        print(f"   ✓ Coming Soon mode disabled: {not response.get('coming_soon_active', True)}")
+    
+    # ========================================
     # 22. ADMIN - NEWSLETTER
     # ========================================
     print("\n\n📍 SECTION 22: Admin Newsletter")

@@ -90,6 +90,14 @@ class SiteContent(Base):
     newsletter_title: str = "Stay in the loop"
     newsletter_subtitle: str = "Seasonal offers, styling tips, and behind-the-scenes."
 
+    # Coming Soon / Maintenance mode
+    coming_soon_active: bool = False
+    coming_soon_eyebrow: str = "SOMETHING BEAUTIFUL IS COMING"
+    coming_soon_title: str = "We\u2019re styling something dreamy."
+    coming_soon_script: str = "stay tuned"
+    coming_soon_message: str = "A boutique event styling studio launching soon in Los Angeles \u2014 custom balloon installations, thoughtful florals, and dreamy details for weddings, showers, birthdays, and brand moments."
+    coming_soon_launch_date: str = ""
+
     updated_at: datetime = Field(default_factory=_now)
 
 

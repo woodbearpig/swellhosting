@@ -119,6 +119,14 @@ async def _startup():
         if not await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}):
             await db.site_content.insert_one(to_doc(SiteContent().model_dump()))
             logger.info("Seeded site content at startup")
+        else:
+            # Migration: ensure new fields exist on existing documents (idempotent)
+            default_doc = SiteContent().model_dump()
+            existing = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+            missing = {k: v for k, v in default_doc.items() if k not in existing}
+            if missing:
+                await db.site_content.update_one({"id": "site_content_singleton"}, {"$set": to_doc(missing)})
+                logger.info("Migrated site content: added %d missing fields", len(missing))
 
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
