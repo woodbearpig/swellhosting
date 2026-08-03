@@ -19,6 +19,7 @@ from models import (
     AdminUser, LoginPayload, TokenResponse,
     SiteContent, Service, GalleryItem, Testimonial, FAQ, BlogPost,
     Inquiry, Client, Consultation, Availability, NewsletterSubscriber,
+    CustomPalette,
 )
 from auth import hash_password, verify_password, create_token, require_admin
 from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html
@@ -26,6 +27,7 @@ from crypto_utils import encrypt, decrypt
 import google_calendar as gcal
 import instagram_service as ig
 from palettes import PALETTES, CATEGORIES, get_palette
+from datetime import date as _date_only
 from fastapi.responses import RedirectResponse
 
 # =========================================================
@@ -953,16 +955,94 @@ async def instagram_feed_public():
 # =========================================================
 # Palettes
 # =========================================================
+async def _resolve_palette(pid: str) -> Dict[str, Any]:
+    """Resolve a palette id to a palette dict, checking presets then custom palettes."""
+    # Check presets first
+    for p in PALETTES:
+        if p["id"] == pid:
+            return p
+    # Then custom palettes
+    doc = await db.custom_palettes.find_one({"id": pid}, {"_id": 0})
+    if doc:
+        return doc
+    return PALETTES[0]  # signature default
+
+
+def _schedule_matches_today(rule: Dict[str, Any], today: _date_only) -> bool:
+    """Return True if the given schedule rule is active on the provided date."""
+    if not rule.get("enabled", True):
+        return False
+    try:
+        sm = int(rule.get("start_month", 0))
+        sd = int(rule.get("start_day", 0))
+        em = int(rule.get("end_month", 0))
+        ed = int(rule.get("end_day", 0))
+    except (TypeError, ValueError):
+        return False
+    if not (1 <= sm <= 12 and 1 <= sd <= 31 and 1 <= em <= 12 and 1 <= ed <= 31):
+        return False
+
+    repeats = bool(rule.get("repeats_yearly", True))
+    if not repeats:
+        year = rule.get("year")
+        if year is None:
+            return False
+        try:
+            start = _date_only(int(year), sm, sd)
+            end_year = int(year) if (em, ed) >= (sm, sd) else int(year) + 1
+            end = _date_only(end_year, em, ed)
+        except ValueError:
+            return False
+        return start <= today <= end
+    # Yearly recurring — match by month/day, allowing wrap-around (e.g. Dec 20 → Jan 5)
+    md_today = (today.month, today.day)
+    md_start = (sm, sd)
+    md_end = (em, ed)
+    if md_start <= md_end:
+        return md_start <= md_today <= md_end
+    # Wraps year end (e.g. start Dec 15, end Jan 10)
+    return md_today >= md_start or md_today <= md_end
+
+
+async def _effective_palette_id() -> str:
+    """Compute currently effective palette id, honoring schedules > active_palette_id."""
+    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+    schedules = doc.get("palette_schedules", []) or []
+    today = _date_only.today()
+    # Priority: one-off (with year) > yearly-recurring, in insertion order
+    matched_oneoff = None
+    matched_yearly = None
+    for rule in schedules:
+        if _schedule_matches_today(rule, today):
+            if rule.get("repeats_yearly", True):
+                if matched_yearly is None:
+                    matched_yearly = rule
+            else:
+                if matched_oneoff is None:
+                    matched_oneoff = rule
+    chosen = matched_oneoff or matched_yearly
+    if chosen and chosen.get("palette_id"):
+        return chosen["palette_id"]
+    return doc.get("active_palette_id", "signature")
+
+
 @api.get("/palettes")
 async def list_palettes():
-    return {"categories": CATEGORIES, "palettes": PALETTES}
+    custom = await db.custom_palettes.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    # Ensure custom palettes carry the "custom" category
+    for c in custom:
+        c["category"] = c.get("category") or "custom"
+        c.setdefault("is_preset", False)
+    categories = list(CATEGORIES)
+    if custom and not any(c.get("key") == "custom" for c in categories):
+        categories.append({"key": "custom", "label": "Custom"})
+    return {"categories": categories, "palettes": PALETTES + custom}
 
 
 @api.get("/palettes/active")
 async def get_active_palette():
-    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
-    pid = doc.get("active_palette_id", "signature")
-    return get_palette(pid)
+    pid = await _effective_palette_id()
+    return await _resolve_palette(pid)
 
 
 @api.put("/admin/palettes/active")
@@ -970,14 +1050,94 @@ async def set_active_palette(payload: Dict[str, Any], admin=Depends(require_admi
     pid = (payload.get("palette_id") or "").strip()
     if not pid:
         raise HTTPException(status_code=400, detail="palette_id is required")
-    if not any(p["id"] == pid for p in PALETTES):
+    # Verify id exists in presets OR custom
+    exists_preset = any(p["id"] == pid for p in PALETTES)
+    exists_custom = False
+    if not exists_preset:
+        exists_custom = bool(await db.custom_palettes.find_one({"id": pid}, {"_id": 0}))
+    if not (exists_preset or exists_custom):
         raise HTTPException(status_code=404, detail="Unknown palette")
     await db.site_content.update_one(
         {"id": "site_content_singleton"},
         {"$set": {"active_palette_id": pid, "updated_at": datetime.now(timezone.utc).isoformat()}},
         upsert=True,
     )
-    return {"ok": True, "palette": get_palette(pid)}
+    resolved = await _resolve_palette(pid)
+    return {"ok": True, "palette": resolved}
+
+
+# ---- Palette schedules ----
+@api.get("/admin/palettes/schedules")
+async def list_schedules(admin=Depends(require_admin)):
+    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+    return {"schedules": doc.get("palette_schedules", []) or []}
+
+
+@api.put("/admin/palettes/schedules")
+async def replace_schedules(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Replace the full schedule list. Payload: {schedules: [rule, ...]}."""
+    schedules = payload.get("schedules")
+    if not isinstance(schedules, list):
+        raise HTTPException(status_code=400, detail="schedules must be a list")
+    # Basic sanitization
+    cleaned = []
+    for r in schedules:
+        if not isinstance(r, dict):
+            continue
+        rid = str(r.get("id") or uuid.uuid4().hex)
+        cleaned.append({
+            "id": rid,
+            "label": str(r.get("label") or "Schedule"),
+            "enabled": bool(r.get("enabled", True)),
+            "palette_id": str(r.get("palette_id") or "signature"),
+            "start_month": int(r.get("start_month") or 1),
+            "start_day": int(r.get("start_day") or 1),
+            "end_month": int(r.get("end_month") or 1),
+            "end_day": int(r.get("end_day") or 1),
+            "repeats_yearly": bool(r.get("repeats_yearly", True)),
+            "year": int(r["year"]) if r.get("year") not in (None, "", 0) else None,
+        })
+    await db.site_content.update_one(
+        {"id": "site_content_singleton"},
+        {"$set": {"palette_schedules": cleaned, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "schedules": cleaned}
+
+
+# ---- Custom palettes ----
+@api.get("/admin/palettes/custom")
+async def list_custom_palettes(admin=Depends(require_admin)):
+    docs = await db.custom_palettes.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return docs
+
+
+@api.post("/admin/palettes/custom")
+async def create_custom_palette(payload: Dict[str, Any], admin=Depends(require_admin)):
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name is required")
+    colors = payload.get("colors") or {}
+    if not isinstance(colors, dict) or not colors:
+        raise HTTPException(status_code=400, detail="colors dict is required")
+    obj = CustomPalette(
+        name=name,
+        mood=(payload.get("mood") or "").strip(),
+        colors={str(k): str(v) for k, v in colors.items()},
+        source_image_url=(payload.get("source_image_url") or "").strip(),
+    )
+    await db.custom_palettes.insert_one(to_doc(obj.model_dump()))
+    return await db.custom_palettes.find_one({"id": obj.id}, {"_id": 0})
+
+
+@api.delete("/admin/palettes/custom/{pid}")
+async def delete_custom_palette(pid: str, admin=Depends(require_admin)):
+    # If the palette being deleted is the active one, fall back to signature
+    active = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "active_palette_id": 1}) or {}
+    if active.get("active_palette_id") == pid:
+        await db.site_content.update_one({"id": "site_content_singleton"}, {"$set": {"active_palette_id": "signature"}})
+    await db.custom_palettes.delete_one({"id": pid})
+    return {"ok": True}
 
 
 # =========================================================

@@ -8,22 +8,33 @@ import { useSite } from '@/context/SiteContext';
 
 export const AboutPage = () => {
   const { site } = useSite();
+  const showImage = site?.about_show_image !== false;
+  const showDesigner = site?.about_show_designer !== false;
+  const showCtas = site?.about_show_ctas !== false;
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="about-page">
       <SectionHeader eyebrow="ABOUT" title="About swell design + media" subtitle="A boutique LA-based studio dedicated to thoughtful, custom event styling." />
-      <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-[2rem] overflow-hidden aspect-[4/5] bg-[color:var(--brand-surface-2)] lift-shadow">
+      <div className={`mt-10 grid grid-cols-1 gap-10 items-center ${showImage ? 'lg:grid-cols-2' : ''}`}>
+        {showImage && (
+        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-[2rem] overflow-hidden aspect-[4/5] bg-[color:var(--brand-surface-2)] lift-shadow" data-testid="about-image-block">
           <img src={site?.about_image_url} alt="About swell design + media" className="h-full w-full object-cover" />
         </motion.div>
+        )}
         <div>
           <p className="font-script text-4xl text-[color:var(--brand-sage-deep)] mb-2">a warm welcome</p>
           <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed">{site?.about_full}</p>
-          <p className="font-serif text-2xl mt-8">{site?.designer_name}</p>
-          <p className="text-base text-[color:var(--brand-text-muted)] mt-2 leading-relaxed">{site?.designer_bio}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
-            <Link to="/gallery" className="btn-secondary">See the work</Link>
-          </div>
+          {showDesigner && (
+            <div data-testid="about-designer-block">
+              <p className="font-serif text-2xl mt-8">{site?.designer_name}</p>
+              <p className="text-base text-[color:var(--brand-text-muted)] mt-2 leading-relaxed">{site?.designer_bio}</p>
+            </div>
+          )}
+          {showCtas && (
+            <div className="mt-6 flex flex-wrap gap-3" data-testid="about-ctas-block">
+              <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
+              <Link to="/gallery" className="btn-secondary">See the work</Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

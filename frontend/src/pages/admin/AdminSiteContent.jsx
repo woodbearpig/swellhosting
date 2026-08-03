@@ -7,10 +7,14 @@ import { useSite } from '@/context/SiteContext';
 const SECTIONS = [
   { key: 'brand', label: 'Brand' },
   { key: 'hero', label: 'Hero' },
+  { key: 'header', label: 'Header & Nav' },
   { key: 'about', label: 'About' },
   { key: 'promo', label: 'Promo banner' },
   { key: 'home', label: 'Home page' },
+  { key: 'services_page', label: 'Services page' },
+  { key: 'gallery_page', label: 'Gallery page' },
   { key: 'contact', label: 'Contact & social' },
+  { key: 'contact_page', label: 'Contact page' },
   { key: 'footer', label: 'Footer & newsletter' },
   { key: 'coming_soon', label: 'Coming Soon mode' },
 ];
@@ -104,6 +108,15 @@ export const AdminSiteContent = () => {
             </div>
             <div><label className="eyebrow block mb-1">DESIGNER NAME</label><input className="input-cream" value={data.designer_name} onChange={e => set({ designer_name: e.target.value })} /></div>
             <div><label className="eyebrow block mb-1">DESIGNER BIO</label><textarea className="input-cream textarea-cream" rows={4} value={data.designer_bio} onChange={e => set({ designer_bio: e.target.value })} /></div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-5 mt-4">
+              <p className="eyebrow mb-2">ABOUT PAGE VISIBILITY</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ToggleRow label="About page hero image" checked={data.about_show_image !== false} onChange={v => set({ about_show_image: v })} />
+                <ToggleRow label="Designer bio block" hint="Name + bio paragraphs." checked={data.about_show_designer !== false} onChange={v => set({ about_show_designer: v })} />
+                <ToggleRow label="Call-to-action buttons" hint="Start inquiry + See the work." checked={data.about_show_ctas !== false} onChange={v => set({ about_show_ctas: v })} />
+              </div>
+            </div>
           </div>
         )}
         {tab === 'promo' && (
@@ -259,6 +272,154 @@ export const AdminSiteContent = () => {
                 <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_faq_eyebrow || ''} onChange={e => set({ home_faq_eyebrow: e.target.value })} /></div>
                 <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_faq_title || ''} onChange={e => set({ home_faq_title: e.target.value })} /></div>
               </div>
+            </div>
+          </div>
+        )}
+        {tab === 'header' && (
+          <div className="space-y-8" data-testid="admin-header-tab">
+            <div>
+              <p className="font-serif text-xl mb-1">Header & navigation</p>
+              <p className="text-sm text-[color:var(--brand-text-muted)]">Control what appears in the top navigation bar and customize the menu links.</p>
+            </div>
+
+            <div>
+              <p className="eyebrow mb-2">HEADER ELEMENTS</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ToggleRow label="Logo" hint="Business logo (top-left)." checked={data.header_show_logo !== false} onChange={v => set({ header_show_logo: v })} />
+                <ToggleRow label="Light/dark theme toggle" hint="Sun/moon button (desktop)." checked={data.header_show_theme_toggle !== false} onChange={v => set({ header_show_theme_toggle: v })} />
+                <ToggleRow label="Start inquiry CTA" hint="Primary button on the right." checked={data.header_show_inquire_cta !== false} onChange={v => set({ header_show_inquire_cta: v })} />
+              </div>
+            </div>
+
+            <div className="border-t border-[color:var(--brand-border)] pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="eyebrow mb-1">NAVIGATION LINKS</p>
+                  <p className="text-xs text-[color:var(--brand-text-muted)]">Internal pages start with <code>/</code> (e.g. <code>/gallery</code>). External sites start with <code>https://</code>.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary !h-8 text-xs"
+                  onClick={() => set({ header_nav_items: [...(data.header_nav_items || []), { id: `nav-${Date.now()}`, label: 'New link', href: '/', visible: true, new_tab: false }] })}
+                  data-testid="admin-nav-item-add"
+                ><Plus className="h-3.5 w-3.5" /> Add link</button>
+              </div>
+
+              <div className="space-y-2" data-testid="admin-nav-items-list">
+                {(data.header_nav_items || []).map((item, idx) => (
+                  <div key={item.id || idx} className="card-cream p-3 space-y-2" data-testid={`admin-nav-item-${idx}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-[auto_1.2fr_2fr_auto] gap-2 items-center">
+                      <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
+                      <input
+                        className="input-cream !h-9"
+                        placeholder="Label (e.g. Gallery)"
+                        value={item.label || ''}
+                        onChange={e => {
+                          const next = [...data.header_nav_items];
+                          next[idx] = { ...next[idx], label: e.target.value };
+                          set({ header_nav_items: next });
+                        }}
+                        data-testid={`admin-nav-item-${idx}-label`}
+                      />
+                      <input
+                        className="input-cream !h-9"
+                        placeholder="Link (e.g. /gallery or https://example.com)"
+                        value={item.href || ''}
+                        onChange={e => {
+                          const next = [...data.header_nav_items];
+                          next[idx] = { ...next[idx], href: e.target.value };
+                          set({ header_nav_items: next });
+                        }}
+                        data-testid={`admin-nav-item-${idx}-href`}
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                          disabled={idx === 0}
+                          onClick={() => {
+                            const next = [...data.header_nav_items];
+                            [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                            set({ header_nav_items: next });
+                          }}
+                          aria-label="Move up"
+                        ><ArrowUp className="h-3.5 w-3.5" /></button>
+                        <button
+                          type="button"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                          disabled={idx === (data.header_nav_items || []).length - 1}
+                          onClick={() => {
+                            const next = [...data.header_nav_items];
+                            [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                            set({ header_nav_items: next });
+                          }}
+                          aria-label="Move down"
+                        ><ArrowDown className="h-3.5 w-3.5" /></button>
+                        <button
+                          type="button"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50"
+                          onClick={() => set({ header_nav_items: data.header_nav_items.filter((_, i) => i !== idx) })}
+                          aria-label="Delete"
+                          data-testid={`admin-nav-item-${idx}-delete`}
+                        ><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 pl-10">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={item.visible !== false} onChange={e => {
+                          const next = [...data.header_nav_items];
+                          next[idx] = { ...next[idx], visible: e.target.checked };
+                          set({ header_nav_items: next });
+                        }} data-testid={`admin-nav-item-${idx}-visible`} />
+                        <span>Visible</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={!!item.new_tab} onChange={e => {
+                          const next = [...data.header_nav_items];
+                          next[idx] = { ...next[idx], new_tab: e.target.checked };
+                          set({ header_nav_items: next });
+                        }} data-testid={`admin-nav-item-${idx}-newtab`} />
+                        <span>Open in new tab</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+                {(!data.header_nav_items || data.header_nav_items.length === 0) && (
+                  <p className="text-sm text-[color:var(--brand-text-muted)] italic">No links yet — click "Add link" to create the first one.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {tab === 'services_page' && (
+          <div className="space-y-4" data-testid="admin-services-page-tab">
+            <p className="font-serif text-xl">Services page</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)]">Toggle what appears on the <code>/services</code> listing page. Individual services are managed under <em>Services</em> in the sidebar.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ToggleRow label="Page header" hint="Eyebrow, title and subtitle at the top." checked={data.services_page_show_header !== false} onChange={v => set({ services_page_show_header: v })} />
+              <ToggleRow label="Services grid" hint="The cards listing each service." checked={data.services_page_show_grid !== false} onChange={v => set({ services_page_show_grid: v })} />
+            </div>
+          </div>
+        )}
+        {tab === 'gallery_page' && (
+          <div className="space-y-4" data-testid="admin-gallery-page-tab">
+            <p className="font-serif text-xl">Gallery page</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)]">Toggle what appears on the <code>/gallery</code> page. Images are managed under <em>Gallery</em> in the sidebar.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ToggleRow label="Page header" checked={data.gallery_page_show_header !== false} onChange={v => set({ gallery_page_show_header: v })} />
+              <ToggleRow label="Category filters" hint="Chips to filter by event type." checked={data.gallery_page_show_filters !== false} onChange={v => set({ gallery_page_show_filters: v })} />
+              <ToggleRow label="Photo grid" hint="The full photo grid + lightbox." checked={data.gallery_page_show_grid !== false} onChange={v => set({ gallery_page_show_grid: v })} />
+            </div>
+          </div>
+        )}
+        {tab === 'contact_page' && (
+          <div className="space-y-4" data-testid="admin-contact-page-tab">
+            <p className="font-serif text-xl">Contact page</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)]">Toggle what appears on the <code>/contact</code> page. Content (email, phone, hours) is managed on the <em>Contact & social</em> tab.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ToggleRow label="Page header" checked={data.contact_page_show_header !== false} onChange={v => set({ contact_page_show_header: v })} />
+              <ToggleRow label="Contact info block" hint="Email, phone, location, hours card." checked={data.contact_page_show_info_block !== false} onChange={v => set({ contact_page_show_info_block: v })} />
+              <ToggleRow label="Message form" hint="The name/email/message form." checked={data.contact_page_show_form !== false} onChange={v => set({ contact_page_show_form: v })} />
             </div>
           </div>
         )}

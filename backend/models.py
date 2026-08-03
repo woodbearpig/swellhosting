@@ -163,6 +163,46 @@ class SiteContent(Base):
     footer_show_legal_links: bool = True
     footer_copyright_override: str = ""
 
+    # Header element visibility
+    header_show_logo: bool = True
+    header_show_theme_toggle: bool = True
+    header_show_inquire_cta: bool = True
+
+    # Header navigation items (CMS-driven, ordered)
+    header_nav_items: List[Dict[str, Any]] = Field(default_factory=lambda: [
+        {"id": "nav-services", "label": "Services", "href": "/services", "visible": True, "new_tab": False},
+        {"id": "nav-gallery", "label": "Gallery", "href": "/gallery", "visible": True, "new_tab": False},
+        {"id": "nav-about", "label": "About", "href": "/about", "visible": True, "new_tab": False},
+        {"id": "nav-testimonials", "label": "Testimonials", "href": "/testimonials", "visible": True, "new_tab": False},
+        {"id": "nav-blog", "label": "Journal", "href": "/blog", "visible": True, "new_tab": False},
+        {"id": "nav-faq", "label": "FAQ", "href": "/faq", "visible": True, "new_tab": False},
+        {"id": "nav-contact", "label": "Contact", "href": "/contact", "visible": True, "new_tab": False},
+    ])
+
+    # About page visibility toggles
+    about_show_image: bool = True
+    about_show_designer: bool = True
+    about_show_ctas: bool = True
+
+    # Services listing page visibility toggles
+    services_page_show_header: bool = True
+    services_page_show_grid: bool = True
+
+    # Gallery page visibility toggles
+    gallery_page_show_header: bool = True
+    gallery_page_show_filters: bool = True
+    gallery_page_show_grid: bool = True
+
+    # Contact page visibility toggles
+    contact_page_show_header: bool = True
+    contact_page_show_info_block: bool = True
+    contact_page_show_form: bool = True
+
+    # Season Auto-Switch palette schedules
+    # Each item: { id, label, enabled, palette_id, start_month, start_day, end_month, end_day,
+    #              repeats_yearly (bool), year (optional int for one-off) }
+    palette_schedules: List[Dict[str, Any]] = Field(default_factory=list)
+
     updated_at: datetime = Field(default_factory=_now)
 
 
@@ -385,4 +425,18 @@ class NewsletterSubscriber(Base):
     id: str = Field(default_factory=_uid)
     email: str
     source: str = "footer"
+    created_at: datetime = Field(default_factory=_now)
+
+
+# =========================
+# Custom Palette (user-created, e.g. from photo)
+# =========================
+class CustomPalette(Base):
+    id: str = Field(default_factory=_uid)
+    name: str
+    category: str = "custom"
+    mood: str = ""
+    colors: Dict[str, str] = Field(default_factory=dict)
+    is_preset: bool = False
+    source_image_url: str = ""
     created_at: datetime = Field(default_factory=_now)

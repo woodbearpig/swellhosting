@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { SectionHeader } from '@/components/SectionEyebrow';
+import { useSite } from '@/context/SiteContext';
 
 const CATEGORIES = [
   { key: 'all', label: 'All' },
@@ -18,6 +19,10 @@ const GalleryPage = () => {
   const [items, setItems] = useState([]);
   const [cat, setCat] = useState('all');
   const [lightbox, setLightbox] = useState(null);
+  const { site } = useSite();
+  const showHeader = site?.gallery_page_show_header !== false;
+  const showFilters = site?.gallery_page_show_filters !== false;
+  const showGrid = site?.gallery_page_show_grid !== false;
 
   useEffect(() => { api.get('/gallery').then(r => setItems(r.data)); }, []);
 
@@ -41,8 +46,11 @@ const GalleryPage = () => {
 
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="gallery-page">
-      <SectionHeader eyebrow="GALLERY" title="A closer look at our work" subtitle="Filter by event type to explore recent installations." />
+      {showHeader && (
+        <SectionHeader eyebrow="GALLERY" title="A closer look at our work" subtitle="Filter by event type to explore recent installations." />
+      )}
 
+      {showFilters && (
       <div className="mt-8 flex flex-wrap gap-2" data-testid="gallery-category-tabs">
         {CATEGORIES.map((c) => (
           <button
@@ -55,7 +63,9 @@ const GalleryPage = () => {
           </button>
         ))}
       </div>
+      )}
 
+      {showGrid && (
       <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="gallery-grid">
         {filtered.map((g, i) => (
           <motion.button
@@ -72,8 +82,9 @@ const GalleryPage = () => {
           </motion.button>
         ))}
       </div>
+      )}
 
-      {filtered.length === 0 && (
+      {showGrid && filtered.length === 0 && (
         <p className="text-center py-20 text-[color:var(--brand-text-muted)]">No photos in this category yet.</p>
       )}
 

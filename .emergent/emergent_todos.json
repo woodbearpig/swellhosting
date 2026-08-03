@@ -1,26 +1,46 @@
 [
   {
-    "content": "Wire PaletteProvider into App.js and add /admin/palettes route",
+    "content": "Phase B1: Fix Coming Soon FOUC — hold render in PublicLayout with cream splash until site loads",
     "status": "completed"
   },
   {
-    "content": "Add Palettes nav link inside AdminLayout.jsx",
+    "content": "Phase B2 backend: add hide-element toggles to SiteContent model (Header, About, Services, Gallery, Contact fields)",
     "status": "completed"
   },
   {
-    "content": "Update HomePage.jsx to use dynamic eyebrows/titles/subtitles, honor home_*_active toggles, and render dynamic home_process_steps",
+    "content": "Phase B2 frontend: honor toggles in Header, About, Services, Gallery, Contact pages",
     "status": "completed"
   },
   {
-    "content": "Update AdminSiteContent.jsx: add 'Home page' tab (eyebrows/titles/subtitles + process steps editor + section visibility) and expose Footer visibility toggles + copyright override",
+    "content": "Phase B3 backend: add header_nav_items list to SiteContent with defaults",
     "status": "completed"
   },
   {
-    "content": "Restart frontend, verify no build errors, and smoke test with screenshots",
+    "content": "Phase B3 frontend: render Header nav from site.header_nav_items with external URL + new_tab support",
     "status": "completed"
   },
   {
-    "content": "Run testing_agent (backend palettes + admin site-content CRUD; frontend palette apply flow and home page toggles)",
+    "content": "Phase B admin UI: add Header/Nav tab (nav CRUD + reorder + new_tab) and per-page tabs (About/Services/Gallery/Contact) with toggles to AdminSiteContent",
     "status": "completed"
+  },
+  {
+    "content": "Phase C backend: add palette_schedules to SiteContent + update /api/palettes/active to compute from schedules",
+    "status": "completed"
+  },
+  {
+    "content": "Phase C frontend: add Schedules UI in AdminPalettes with add/edit/delete rules",
+    "status": "completed"
+  },
+  {
+    "content": "Phase D backend: add custom_palettes collection + POST/DELETE admin endpoints + merge into /api/palettes",
+    "status": "completed"
+  },
+  {
+    "content": "Phase D frontend: install colorthief, add Create-from-Photo workflow in AdminPalettes, list & manage custom palettes",
+    "status": "completed"
+  },
+  {
+    "content": "Full testing_agent run: FOUC, hide toggles, nav CRUD, schedules, palette-from-photo end-to-end",
+    "status": "in_progress"
   }
 ]
