@@ -25,6 +25,7 @@ from email_service import send_email, inquiry_confirmation_html, consultation_co
 from crypto_utils import encrypt, decrypt
 import google_calendar as gcal
 import instagram_service as ig
+from palettes import PALETTES, CATEGORIES, get_palette
 from fastapi.responses import RedirectResponse
 
 # =========================================================
@@ -947,6 +948,36 @@ async def instagram_feed_public():
     posts = await ig.public_feed(db, limit=12)
     return posts
 
+
+
+# =========================================================
+# Palettes
+# =========================================================
+@api.get("/palettes")
+async def list_palettes():
+    return {"categories": CATEGORIES, "palettes": PALETTES}
+
+
+@api.get("/palettes/active")
+async def get_active_palette():
+    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+    pid = doc.get("active_palette_id", "signature")
+    return get_palette(pid)
+
+
+@api.put("/admin/palettes/active")
+async def set_active_palette(payload: Dict[str, Any], admin=Depends(require_admin)):
+    pid = (payload.get("palette_id") or "").strip()
+    if not pid:
+        raise HTTPException(status_code=400, detail="palette_id is required")
+    if not any(p["id"] == pid for p in PALETTES):
+        raise HTTPException(status_code=404, detail="Unknown palette")
+    await db.site_content.update_one(
+        {"id": "site_content_singleton"},
+        {"$set": {"active_palette_id": pid, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "palette": get_palette(pid)}
 
 
 # =========================================================

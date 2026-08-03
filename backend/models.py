@@ -115,7 +115,58 @@ class SiteContent(Base):
     coming_soon_newsletter_placeholder: str = "you@email.com"
     coming_soon_newsletter_button: str = "Notify me"
 
+    # Palette
+    active_palette_id: str = "signature"
+
+    # Home page section labels (editable eyebrows + titles)
+    home_services_eyebrow: str = "WHAT WE DO"
+    home_services_title: str = "Designed for the moments that matter"
+    home_services_subtitle: str = "We style celebrations end-to-end \u2014 from balloons to florals, backdrops to signage."
+    home_gallery_eyebrow: str = "RECENT WORK"
+    home_gallery_title: str = "Moments we\u2019ve styled"
+    home_gallery_subtitle: str = "A glimpse into the celebrations we\u2019ve been lucky to design."
+    home_process_eyebrow: str = "THE PROCESS"
+    home_process_title: str = "A calm, collaborative process"
+    home_process_subtitle: str = "No overwhelm, no cookie-cutter kits \u2014 just thoughtful design from first inquiry to install."
+    home_testimonials_eyebrow: str = "KIND WORDS"
+    home_testimonials_title: str = "Loved by families & brands"
+    home_faq_eyebrow: str = "COMMON QUESTIONS"
+    home_faq_title: str = "Good things to know"
+
+    # Home process timeline (editable list)
+    home_process_steps: List[Dict[str, str]] = Field(default_factory=lambda: [
+        {"title": "Inquiry", "description": "Tell us about your event via our smart form."},
+        {"title": "Design call", "description": "A relaxed conversation to align on the vision."},
+        {"title": "Proposal", "description": "A tailored proposal with pricing + palette."},
+        {"title": "Install", "description": "We handle the build, delivery, and on-site setup."},
+        {"title": "Enjoy", "description": "You show up and take it all in. That\u2019s it."},
+    ])
+    # Home section visibility
+    home_services_active: bool = True
+    home_gallery_active: bool = True
+    home_process_active: bool = True
+    home_testimonials_active: bool = True
+    home_designer_active: bool = True
+    home_faq_active: bool = True
+    home_final_cta_active: bool = True
+
+    # Footer element visibility + copyright override
+    footer_show_logo: bool = True
+    footer_show_explore: bool = True
+    footer_show_contact_block: bool = True
+    footer_show_email: bool = True
+    footer_show_phone: bool = True
+    footer_show_location: bool = True
+    footer_show_hours: bool = True
+    footer_show_social: bool = True
+    footer_show_newsletter: bool = True
+    footer_show_legal_links: bool = True
+    footer_copyright_override: str = ""
+
     updated_at: datetime = Field(default_factory=_now)
+
+
+# =========================
 
 
 # =========================
