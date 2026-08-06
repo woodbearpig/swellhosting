@@ -361,6 +361,13 @@ class Inquiry(Base):
     # Event-type specific answers
     extra: Dict[str, Any] = Field(default_factory=dict)
 
+    # Consult (optional phone consultation booked as final step of the inquiry)
+    consult_date: Optional[str] = None       # YYYY-MM-DD
+    consult_time: Optional[str] = None       # HH:MM (24h) in the site's timezone
+    consult_duration_minutes: Optional[int] = None
+    consult_status: str = ""                 # "" | scheduled | completed | cancelled | no_show
+    consult_calendar_event_id: str = ""      # Google Calendar event id, if created
+
     # Meta
     status: str = "new"  # new | needs_follow_up | consult_scheduled | proposal_sent | booked | archived | lost
     admin_notes: str = ""
@@ -423,6 +430,14 @@ class Availability(Base):
     blackout_dates: List[str] = Field(default_factory=list)  # YYYY-MM-DD list
     slot_minutes: int = 30
     buffer_minutes: int = 15
+
+    # NEW booking rules (owner-editable in Admin → Settings)
+    advance_booking_days: int = 60      # how far in the future people can book
+    minimum_lead_hours: int = 2         # min notice before a booking (blocks last-minute)
+    daily_max_consults: int = 6         # cap on same-day bookings
+    consult_duration_minutes: int = 30  # default consult length
+    block_sundays: bool = True          # simple no-Sundays toggle
+
     consultation_types: List[Dict[str, Any]] = Field(default_factory=lambda: [
         {"key": "phone", "label": "Phone consult", "duration": 20},
         {"key": "video", "label": "Video consult", "duration": 30},

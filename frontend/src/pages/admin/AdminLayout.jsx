@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
@@ -12,7 +12,7 @@ const groups = [
       { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox },
       { to: '/admin/clients', label: 'Clients', icon: Users },
-      { to: '/admin/consultations', label: 'Consultations', icon: CalendarClock },
+      { to: '/admin/consultations', label: 'Scheduled calls', icon: CalendarClock },
     ],
   },
   {
@@ -20,6 +20,7 @@ const groups = [
     items: [
       { to: '/admin/services', label: 'Services', icon: Boxes },
       { to: '/admin/gallery', label: 'Gallery', icon: Image },
+      { to: '/admin/media', label: 'Media library', icon: FolderOpen },
       { to: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
       { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
       { to: '/admin/blog', label: 'Journal', icon: BookOpen },

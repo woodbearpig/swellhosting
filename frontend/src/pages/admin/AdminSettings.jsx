@@ -4,6 +4,7 @@ import { KeyRound, Save, User as UserIcon, Mail } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { BookingRulesCard } from '@/pages/admin/BookingRulesCard';
 
 const ChangeCredentialsCard = () => {
   const { user } = useAuth();
@@ -157,6 +158,8 @@ export const AdminSettings = () => {
       <div><p className="eyebrow">SYSTEM</p><h1 className="font-serif text-3xl sm:text-4xl mt-1">Settings</h1></div>
 
       <ChangeCredentialsCard />
+
+      <BookingRulesCard />
 
       <div className="card-cream p-6">
         <p className="font-serif text-xl mb-2">SMTP email</p>

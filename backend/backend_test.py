@@ -1,11 +1,12 @@
 """
 Backend API tests for swell design + media
-Tests admin credentials change and dynamic inquiry form builder features.
+Tests Features H (Google Calendar Polish), I (Consults Merged), J (Media Library)
 """
 import requests
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, date, timedelta
+import io
 
 BASE_URL = "https://balloon-decor-cms.preview.emergentagent.com/api"
 ADMIN_EMAIL = "admin@swelldesignla.com"
@@ -69,409 +70,435 @@ def main():
     runner = TestRunner()
 
     # =========================================================
-    # ADMIN AUTH: Change Credentials Tests
+    # FEATURE H: Google Calendar Polish
     # =========================================================
     
-    def test_change_credentials_no_jwt():
-        """POST /api/admin/auth/change-credentials without JWT returns 401"""
-        r = requests.post(f"{BASE_URL}/admin/auth/change-credentials", json={"current_password": "test"})
-        print(f"  → Status: {r.status_code}")
-        assert r.status_code == 401, f"Expected 401, got {r.status_code}"
-
-    def test_change_credentials_wrong_password():
-        """With JWT + wrong current_password returns 401"""
+    def test_gcal_status_env_configured():
+        """GET /api/admin/integrations/google/status returns env_configured field"""
         runner.login()
-        r = requests.post(
-            f"{BASE_URL}/admin/auth/change-credentials",
-            json={"current_password": "wrongpassword123"},
-            headers=runner.headers()
-        )
+        r = requests.get(f"{BASE_URL}/admin/integrations/google/status", headers=runner.headers())
         print(f"  → Status: {r.status_code}")
-        assert r.status_code == 401, f"Expected 401, got {r.status_code}"
-
-    def test_change_credentials_update_name():
-        """With correct current_password + new_name returns updated user"""
-        runner.login()
-        r = requests.post(
-            f"{BASE_URL}/admin/auth/change-credentials",
-            json={"current_password": ADMIN_PASSWORD, "new_name": "Test Admin Updated"},
-            headers=runner.headers()
-        )
-        print(f"  → Status: {r.status_code}")
-        print(f"  → Response: {r.json()}")
         assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
         data = r.json()
-        assert data["ok"] == True, "ok should be True"
-        assert data["changed"] == True, "changed should be True"
-        assert data["user"]["name"] == "Test Admin Updated", f"Name not updated: {data['user']['name']}"
-
-    def test_change_credentials_short_password():
-        """With correct + new_password shorter than 8 returns 400"""
-        runner.login()
-        r = requests.post(
-            f"{BASE_URL}/admin/auth/change-credentials",
-            json={"current_password": ADMIN_PASSWORD, "new_password": "short"},
-            headers=runner.headers()
-        )
-        print(f"  → Status: {r.status_code}")
-        assert r.status_code == 400, f"Expected 400, got {r.status_code}"
-
-    def test_change_credentials_valid_password():
-        """With correct + valid new_password returns {ok, changed:true, token}"""
-        runner.login()
-        new_password = "newpassword123"
-        r = requests.post(
-            f"{BASE_URL}/admin/auth/change-credentials",
-            json={"current_password": ADMIN_PASSWORD, "new_password": new_password},
-            headers=runner.headers()
-        )
-        print(f"  → Status: {r.status_code}")
-        print(f"  → Response: {r.json()}")
-        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
-        data = r.json()
-        assert data["ok"] == True, "ok should be True"
-        assert data["changed"] == True, "changed should be True"
-        assert "token" in data, "New token should be returned"
+        print(f"  → Response keys: {list(data.keys())}")
+        print(f"  → env_configured: {data.get('env_configured')}")
+        print(f"  → connected: {data.get('connected')}")
         
-        # Store new token and verify it works
-        new_token = data["token"]
-        print(f"  ✓ New token received: {new_token[:20]}...")
+        assert "env_configured" in data, "env_configured field missing"
+        assert "connected" in data, "connected field missing"
         
-        # Test new token on /auth/me
-        r2 = requests.get(f"{BASE_URL}/auth/me", headers={"Authorization": f"Bearer {new_token}"})
-        print(f"  → Testing new token on /auth/me: {r2.status_code}")
-        assert r2.status_code == 200, f"New token should work, got {r2.status_code}"
-        
-        # Test login with new password
-        print(f"  → Testing login with new password...")
-        r3 = requests.post(f"{BASE_URL}/auth/login", json={"email": ADMIN_EMAIL, "password": new_password})
-        print(f"  → Login status: {r3.status_code}")
-        assert r3.status_code == 200, f"Login with new password failed: {r3.status_code}"
-        
-        # Change back to original password
-        print(f"  → Changing password back to original...")
-        runner.token = new_token
-        r4 = requests.post(
-            f"{BASE_URL}/admin/auth/change-credentials",
-            json={"current_password": new_password, "new_password": ADMIN_PASSWORD},
-            headers=runner.headers()
-        )
-        print(f"  → Reset status: {r4.status_code}")
-        assert r4.status_code == 200, f"Failed to reset password: {r4.status_code}"
-        print(f"  ✓ Password reset to original")
-
-    def test_change_credentials_duplicate_email():
-        """Changing email to one already in use by another admin returns 409"""
-        # This test assumes only one admin exists, so we can't test duplicate email collision
-        # But we can test changing to the same email (no-op)
-        runner.login()
-        r = requests.post(
-            f"{BASE_URL}/admin/auth/change-credentials",
-            json={"current_password": ADMIN_PASSWORD, "new_email": ADMIN_EMAIL},
-            headers=runner.headers()
-        )
-        print(f"  → Status: {r.status_code}")
-        print(f"  → Response: {r.json()}")
-        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
-        data = r.json()
-        # Either changed:false (no-op) OR changed:true with no email change is acceptable
-        print(f"  ✓ Same email change: changed={data.get('changed')}")
+        # In test env, GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are NOT set
+        # So env_configured should be False
+        assert data["env_configured"] == False, f"Expected env_configured=False (env vars not set), got {data['env_configured']}"
+        print(f"  ✓ env_configured correctly returns False when env vars not set")
 
     # =========================================================
-    # INQUIRY FORM: Schema Tests
+    # FEATURE I: Consults Merged into Inquiries
     # =========================================================
-
-    def test_inquiry_form_get_default():
-        """GET /api/inquiry-form returns the 8-step default template"""
-        r = requests.get(f"{BASE_URL}/inquiry-form")
-        print(f"  → Status: {r.status_code}")
-        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
-        data = r.json()
-        print(f"  → Schema version: {data.get('version')}")
-        print(f"  → Steps count: {len(data.get('steps', []))}")
-        assert "steps" in data, "Schema should have steps"
-        assert len(data["steps"]) == 8, f"Expected 8 steps, got {len(data['steps'])}"
+    
+    def test_inquiry_with_consult():
+        """POST /api/inquiries with consult_date+time creates inquiry + consultation"""
+        # Pick a valid date ~14 days out, non-Sunday
+        today = date.today()
+        target_date = today + timedelta(days=14)
+        # Ensure not Sunday
+        while target_date.weekday() == 6:
+            target_date += timedelta(days=1)
         
-        # Check for standard fields
-        all_field_ids = []
-        for step in data["steps"]:
-            for field in step.get("fields", []):
-                all_field_ids.append(field["id"])
+        date_str = target_date.strftime("%Y-%m-%d")
+        time_str = "10:00"
         
-        print(f"  → All field IDs: {all_field_ids}")
-        required_fields = ["event_type", "client_name", "client_email", "client_phone", 
-                          "event_date", "color_palette", "services_needed", "budget_range", 
-                          "inspiration_links"]
-        for fid in required_fields:
-            assert fid in all_field_ids, f"Missing required field: {fid}"
-        print(f"  ✓ All required fields present")
-
-    def test_inquiry_form_update():
-        """PUT /api/admin/inquiry-form with modified schema persists"""
-        runner.login()
-        
-        # Get current schema
-        r = requests.get(f"{BASE_URL}/inquiry-form")
-        schema = r.json()
-        
-        # Add a new step with a text field
-        new_step = {
-            "id": "step-test-custom",
-            "title": "Test Custom Step",
-            "description": "This is a test step",
-            "fields": [
-                {
-                    "id": "test_custom_field",
-                    "type": "text",
-                    "label": "Test Field",
-                    "help": "This is a test",
-                    "placeholder": "Enter test value",
-                    "required": False
-                }
-            ]
-        }
-        schema["steps"].append(new_step)
-        
-        # Update schema
-        r2 = requests.put(f"{BASE_URL}/admin/inquiry-form", json=schema, headers=runner.headers())
-        print(f"  → Update status: {r2.status_code}")
-        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
-        
-        # Verify it persisted
-        r3 = requests.get(f"{BASE_URL}/inquiry-form")
-        updated = r3.json()
-        print(f"  → Updated steps count: {len(updated['steps'])}")
-        assert len(updated["steps"]) == 9, f"Expected 9 steps, got {len(updated['steps'])}"
-        
-        # Check the new step exists
-        last_step = updated["steps"][-1]
-        assert last_step["id"] == "step-test-custom", f"New step not found"
-        assert len(last_step["fields"]) == 1, "New step should have 1 field"
-        assert last_step["fields"][0]["id"] == "test_custom_field", "New field not found"
-        print(f"  ✓ Custom step persisted")
-
-    def test_inquiry_form_invalid_payload():
-        """PUT /api/admin/inquiry-form with invalid payload returns 400"""
-        runner.login()
-        
-        # Test non-object payload
-        r = requests.put(f"{BASE_URL}/admin/inquiry-form", json="invalid", headers=runner.headers())
-        print(f"  → Non-object payload status: {r.status_code}")
-        assert r.status_code == 400, f"Expected 400, got {r.status_code}"
-        
-        # Test non-list steps
-        r2 = requests.put(f"{BASE_URL}/admin/inquiry-form", json={"steps": "invalid"}, headers=runner.headers())
-        print(f"  → Non-list steps status: {r2.status_code}")
-        assert r2.status_code == 400, f"Expected 400, got {r2.status_code}"
-
-    def test_inquiry_form_missing_field_attrs():
-        """Missing type/id in a field → field is silently dropped"""
-        runner.login()
-        
-        schema = {
-            "version": 1,
-            "steps": [
-                {
-                    "id": "step-test",
-                    "title": "Test",
-                    "description": "Test",
-                    "fields": [
-                        {"id": "valid_field", "type": "text", "label": "Valid"},
-                        {"type": "text", "label": "Missing ID"},  # Missing id
-                        {"id": "missing_type", "label": "Missing Type"},  # Missing type
-                    ]
-                }
-            ]
-        }
-        
-        r = requests.put(f"{BASE_URL}/admin/inquiry-form", json=schema, headers=runner.headers())
-        print(f"  → Status: {r.status_code}")
-        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
-        
-        # Verify only valid field remains
-        r2 = requests.get(f"{BASE_URL}/inquiry-form")
-        updated = r2.json()
-        fields = updated["steps"][0]["fields"]
-        print(f"  → Fields count: {len(fields)}")
-        assert len(fields) == 1, f"Expected 1 field (invalid ones dropped), got {len(fields)}"
-        assert fields[0]["id"] == "valid_field", "Only valid field should remain"
-        print(f"  ✓ Invalid fields silently dropped")
-
-    def test_inquiry_form_reset():
-        """POST /api/admin/inquiry-form/reset restores default 8-step schema"""
-        runner.login()
-        
-        r = requests.post(f"{BASE_URL}/admin/inquiry-form/reset", headers=runner.headers())
-        print(f"  → Reset status: {r.status_code}")
-        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
-        
-        # Verify it's back to 8 steps
-        r2 = requests.get(f"{BASE_URL}/inquiry-form")
-        schema = r2.json()
-        print(f"  → Steps count after reset: {len(schema['steps'])}")
-        assert len(schema["steps"]) == 8, f"Expected 8 steps after reset, got {len(schema['steps'])}"
-        print(f"  ✓ Schema reset to default")
-
-    # =========================================================
-    # INQUIRIES: Custom Fields Tests
-    # =========================================================
-
-    def test_inquiry_with_custom_fields():
-        """POST /api/inquiries with standard + custom fields persists correctly"""
-        # Create inquiry with mix of standard and custom fields
         payload = {
-            "client_name": "Test Client",
-            "client_email": "test@example.com",
-            "client_phone": "(310) 555-1234",
+            "client_name": "Test Consult Client",
+            "client_email": "testconsult@example.com",
+            "client_phone": "(310) 555-9999",
             "event_type": "wedding",
-            "event_date": "2025-12-15",
-            "color_palette": ["blush", "sage"],
-            "services_needed": ["balloon_garland", "florals"],
-            "budget_range": "$2,500 – $5,000",
-            # Custom fields (not in STANDARD_FIELD_IDS)
-            "favorite_color": "blush",
-            "how_did_you_hear": "instagram",
-            "custom_notes": "This is a custom field"
+            "consult_date": date_str,
+            "consult_time": time_str
         }
         
+        print(f"  → Creating inquiry with consult: {date_str} {time_str}")
         r = requests.post(f"{BASE_URL}/inquiries", json=payload)
-        print(f"  → Create inquiry status: {r.status_code}")
+        print(f"  → Status: {r.status_code}")
         print(f"  → Response: {r.json()}")
+        
         assert r.status_code == 200, f"Expected 200, got {r.status_code}"
-        inquiry_id = r.json()["id"]
+        data = r.json()
+        assert data["ok"] == True, "ok should be True"
+        assert data["consult_scheduled"] == True, "consult_scheduled should be True"
+        assert "id" in data, "Should return inquiry id"
+        
+        inquiry_id = data["id"]
         print(f"  ✓ Inquiry created: {inquiry_id}")
         
-        # Retrieve inquiry via admin endpoint
+        # Verify inquiry in DB
         runner.login()
         r2 = requests.get(f"{BASE_URL}/admin/inquiries/{inquiry_id}", headers=runner.headers())
-        print(f"  → Get inquiry status: {r2.status_code}")
-        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        assert r2.status_code == 200, f"Failed to get inquiry: {r2.status_code}"
         
         inquiry = r2.json()
-        print(f"  → Inquiry data keys: {list(inquiry.keys())}")
+        print(f"  → Inquiry status: {inquiry.get('status')}")
+        print(f"  → Inquiry consult_date: {inquiry.get('consult_date')}")
+        print(f"  → Inquiry consult_time: {inquiry.get('consult_time')}")
+        print(f"  → Inquiry consult_status: {inquiry.get('consult_status')}")
         
-        # Check standard fields at top-level
-        assert inquiry["client_name"] == "Test Client", "client_name should be at top-level"
-        assert inquiry["client_email"] == "test@example.com", "client_email should be at top-level"
-        assert inquiry["event_type"] == "wedding", "event_type should be at top-level"
-        print(f"  ✓ Standard fields at top-level")
+        assert inquiry["consult_date"] == date_str, f"consult_date mismatch"
+        assert inquiry["consult_time"] == time_str, f"consult_time mismatch"
+        assert inquiry["consult_status"] == "scheduled", f"consult_status should be 'scheduled'"
+        assert inquiry["status"] == "consult_scheduled", f"status should be 'consult_scheduled'"
+        print(f"  ✓ Inquiry has correct consult fields")
         
-        # Check custom fields in extra
-        assert "extra" in inquiry, "extra field should exist"
-        extra = inquiry["extra"]
-        print(f"  → Extra fields: {extra}")
-        assert extra.get("favorite_color") == "blush", "favorite_color should be in extra"
-        assert extra.get("how_did_you_hear") == "instagram", "how_did_you_hear should be in extra"
-        assert extra.get("custom_notes") == "This is a custom field", "custom_notes should be in extra"
-        print(f"  ✓ Custom fields in extra")
+        # Verify consultation row exists
+        r3 = requests.get(f"{BASE_URL}/admin/consultations", headers=runner.headers())
+        assert r3.status_code == 200, f"Failed to get consultations: {r3.status_code}"
         
-        # Clean up: delete test inquiry
-        r3 = requests.delete(f"{BASE_URL}/admin/inquiries/{inquiry_id}", headers=runner.headers())
-        print(f"  → Delete inquiry status: {r3.status_code}")
-        print(f"  ✓ Test inquiry deleted")
+        consultations = r3.json()
+        matching = [c for c in consultations if c.get("inquiry_id") == inquiry_id]
+        print(f"  → Found {len(matching)} consultations for inquiry {inquiry_id}")
+        assert len(matching) == 1, f"Expected 1 consultation, found {len(matching)}"
+        
+        consult = matching[0]
+        print(f"  → Consultation date: {consult.get('date')}")
+        print(f"  → Consultation time: {consult.get('time')}")
+        print(f"  → Consultation status: {consult.get('status')}")
+        
+        assert consult["date"] == date_str, "Consultation date mismatch"
+        assert consult["time"] == time_str, "Consultation time mismatch"
+        assert consult["status"] == "scheduled", "Consultation status should be 'scheduled'"
+        print(f"  ✓ Consultation row created correctly")
+        
+        # Clean up
+        requests.delete(f"{BASE_URL}/admin/inquiries/{inquiry_id}", headers=runner.headers())
+        requests.delete(f"{BASE_URL}/admin/consultations/{consult['id']}", headers=runner.headers())
+        print(f"  ✓ Cleaned up test data")
 
-    # =========================================================
-    # WHITE-LABEL PURGE: Bug Fix Tests
-    # =========================================================
+    def test_inquiry_without_consult():
+        """POST /api/inquiries without consult_date/time does NOT create consultation"""
+        payload = {
+            "client_name": "Test No Consult Client",
+            "client_email": "testnoconsult@example.com",
+            "client_phone": "(310) 555-8888",
+            "event_type": "birthday"
+        }
+        
+        print(f"  → Creating inquiry WITHOUT consult")
+        r = requests.post(f"{BASE_URL}/inquiries", json=payload)
+        print(f"  → Status: {r.status_code}")
+        print(f"  → Response: {r.json()}")
+        
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data["ok"] == True, "ok should be True"
+        assert data["consult_scheduled"] == False, "consult_scheduled should be False"
+        
+        inquiry_id = data["id"]
+        print(f"  ✓ Inquiry created: {inquiry_id}")
+        
+        # Verify no consultation row
+        runner.login()
+        r2 = requests.get(f"{BASE_URL}/admin/consultations", headers=runner.headers())
+        consultations = r2.json()
+        matching = [c for c in consultations if c.get("inquiry_id") == inquiry_id]
+        print(f"  → Found {len(matching)} consultations for inquiry {inquiry_id}")
+        assert len(matching) == 0, f"Expected 0 consultations, found {len(matching)}"
+        print(f"  ✓ No consultation row created")
+        
+        # Clean up
+        requests.delete(f"{BASE_URL}/admin/inquiries/{inquiry_id}", headers=runner.headers())
+        print(f"  ✓ Cleaned up test data")
 
-    def test_site_content_no_emergent_urls():
-        """GET /api/site-content should have NO emergent URLs in image fields"""
-        r = requests.get(f"{BASE_URL}/site-content")
+    def test_availability_rules():
+        """GET /api/availability returns new booking rule fields"""
+        r = requests.get(f"{BASE_URL}/availability")
         print(f"  → Status: {r.status_code}")
         assert r.status_code == 200, f"Expected 200, got {r.status_code}"
         
         data = r.json()
-        image_fields = ["logo_url", "hero_image_url", "about_image_url", 
-                       "coming_soon_bg_url", "og_image_url", "favicon_url"]
+        print(f"  → Response keys: {list(data.keys())}")
         
-        emergent_hosts = ["emergentagent.net", "emergentagent.com", "customer-assets"]
+        required_fields = [
+            "advance_booking_days",
+            "minimum_lead_hours",
+            "daily_max_consults",
+            "consult_duration_minutes",
+            "block_sundays"
+        ]
         
-        for field in image_fields:
-            value = data.get(field, "")
-            print(f"  → {field}: {value[:80] if value else '(empty)'}")
-            if value:
-                for host in emergent_hosts:
-                    assert host not in value, f"Field {field} contains emergent host '{host}': {value}"
+        for field in required_fields:
+            assert field in data, f"Missing field: {field}"
+            print(f"  → {field}: {data[field]}")
         
-        print(f"  ✓ All image fields clean (no emergent URLs)")
+        # Check defaults
+        assert data["advance_booking_days"] == 60, "Default advance_booking_days should be 60"
+        assert data["minimum_lead_hours"] == 2, "Default minimum_lead_hours should be 2"
+        assert data["daily_max_consults"] == 6, "Default daily_max_consults should be 6"
+        assert data["consult_duration_minutes"] == 30, "Default consult_duration_minutes should be 30"
+        assert data["block_sundays"] == True, "Default block_sundays should be True"
+        
+        print(f"  ✓ All booking rule fields present with correct defaults")
 
-    def test_public_html_no_emergent_urls():
-        """Public site HTML should NOT contain emergent URLs"""
-        # Get the frontend URL from backend URL
-        frontend_url = BASE_URL.replace("/api", "")
-        print(f"  → Fetching public HTML from: {frontend_url}")
+    def test_availability_rules_update():
+        """PUT /api/admin/availability persists booking rule changes"""
+        runner.login()
         
-        r = requests.get(frontend_url)
+        # Update rules
+        payload = {
+            "advance_booking_days": 90,
+            "minimum_lead_hours": 12,
+            "daily_max_consults": 4,
+            "consult_duration_minutes": 45,
+            "block_sundays": False
+        }
+        
+        print(f"  → Updating availability rules")
+        r = requests.put(f"{BASE_URL}/admin/availability", json=payload, headers=runner.headers())
         print(f"  → Status: {r.status_code}")
         assert r.status_code == 200, f"Expected 200, got {r.status_code}"
         
-        html = r.text
-        emergent_patterns = ["emergentagent.net", "emergentagent.com", "customer-assets"]
+        # Verify changes persisted
+        r2 = requests.get(f"{BASE_URL}/availability")
+        data = r2.json()
         
-        for pattern in emergent_patterns:
-            if pattern in html:
-                # Find context around the match
-                idx = html.find(pattern)
-                context = html[max(0, idx-100):min(len(html), idx+100)]
-                print(f"  ❌ Found '{pattern}' in HTML at position {idx}")
-                print(f"  Context: ...{context}...")
-                assert False, f"Public HTML contains emergent pattern '{pattern}'"
+        assert data["advance_booking_days"] == 90, "advance_booking_days not updated"
+        assert data["minimum_lead_hours"] == 12, "minimum_lead_hours not updated"
+        assert data["daily_max_consults"] == 4, "daily_max_consults not updated"
+        assert data["consult_duration_minutes"] == 45, "consult_duration_minutes not updated"
+        assert data["block_sundays"] == False, "block_sundays not updated"
         
-        print(f"  ✓ Public HTML clean (no emergent URLs)")
+        print(f"  ✓ Booking rules updated successfully")
+        
+        # Reset to defaults
+        reset_payload = {
+            "advance_booking_days": 60,
+            "minimum_lead_hours": 2,
+            "daily_max_consults": 6,
+            "consult_duration_minutes": 30,
+            "block_sundays": True
+        }
+        requests.put(f"{BASE_URL}/admin/availability", json=reset_payload, headers=runner.headers())
+        print(f"  ✓ Reset to defaults")
 
-    def test_migration_robustness():
-        """Inject fake emergent URL, restart backend, verify it's cleared"""
-        runner.login()
+    def test_availability_slots_block_sundays():
+        """GET /api/availability/slots?date=YYYY-MM-DD (Sunday) returns empty when block_sundays=true"""
+        # Find next Sunday
+        today = date.today()
+        days_ahead = 6 - today.weekday()  # Sunday is 6
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_sunday = today + timedelta(days=days_ahead)
+        date_str = next_sunday.strftime("%Y-%m-%d")
         
-        # Step 1: Inject fake emergent URL
-        fake_url = "https://customer-assets-test.emergentagent.net/fake.png"
-        print(f"  → Injecting fake emergent URL: {fake_url}")
-        
-        r = requests.put(
-            f"{BASE_URL}/admin/site-content",
-            json={"logo_url": fake_url},
-            headers=runner.headers()
-        )
-        print(f"  → PUT status: {r.status_code}")
+        print(f"  → Testing Sunday blocking: {date_str}")
+        r = requests.get(f"{BASE_URL}/availability/slots", params={"date": date_str})
+        print(f"  → Status: {r.status_code}")
         assert r.status_code == 200, f"Expected 200, got {r.status_code}"
         
-        # Verify it was set
-        r2 = requests.get(f"{BASE_URL}/site-content")
-        data = r2.json()
-        print(f"  → logo_url after injection: {data.get('logo_url')}")
-        assert data.get("logo_url") == fake_url, "Fake URL should be set"
-        print(f"  ✓ Fake emergent URL injected")
-        
-        # Step 2: Restart backend to trigger migration
-        print(f"  → Restarting backend to trigger white-label purge migration...")
-        import subprocess
-        result = subprocess.run(
-            ["sudo", "supervisorctl", "restart", "backend"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        print(f"  → Restart output: {result.stdout}")
-        if result.stderr:
-            print(f"  → Restart stderr: {result.stderr}")
-        
-        # Wait for backend to come back up
-        print(f"  → Waiting 4 seconds for backend to restart...")
-        time.sleep(4)
-        
-        # Step 3: Verify logo_url is cleared
-        print(f"  → Checking if logo_url was purged...")
-        r3 = requests.get(f"{BASE_URL}/site-content")
-        print(f"  → GET status: {r3.status_code}")
-        assert r3.status_code == 200, f"Backend should be up, got {r3.status_code}"
-        
-        data = r3.json()
-        logo_url = data.get("logo_url", "")
-        print(f"  → logo_url after restart: '{logo_url}'")
-        
-        assert logo_url == "", f"logo_url should be empty after purge, got: {logo_url}"
-        print(f"  ✓ White-label purge migration cleared emergent URL")
+        data = r.json()
+        print(f"  → Slots: {data.get('slots')}")
+        assert data["slots"] == [], f"Expected empty slots for Sunday, got {data['slots']}"
+        print(f"  ✓ Sunday correctly blocked")
 
+    def test_availability_slots_past_date():
+        """GET /api/availability/slots?date=YYYY-MM-DD (past) returns empty"""
+        past_date = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        print(f"  → Testing past date: {past_date}")
+        r = requests.get(f"{BASE_URL}/availability/slots", params={"date": past_date})
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        data = r.json()
+        print(f"  → Slots: {data.get('slots')}")
+        assert data["slots"] == [], f"Expected empty slots for past date, got {data['slots']}"
+        print(f"  ✓ Past date correctly blocked")
+
+    def test_availability_slots_too_far():
+        """GET /api/availability/slots?date=YYYY-MM-DD (> advance_booking_days) returns empty"""
+        far_date = (date.today() + timedelta(days=100)).strftime("%Y-%m-%d")
+        
+        print(f"  → Testing date too far out: {far_date}")
+        r = requests.get(f"{BASE_URL}/availability/slots", params={"date": far_date})
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        data = r.json()
+        print(f"  → Slots: {data.get('slots')}")
+        assert data["slots"] == [], f"Expected empty slots for date too far out, got {data['slots']}"
+        print(f"  ✓ Date beyond advance_booking_days correctly blocked")
+
+    # =========================================================
+    # FEATURE J: Media Library
+    # =========================================================
+    
+    def test_media_upload():
+        """POST /api/uploads creates media_library record"""
+        # Create a small test image (1x1 PNG)
+        import base64
+        # 1x1 red PNG
+        png_data = base64.b64decode(
+            b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+        )
+        
+        files = {'file': ('test.png', io.BytesIO(png_data), 'image/png')}
+        
+        print(f"  → Uploading test image")
+        r = requests.post(f"{BASE_URL}/uploads", files=files)
+        print(f"  → Status: {r.status_code}")
+        print(f"  → Response: {r.json()}")
+        
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert "url" in data, "Should return url"
+        assert "filename" in data, "Should return filename"
+        assert "width" in data, "Should return width"
+        assert "height" in data, "Should return height"
+        
+        url = data["url"]
+        print(f"  ✓ Image uploaded: {url}")
+        
+        # Verify it's in media library
+        runner.login()
+        r2 = requests.get(f"{BASE_URL}/admin/media", headers=runner.headers())
+        assert r2.status_code == 200, f"Failed to get media: {r2.status_code}"
+        
+        media = r2.json()
+        matching = [m for m in media if m["url"] == url]
+        print(f"  → Found {len(matching)} media records for {url}")
+        assert len(matching) == 1, f"Expected 1 media record, found {len(matching)}"
+        
+        media_id = matching[0]["id"]
+        print(f"  ✓ Media library record created: {media_id}")
+        
+        # Clean up
+        requests.delete(f"{BASE_URL}/admin/media/{media_id}", headers=runner.headers())
+        print(f"  ✓ Cleaned up test media")
+
+    def test_media_crud():
+        """GET/PATCH/DELETE /api/admin/media work correctly"""
+        runner.login()
+        
+        # Upload test image first
+        import base64
+        png_data = base64.b64decode(
+            b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+        )
+        files = {'file': ('test-crud.png', io.BytesIO(png_data), 'image/png')}
+        r = requests.post(f"{BASE_URL}/uploads", files=files)
+        url = r.json()["url"]
+        
+        # Get media list
+        r2 = requests.get(f"{BASE_URL}/admin/media", headers=runner.headers())
+        media = r2.json()
+        matching = [m for m in media if m["url"] == url]
+        media_id = matching[0]["id"]
+        
+        print(f"  → Testing PATCH /api/admin/media/{media_id}")
+        # Update alt_text and tags
+        patch = {"alt_text": "Test alt text", "tags": ["test", "crud"]}
+        r3 = requests.patch(f"{BASE_URL}/admin/media/{media_id}", json=patch, headers=runner.headers())
+        print(f"  → PATCH status: {r3.status_code}")
+        assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
+        
+        updated = r3.json()
+        print(f"  → Updated alt_text: {updated.get('alt_text')}")
+        print(f"  → Updated tags: {updated.get('tags')}")
+        assert updated["alt_text"] == "Test alt text", "alt_text not updated"
+        assert updated["tags"] == ["test", "crud"], "tags not updated"
+        print(f"  ✓ PATCH works")
+        
+        # Test DELETE
+        print(f"  → Testing DELETE /api/admin/media/{media_id}")
+        r4 = requests.delete(f"{BASE_URL}/admin/media/{media_id}", headers=runner.headers())
+        print(f"  → DELETE status: {r4.status_code}")
+        assert r4.status_code == 200, f"Expected 200, got {r4.status_code}"
+        
+        # Verify deleted
+        r5 = requests.get(f"{BASE_URL}/admin/media", headers=runner.headers())
+        media = r5.json()
+        matching = [m for m in media if m["id"] == media_id]
+        assert len(matching) == 0, "Media should be deleted"
+        print(f"  ✓ DELETE works")
+
+    def test_media_search():
+        """GET /api/admin/media?q=... filters by filename/alt_text"""
+        runner.login()
+        
+        # Upload test image with specific filename
+        import base64
+        png_data = base64.b64decode(
+            b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+        )
+        files = {'file': ('searchable-test-image.png', io.BytesIO(png_data), 'image/png')}
+        r = requests.post(f"{BASE_URL}/uploads", files=files)
+        url = r.json()["url"]
+        
+        # Get media ID
+        r2 = requests.get(f"{BASE_URL}/admin/media", headers=runner.headers())
+        media = r2.json()
+        matching = [m for m in media if m["url"] == url]
+        media_id = matching[0]["id"]
+        
+        # Search by filename
+        print(f"  → Searching for 'searchable'")
+        r3 = requests.get(f"{BASE_URL}/admin/media", params={"q": "searchable"}, headers=runner.headers())
+        print(f"  → Status: {r3.status_code}")
+        assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
+        
+        results = r3.json()
+        print(f"  → Found {len(results)} results")
+        assert len(results) >= 1, "Should find at least 1 result"
+        assert any(m["id"] == media_id for m in results), "Should find our test image"
+        print(f"  ✓ Search by filename works")
+        
+        # Clean up
+        requests.delete(f"{BASE_URL}/admin/media/{media_id}", headers=runner.headers())
+        print(f"  ✓ Cleaned up test media")
+
+    def test_media_tag_filter():
+        """GET /api/admin/media?tag=... filters by tag"""
+        runner.login()
+        
+        # Upload and tag an image
+        import base64
+        png_data = base64.b64decode(
+            b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+        )
+        files = {'file': ('tagged-test.png', io.BytesIO(png_data), 'image/png')}
+        r = requests.post(f"{BASE_URL}/uploads", files=files)
+        url = r.json()["url"]
+        
+        # Get media ID and add tag
+        r2 = requests.get(f"{BASE_URL}/admin/media", headers=runner.headers())
+        media = r2.json()
+        matching = [m for m in media if m["url"] == url]
+        media_id = matching[0]["id"]
+        
+        # Add unique tag
+        unique_tag = f"test-tag-{int(time.time())}"
+        patch = {"tags": [unique_tag]}
+        requests.patch(f"{BASE_URL}/admin/media/{media_id}", json=patch, headers=runner.headers())
+        
+        # Filter by tag
+        print(f"  → Filtering by tag: {unique_tag}")
+        r3 = requests.get(f"{BASE_URL}/admin/media", params={"tag": unique_tag}, headers=runner.headers())
+        print(f"  → Status: {r3.status_code}")
+        assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
+        
+        results = r3.json()
+        print(f"  → Found {len(results)} results")
+        assert len(results) == 1, f"Should find exactly 1 result, found {len(results)}"
+        assert results[0]["id"] == media_id, "Should find our test image"
+        print(f"  ✓ Tag filter works")
+        
+        # Clean up
+        requests.delete(f"{BASE_URL}/admin/media/{media_id}", headers=runner.headers())
+        print(f"  ✓ Cleaned up test media")
+
+    # =========================================================
+    # NO REGRESSIONS
+    # =========================================================
+    
     def test_no_regressions():
         """Verify previously working endpoints still function"""
         runner.login()
@@ -482,66 +509,68 @@ def main():
         assert r1.status_code == 200, f"Expected 200, got {r1.status_code}"
         palettes = r1.json()
         assert "palettes" in palettes, "Should have palettes key"
-        print(f"  ✓ /api/palettes working ({len(palettes['palettes'])} palettes)")
+        palette_count = len(palettes['palettes'])
+        print(f"  ✓ /api/palettes working ({palette_count} palettes)")
+        assert palette_count >= 22, f"Expected at least 22 palettes, got {palette_count}"
+        
+        # Test /api/site-content
+        r2 = requests.get(f"{BASE_URL}/site-content")
+        print(f"  → GET /api/site-content: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        site = r2.json()
+        required_fields = ["business_name", "hero_headline", "active_palette_id", 
+                          "font_serif_id", "hero_badges"]
+        for field in required_fields:
+            assert field in site, f"Missing field: {field}"
+        print(f"  ✓ /api/site-content working")
         
         # Test /api/inquiry-form
-        r2 = requests.get(f"{BASE_URL}/inquiry-form")
-        print(f"  → GET /api/inquiry-form: {r2.status_code}")
-        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
-        form = r2.json()
-        assert "steps" in form, "Should have steps key"
-        print(f"  ✓ /api/inquiry-form working ({len(form['steps'])} steps)")
-        
-        # Test /api/auth/login (already tested, but verify again)
-        r3 = requests.post(f"{BASE_URL}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
-        print(f"  → POST /api/auth/login: {r3.status_code}")
+        r3 = requests.get(f"{BASE_URL}/inquiry-form")
+        print(f"  → GET /api/inquiry-form: {r3.status_code}")
         assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
-        print(f"  ✓ /api/auth/login working")
+        form = r3.json()
+        assert "steps" in form, "Should have steps key"
+        assert len(form["steps"]) == 8, f"Expected 8 steps, got {len(form['steps'])}"
+        print(f"  ✓ /api/inquiry-form working (8 steps)")
         
-        # Test /api/services
-        r4 = requests.get(f"{BASE_URL}/services")
-        print(f"  → GET /api/services: {r4.status_code}")
+        # Test login
+        r4 = requests.post(f"{BASE_URL}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        print(f"  → POST /api/auth/login: {r4.status_code}")
         assert r4.status_code == 200, f"Expected 200, got {r4.status_code}"
-        services = r4.json()
-        assert isinstance(services, list), "Should return a list"
-        print(f"  ✓ /api/services working ({len(services)} services)")
-        
-        # Test /api/site-content (verify schema intact)
-        r5 = requests.get(f"{BASE_URL}/site-content")
-        print(f"  → GET /api/site-content: {r5.status_code}")
-        assert r5.status_code == 200, f"Expected 200, got {r5.status_code}"
-        site = r5.json()
-        required_fields = ["business_name", "tagline", "hero_headline", "hero_badges", 
-                          "active_palette_id", "inquiry_form_schema", "font_serif_id"]
-        for field in required_fields:
-            assert field in site, f"Missing required field: {field}"
-        print(f"  ✓ /api/site-content schema intact")
+        print(f"  ✓ /api/auth/login working")
 
     # =========================================================
     # Run all tests
     # =========================================================
     
-    # Original tests
-    runner.test("Change credentials without JWT returns 401", test_change_credentials_no_jwt)
-    runner.test("Change credentials with wrong password returns 401", test_change_credentials_wrong_password)
-    runner.test("Change credentials updates name", test_change_credentials_update_name)
-    runner.test("Change credentials rejects short password", test_change_credentials_short_password)
-    runner.test("Change credentials with valid password works", test_change_credentials_valid_password)
-    runner.test("Change credentials with same email", test_change_credentials_duplicate_email)
+    print("\n" + "="*60)
+    print("FEATURE H: Google Calendar Polish")
+    print("="*60)
+    runner.test("Google Calendar status returns env_configured field", test_gcal_status_env_configured)
     
-    runner.test("GET inquiry form returns default 8-step template", test_inquiry_form_get_default)
-    runner.test("PUT inquiry form persists changes", test_inquiry_form_update)
-    runner.test("PUT inquiry form rejects invalid payload", test_inquiry_form_invalid_payload)
-    runner.test("PUT inquiry form drops fields with missing type/id", test_inquiry_form_missing_field_attrs)
-    runner.test("POST inquiry form reset restores default", test_inquiry_form_reset)
+    print("\n" + "="*60)
+    print("FEATURE I: Consults Merged into Inquiries")
+    print("="*60)
+    runner.test("Inquiry with consult creates inquiry + consultation", test_inquiry_with_consult)
+    runner.test("Inquiry without consult does NOT create consultation", test_inquiry_without_consult)
+    runner.test("Availability returns new booking rule fields", test_availability_rules)
+    runner.test("Availability rules can be updated", test_availability_rules_update)
+    runner.test("Availability slots blocks Sundays when block_sundays=true", test_availability_slots_block_sundays)
+    runner.test("Availability slots blocks past dates", test_availability_slots_past_date)
+    runner.test("Availability slots blocks dates beyond advance_booking_days", test_availability_slots_too_far)
     
-    runner.test("POST inquiry with custom fields persists correctly", test_inquiry_with_custom_fields)
+    print("\n" + "="*60)
+    print("FEATURE J: Media Library")
+    print("="*60)
+    runner.test("Upload creates media_library record", test_media_upload)
+    runner.test("Media CRUD operations work", test_media_crud)
+    runner.test("Media search by filename/alt_text works", test_media_search)
+    runner.test("Media tag filter works", test_media_tag_filter)
     
-    # White-label purge tests
-    runner.test("Site content has NO emergent URLs", test_site_content_no_emergent_urls)
-    runner.test("Public HTML has NO emergent URLs", test_public_html_no_emergent_urls)
-    runner.test("Migration robustness: inject + restart + verify purge", test_migration_robustness)
-    runner.test("No regressions in other endpoints", test_no_regressions)
+    print("\n" + "="*60)
+    print("NO REGRESSIONS")
+    print("="*60)
+    runner.test("No regressions in core endpoints", test_no_regressions)
     
     return runner.summary()
 

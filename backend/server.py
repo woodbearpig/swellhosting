@@ -22,7 +22,7 @@ from models import (
     CustomPalette,
 )
 from auth import hash_password, verify_password, create_token, require_admin
-from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html
+from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html, make_ics, owner_new_inquiry_html
 from crypto_utils import encrypt, decrypt
 import google_calendar as gcal
 import instagram_service as ig
@@ -171,6 +171,14 @@ async def _startup():
                 )
                 logger.info("White-label purge: cleared emergent CDN URLs from %s", list(purge_updates.keys()))
 
+        # Media library one-time migration
+        try:
+            n = await _migrate_media_library()
+            if n:
+                logger.info("Media library: indexed %d existing images", n)
+        except Exception as e:
+            logger.warning("Media library migration failed: %s", e)
+
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
             logger.info("Seeded availability at startup")
@@ -254,18 +262,88 @@ async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admi
 
 
 # =========================================================
-# Uploads
+# Uploads + Media Library
 # =========================================================
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic"}
+MAX_IMAGE_WIDTH = 2400  # auto-resize wider images to this on upload
+
+
+def _process_image(src_path: Path, dest_path: Path) -> Dict[str, Any]:
+    """Compress + resize an uploaded image. Returns {width, height, size}."""
+    from PIL import Image
+    try:
+        img = Image.open(src_path)
+        # Preserve transparency for PNGs; convert others to RGB
+        if img.mode in ("P", "RGBA") and dest_path.suffix.lower() in {".png", ".webp"}:
+            pass
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        # Resize if wider than MAX
+        if img.width > MAX_IMAGE_WIDTH:
+            new_h = int(img.height * (MAX_IMAGE_WIDTH / img.width))
+            img = img.resize((MAX_IMAGE_WIDTH, new_h), Image.LANCZOS)
+        # Save with sensible defaults
+        save_kwargs = {}
+        ext = dest_path.suffix.lower()
+        if ext in {".jpg", ".jpeg"}:
+            save_kwargs = {"quality": 82, "optimize": True, "progressive": True}
+        elif ext == ".webp":
+            save_kwargs = {"quality": 82, "method": 6}
+        elif ext == ".png":
+            save_kwargs = {"optimize": True}
+        img.save(dest_path, **save_kwargs)
+        return {"width": img.width, "height": img.height, "size_bytes": dest_path.stat().st_size}
+    except Exception as e:
+        logger.warning("Image processing failed for %s: %s", src_path, e)
+        # Fall back to raw copy
+        if src_path.resolve() != dest_path.resolve():
+            shutil.copy(src_path, dest_path)
+        return {"width": 0, "height": 0, "size_bytes": dest_path.stat().st_size}
+
+
 @api.post("/uploads")
 async def upload_file(file: UploadFile = File(...)):
     ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".pdf"}:
+    if ext not in IMAGE_EXTS and ext != ".pdf":
         raise HTTPException(status_code=400, detail="Unsupported file type")
     name = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOAD_DIR / name
-    with dest.open("wb") as f:
+
+    # Save raw first
+    tmp_path = UPLOAD_DIR / f".tmp_{name}"
+    with tmp_path.open("wb") as f:
         shutil.copyfileobj(file.file, f)
-    return {"url": f"/api/uploads/{name}", "filename": name}
+
+    meta = {"width": 0, "height": 0, "size_bytes": tmp_path.stat().st_size}
+    if ext in IMAGE_EXTS:
+        meta = _process_image(tmp_path, dest)
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+    else:
+        tmp_path.rename(dest)
+
+    url = f"/api/uploads/{name}"
+
+    # Index in media library
+    try:
+        asset = {
+            "id": uuid.uuid4().hex,
+            "url": url,
+            "filename": file.filename or name,
+            "alt_text": "",
+            "tags": [],
+            "width": meta.get("width", 0),
+            "height": meta.get("height", 0),
+            "size_bytes": meta.get("size_bytes", 0),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.media_library.insert_one(asset)
+    except Exception as e:
+        logger.warning("Media library indexing failed: %s", e)
+
+    return {"url": url, "filename": name, "width": meta.get("width", 0), "height": meta.get("height", 0)}
 
 
 @api.get("/uploads/{name}")
@@ -274,6 +352,102 @@ async def get_upload(name: str):
     if not dest.exists() or not dest.is_file():
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(str(dest))
+
+
+# ---- Media Library CRUD ----
+@api.get("/admin/media")
+async def list_media(q: str = "", tag: str = "", admin=Depends(require_admin)):
+    query: Dict[str, Any] = {}
+    if q:
+        query["$or"] = [
+            {"filename": {"$regex": q, "$options": "i"}},
+            {"alt_text": {"$regex": q, "$options": "i"}},
+        ]
+    if tag:
+        query["tags"] = tag
+    docs = await db.media_library.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return docs
+
+
+@api.patch("/admin/media/{mid}")
+async def update_media(mid: str, payload: Dict[str, Any], admin=Depends(require_admin)):
+    updates: Dict[str, Any] = {}
+    if "alt_text" in payload:
+        updates["alt_text"] = str(payload["alt_text"])[:500]
+    if "tags" in payload:
+        tags = payload["tags"]
+        if isinstance(tags, list):
+            updates["tags"] = [str(t).strip().lower() for t in tags if str(t).strip()]
+    if "filename" in payload:
+        updates["filename"] = str(payload["filename"])[:200]
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+    await db.media_library.update_one({"id": mid}, {"$set": updates})
+    doc = await db.media_library.find_one({"id": mid}, {"_id": 0})
+    return doc
+
+
+@api.delete("/admin/media/{mid}")
+async def delete_media(mid: str, admin=Depends(require_admin)):
+    doc = await db.media_library.find_one({"id": mid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+    # Best-effort delete underlying file
+    try:
+        name = doc["url"].split("/")[-1]
+        (UPLOAD_DIR / name).unlink(missing_ok=True)
+    except Exception:
+        pass
+    await db.media_library.delete_one({"id": mid})
+    return {"ok": True}
+
+
+async def _migrate_media_library() -> int:
+    """One-time index of pre-existing images (SiteContent, Services, Gallery, Blog) into media_library.
+    Idempotent — only inserts records for URLs not already indexed.
+    """
+    indexed_urls = set()
+    async for doc in db.media_library.find({}, {"_id": 0, "url": 1}):
+        indexed_urls.add(doc.get("url", ""))
+
+    to_index: List[Dict[str, Any]] = []
+
+    def maybe_add(url: str, tag: str, filename: str = ""):
+        if not url or not isinstance(url, str):
+            return
+        if not url.startswith("/api/uploads/"):
+            return  # only track locally-hosted assets
+        if url in indexed_urls:
+            return
+        indexed_urls.add(url)
+        to_index.append({
+            "id": uuid.uuid4().hex,
+            "url": url,
+            "filename": filename or url.split("/")[-1],
+            "alt_text": "",
+            "tags": [tag],
+            "width": 0, "height": 0, "size_bytes": 0,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    sc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+    for f in ("logo_url", "hero_image_url", "about_image_url", "coming_soon_bg_url", "favicon_url", "og_image_url"):
+        maybe_add(sc.get(f, ""), tag=f.replace("_url", ""))
+
+    async for s in db.services.find({}, {"_id": 0}):
+        maybe_add(s.get("hero_image_url", ""), tag="service")
+        for u in (s.get("gallery_image_urls") or []):
+            maybe_add(u, tag="service")
+
+    async for g in db.gallery.find({}, {"_id": 0}):
+        maybe_add(g.get("image_url", ""), tag="gallery")
+
+    async for b in db.blog_posts.find({}, {"_id": 0}):
+        maybe_add(b.get("cover_image_url", ""), tag="blog")
+
+    if to_index:
+        await db.media_library.insert_many(to_index)
+    return len(to_index)
 
 
 # =========================================================
@@ -604,11 +778,21 @@ async def create_inquiry(payload: Dict[str, Any]):
     for k, v in payload.items():
         if k == "extra":
             continue
-        if k in STANDARD_FIELD_IDS or k in {"source", "status", "admin_notes", "tags"}:
+        if k in STANDARD_FIELD_IDS or k in {"source", "status", "admin_notes", "tags",
+                                             "consult_date", "consult_time",
+                                             "consult_duration_minutes", "consult_status"}:
             known[k] = v
         else:
             extra[k] = v
     known["extra"] = extra
+
+    # Detect a scheduled phone consult
+    has_consult = bool(known.get("consult_date") and known.get("consult_time"))
+    if has_consult:
+        av = await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}) or {}
+        known.setdefault("consult_duration_minutes", int(av.get("consult_duration_minutes", 30) or 30))
+        known["consult_status"] = "scheduled"
+        known["status"] = "consult_scheduled"
 
     obj = Inquiry(**known)
     doc = to_doc(obj.model_dump())
@@ -619,22 +803,114 @@ async def create_inquiry(payload: Dict[str, Any]):
     if client_id:
         await db.inquiries.update_one({"id": obj.id}, {"$set": {"client_id": client_id}})
 
-    # Send confirmation emails (best-effort)
+    # If a consult was booked, mirror to Consultation collection + GCal + .ics
+    gcal_event_id = ""
+    if has_consult:
+        # Create Consultation record for legacy tooling / calendar view
+        consult_doc = to_doc(Consultation(
+            client_name=obj.client_name,
+            client_email=obj.client_email,
+            client_phone=obj.client_phone,
+            date=obj.consult_date,
+            time=obj.consult_time,
+            duration_minutes=obj.consult_duration_minutes or 30,
+            consultation_type="phone",
+            notes=(obj.must_haves or "")[:500],
+            inquiry_id=obj.id,
+            client_id=client_id or "",
+            status="scheduled",
+        ).model_dump())
+        await db.consultations.insert_one(consult_doc)
+        if client_id:
+            await db.clients.update_one({"id": client_id}, {"$addToSet": {"consultation_ids": consult_doc["id"]}})
+
+        # Sync to Google Calendar (best-effort)
+        try:
+            start_dt = datetime.fromisoformat(f"{obj.consult_date}T{obj.consult_time}:00")
+            end_dt = start_dt + timedelta(minutes=obj.consult_duration_minutes or 30)
+            event = await gcal.create_event(
+                db,
+                summary=f"Phone consult with {obj.client_name}",
+                description=(
+                    f"Booked via swelldesignla.com\n"
+                    f"Client: {obj.client_name}\n"
+                    f"Phone: {obj.client_phone or '-'}\n"
+                    f"Email: {obj.client_email}\n"
+                    f"Event: {(obj.event_type or '').replace('_', ' ')}\n"
+                    f"Notes: {(obj.must_haves or obj.inspiration_notes or '-')[:1000]}"
+                ),
+                start_iso=start_dt.isoformat(),
+                end_iso=end_dt.isoformat(),
+                attendee_email=obj.client_email or None,
+            )
+            if event and event.get("id"):
+                gcal_event_id = event["id"]
+                await db.inquiries.update_one({"id": obj.id}, {"$set": {"consult_calendar_event_id": gcal_event_id}})
+                await db.consultations.update_one({"id": consult_doc["id"]}, {"$set": {"gcal_event_id": gcal_event_id}})
+        except Exception as e:
+            logger.warning("Google Calendar sync failed on inquiry consult: %s", e)
+
+    # Build .ics attachment if consult was booked
+    ics_content = None
+    if has_consult:
+        try:
+            start_dt = datetime.fromisoformat(f"{obj.consult_date}T{obj.consult_time}:00")
+            organizer = os.environ.get("BUSINESS_EMAIL", os.environ.get("SMTP_FROM", "hello@swelldesignla.com"))
+            ics_content = make_ics(
+                summary="Phone consultation — swell design + media",
+                description=(
+                    f"We'll call you at {obj.client_phone or 'the number you provided'} to chat about your "
+                    f"{(obj.event_type or 'event').replace('_', ' ')}."
+                ),
+                start_local=start_dt,
+                duration_minutes=obj.consult_duration_minutes or 30,
+                organizer_email=organizer,
+                attendee_email=obj.client_email or organizer,
+                location="Phone call",
+            )
+        except Exception as e:
+            logger.warning("Failed to generate .ics: %s", e)
+            ics_content = None
+
+    # Send client confirmation email
     if obj.client_email:
         send_email(
             to=obj.client_email,
             subject="We received your inquiry — swell design + media",
-            html=inquiry_confirmation_html(obj.client_name or "friend", obj.event_type or ""),
-        )
-    biz_email = os.environ.get("BUSINESS_EMAIL", "")
-    if biz_email:
-        send_email(
-            to=biz_email,
-            subject=f"New inquiry: {obj.event_type or 'event'} — {obj.client_name}",
-            html=f"<pre style='font-family: Menlo, monospace;'>{obj.model_dump_json(indent=2)}</pre>",
+            html=inquiry_confirmation_html(
+                obj.client_name or "friend",
+                obj.event_type or "",
+                obj.consult_date or "",
+                obj.consult_time or "",
+            ),
+            ics_content=ics_content,
+            ics_filename="phone-consultation.ics",
+            reply_to=os.environ.get("BUSINESS_EMAIL", None),
         )
 
-    return {"id": obj.id, "ok": True}
+    # Notify owner
+    biz_email = os.environ.get("BUSINESS_EMAIL", "")
+    if biz_email:
+        admin_url = os.environ.get("PUBLIC_FRONTEND_URL", "") + "/admin/inquiries" if os.environ.get("PUBLIC_FRONTEND_URL") else ""
+        subject = f"New inquiry: {obj.event_type or 'event'} — {obj.client_name}"
+        if has_consult:
+            subject += f" (📞 consult booked {obj.consult_date} {obj.consult_time})"
+        send_email(
+            to=biz_email,
+            subject=subject,
+            html=owner_new_inquiry_html(
+                obj.client_name or "New inquiry",
+                obj.client_email or "",
+                obj.client_phone or "",
+                obj.event_type or "",
+                obj.consult_date or "",
+                obj.consult_time or "",
+                admin_url,
+            ),
+            reply_to=obj.client_email or None,
+        )
+
+    return {"id": obj.id, "ok": True, "consult_scheduled": has_consult}
 
 
 @api.get("/admin/inquiries")
@@ -749,22 +1025,45 @@ async def get_available_slots(date_str: str = Query(..., alias="date"), consulta
         raise HTTPException(status_code=400, detail="Invalid date format, expected YYYY-MM-DD")
 
     av = await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}) or Availability().model_dump()
+    today = date.today()
 
+    # Rule: advance booking window
+    advance_days = int(av.get("advance_booking_days", 60) or 60)
+    if (d - today).days > advance_days:
+        return {"date": date_str, "slots": []}
+
+    # Rule: blackout dates
     if date_str in av.get("blackout_dates", []):
         return {"date": date_str, "slots": []}
 
-    if d < date.today():
+    # Rule: no past dates
+    if d < today:
+        return {"date": date_str, "slots": []}
+
+    # Rule: block Sundays if configured
+    if bool(av.get("block_sundays", True)) and d.weekday() == 6:
+        return {"date": date_str, "slots": []}
+
+    # Rule: daily max consults
+    daily_max = int(av.get("daily_max_consults", 6) or 6)
+    booked_today_count = await db.consultations.count_documents({"date": date_str, "status": {"$ne": "cancelled"}})
+    if booked_today_count >= daily_max:
         return {"date": date_str, "slots": []}
 
     ranges = av.get("weekly", {}).get(_day_key(d), [])
     slot_minutes = int(av.get("slot_minutes", 30))
     buffer_minutes = int(av.get("buffer_minutes", 15))
 
-    duration = slot_minutes
+    # Default duration prefers new booking rule, then per-type override
+    duration = int(av.get("consult_duration_minutes", slot_minutes) or slot_minutes)
     for ct in av.get("consultation_types", []):
         if ct.get("key") == consultation_type:
-            duration = int(ct.get("duration", slot_minutes))
+            duration = int(ct.get("duration", duration))
             break
+
+    # Rule: minimum lead hours from now
+    minimum_lead_hours = int(av.get("minimum_lead_hours", 2) or 0)
+    earliest_allowed = datetime.now() + timedelta(hours=minimum_lead_hours)
 
     # Existing bookings for the day
     existing = await db.consultations.find({"date": date_str, "status": {"$ne": "cancelled"}}, {"_id": 0}).to_list(500)
@@ -785,12 +1084,10 @@ async def get_available_slots(date_str: str = Query(..., alias="date"), consulta
             try:
                 s = datetime.fromisoformat(gb["start"].replace("Z", "+00:00"))
                 e = datetime.fromisoformat(gb["end"].replace("Z", "+00:00"))
-                # Convert to naive local for comparison (approximation OK for slot blocking)
                 if s.tzinfo:
                     s = s.astimezone().replace(tzinfo=None)
                 if e.tzinfo:
                     e = e.astimezone().replace(tzinfo=None)
-                # Only block if same date
                 if s.date() == d or e.date() == d:
                     booked.append((s, e))
             except Exception:
@@ -808,6 +1105,10 @@ async def get_available_slots(date_str: str = Query(..., alias="date"), consulta
         cur = rstart
         while cur + timedelta(minutes=duration) <= rend:
             slot_end = cur + timedelta(minutes=duration)
+            # Enforce minimum lead time
+            if cur < earliest_allowed:
+                cur += timedelta(minutes=slot_minutes)
+                continue
             overlap = any(not (slot_end + timedelta(minutes=buffer_minutes) <= bs or cur >= be + timedelta(minutes=buffer_minutes)) for bs, be in booked)
             if not overlap:
                 slots.append(cur.strftime("%H:%M"))
@@ -951,14 +1252,18 @@ async def admin_stats(admin=Depends(require_admin)):
 async def gcal_status(admin=Depends(require_admin)):
     doc = await db.integrations.find_one({"id": "google_calendar"}, {"_id": 0}) or {}
     connected = bool(doc.get("refresh_token_enc"))
+    env_client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    env_client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
     return {
         "connected": connected,
         "email": doc.get("email", ""),
         "name": doc.get("name", ""),
         "client_id": doc.get("client_id", ""),
         "has_client_secret": bool(doc.get("client_secret_enc")),
+        "env_configured": bool(env_client_id and env_client_secret),
         "connected_at": doc.get("connected_at"),
         "updated_at": doc.get("updated_at"),
+        "last_error": doc.get("last_error", ""),
     }
 
 

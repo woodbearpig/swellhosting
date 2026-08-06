@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X, Sparkles, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X, Sparkles, Plus, Phone, PhoneOff, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, uploadFile, publicUrl } from '@/lib/api';
+import { ConsultScheduler } from '@/components/ConsultScheduler';
 
 const STORAGE_KEY = 'swell_inquiry_draft_v2';
 
@@ -186,14 +187,28 @@ const InquiryWizardPage = () => {
   const [stepIdx, setStepIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  // Consult step state — a "virtual" step appended after the schema's own steps
+  const [consultChoice, setConsultChoice] = useState(null); // null | 'schedule' | 'skip'
+  const [consultDT, setConsultDT] = useState({ date: '', time: '' });
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   // Load schema
   useEffect(() => {
     api.get('/inquiry-form').then(r => {
-      setSchema(r.data);
+      // Add PHONE-REQUIRED enforcement: force client_phone.required to true when found in schema
+      const enforcedSchema = JSON.parse(JSON.stringify(r.data));
+      for (const step of (enforcedSchema.steps || [])) {
+        for (const f of (step.fields || [])) {
+          if (f.id === 'client_phone') {
+            f.required = true;
+            f.label = f.label?.replace(/\s*\(optional\)/i, '') || 'Phone';
+          }
+        }
+      }
+      setSchema(enforcedSchema);
       // Initialize values with defaults for each field
       const initial = {};
-      for (const step of (r.data.steps || [])) {
+      for (const step of (enforcedSchema.steps || [])) {
         for (const f of (step.fields || [])) {
           initial[f.id] = initialValueFor(f);
         }
@@ -215,8 +230,10 @@ const InquiryWizardPage = () => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(values)); } catch (_) {}
   }, [values, schema, isPreview]);
 
-  const step = schema?.steps?.[stepIdx];
-  const totalSteps = schema?.steps?.length || 0;
+  const schemaSteps = schema?.steps || [];
+  const totalSteps = schemaSteps.length + 1; // +1 for consult step
+  const isConsultStep = stepIdx === totalSteps - 1;
+  const step = isConsultStep ? null : schemaSteps[stepIdx];
   const progress = totalSteps ? Math.round(((stepIdx + 1) / totalSteps) * 100) : 0;
 
   const setValue = (fieldId, v) => setValues(prev => ({ ...prev, [fieldId]: v }));
@@ -235,29 +252,50 @@ const InquiryWizardPage = () => {
   };
   const prev = () => setStepIdx(i => Math.max(0, i - 1));
 
-  const submit = async () => {
+  const doSubmit = async (skipConsult = false) => {
     if (isPreview) {
       toast.info("Preview mode — submissions aren't saved.");
       setDone(true);
       return;
     }
-    if (missing.length > 0) {
-      toast.error(`Please fill in: ${missing.map(m => m.label).join(', ')}`);
-      return;
-    }
     setSubmitting(true);
     try {
-      await api.post('/inquiries', { ...values, source: 'wizard' });
+      const payload = { ...values, source: 'wizard' };
+      if (!skipConsult && consultChoice === 'schedule' && consultDT.date && consultDT.time) {
+        payload.consult_date = consultDT.date;
+        payload.consult_time = consultDT.time;
+      }
+      await api.post('/inquiries', payload);
       localStorage.removeItem(STORAGE_KEY);
       setDone(true);
     } catch (e) {
       toast.error('Something went wrong. Please try again.');
-    } finally { setSubmitting(false); }
+    } finally { setSubmitting(false); setShowSkipConfirm(false); }
+  };
+
+  const attemptSubmit = () => {
+    if (consultChoice === 'schedule') {
+      if (!consultDT.date || !consultDT.time) {
+        toast.error('Please pick a date and time — or choose "Submit without phone consultation".');
+        return;
+      }
+      doSubmit(false);
+    } else if (consultChoice === 'skip') {
+      setShowSkipConfirm(true);
+    } else {
+      toast.error('Please choose whether to schedule a phone consultation or submit without one.');
+    }
   };
 
   if (!schema) return <div className="container-narrow py-20"><p>Loading…</p></div>;
 
   if (done) {
+    const hasConsult = consultChoice === 'schedule' && consultDT.date && consultDT.time;
+    const consultDateStr = hasConsult
+      ? new Date(consultDT.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+      : '';
+    const [h, m] = hasConsult ? consultDT.time.split(':').map(Number) : [0, 0];
+    const consultTimeStr = hasConsult ? `${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` : '';
     return (
       <div className="container-narrow py-20 sm:py-28" data-testid="inquiry-success">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card-cream p-8 sm:p-12 text-center">
@@ -266,11 +304,18 @@ const InquiryWizardPage = () => {
           <p className="text-[color:var(--brand-text-muted)] mt-3 max-w-lg mx-auto">
             {isPreview
               ? "This is how visitors will see the confirmation screen once they submit."
-              : "We received your inquiry and will be in touch within 1–2 business days. Meanwhile, feel free to browse the gallery."}
+              : "We received your inquiry and will be in touch within 1–2 business days."}
           </p>
+          {hasConsult && !isPreview && (
+            <div className="mt-6 mx-auto max-w-md rounded-2xl bg-[color:var(--brand-sage-tint)] p-5" data-testid="inquiry-success-consult-details">
+              <p className="font-medium">📞 Your call is scheduled</p>
+              <p className="text-[color:var(--brand-text-muted)] mt-1">{consultDateStr} at <strong>{consultTimeStr}</strong></p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">You'll get a confirmation email with a calendar invite.</p>
+            </div>
+          )}
           <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
             <button className="btn-primary" onClick={() => navigate('/gallery')}>Browse the gallery</button>
-            <button className="btn-secondary" onClick={() => { setDone(false); setStepIdx(0); }}>{isPreview ? 'Restart preview' : 'Start another inquiry'}</button>
+            <button className="btn-secondary" onClick={() => { setDone(false); setStepIdx(0); setConsultChoice(null); setConsultDT({ date: '', time: '' }); }}>{isPreview ? 'Restart preview' : 'Start another inquiry'}</button>
           </div>
         </motion.div>
       </div>
@@ -298,40 +343,92 @@ const InquiryWizardPage = () => {
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={step.id}
+          key={isConsultStep ? '__consult__' : step.id}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.25 }}
           className="card-cream p-6 sm:p-10"
         >
-          <div>
-            <h1 className="font-serif text-2xl sm:text-3xl leading-tight">{step.title}</h1>
-            {step.description && <p className="text-[color:var(--brand-text-muted)] mt-2">{step.description}</p>}
-          </div>
-
-          <div className="mt-6 space-y-6">
-            {(step.fields || []).map(field => (
-              <div key={field.id} data-testid={`field-wrap-${field.id}`}>
-                {field.type === 'section_note' ? (
-                  <div className="rounded-xl bg-[color:var(--brand-sage-tint)]/50 p-4">
-                    {field.label && <p className="font-serif text-lg mb-1">{field.label}</p>}
-                    {field.help && <p className="text-sm text-[color:var(--brand-text-muted)]">{field.help}</p>}
-                  </div>
-                ) : (
-                  <>
-                    <label className="eyebrow block mb-2">
-                      {field.label}{field.required && <span className="text-[color:var(--brand-coral)] ml-1">*</span>}
-                    </label>
-                    {renderField(field, values[field.id], v => setValue(field.id, v))}
-                    {field.help && field.type !== 'text' && field.type !== 'email' && field.type !== 'phone' && (
-                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">{field.help}</p>
-                    )}
-                  </>
-                )}
+          {isConsultStep ? (
+            <>
+              <div>
+                <h1 className="font-serif text-2xl sm:text-3xl leading-tight">One last thing</h1>
+                <p className="text-[color:var(--brand-text-muted)] mt-2">Would you like to schedule a quick phone consultation? It's the best way for us to get on the same page fast.</p>
               </div>
-            ))}
-          </div>
+
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="consult-choice-cards">
+                <button
+                  type="button"
+                  onClick={() => setConsultChoice('schedule')}
+                  className={`card-cream p-5 text-left transition-all ${consultChoice === 'schedule' ? 'ring-2 ring-[color:var(--brand-sage)] shadow-lg' : 'hover:shadow-md'}`}
+                  data-testid="consult-choice-schedule"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-[color:var(--brand-sage-tint)] flex items-center justify-center shrink-0">
+                      <Phone className="h-5 w-5 text-[color:var(--brand-sage-deep)]" />
+                    </div>
+                    <div>
+                      <p className="font-serif text-lg">Schedule a phone consultation</p>
+                      <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">Pick a day and time — we'll call you.</p>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConsultChoice('skip')}
+                  className={`card-cream p-5 text-left transition-all ${consultChoice === 'skip' ? 'ring-2 ring-[color:var(--brand-coral)] shadow-lg' : 'hover:shadow-md'}`}
+                  data-testid="consult-choice-skip"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-[color:var(--brand-blush-tint)] flex items-center justify-center shrink-0">
+                      <PhoneOff className="h-5 w-5 text-[color:var(--brand-coral)]" />
+                    </div>
+                    <div>
+                      <p className="font-serif text-lg">Submit inquiry without phone consultation</p>
+                      <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">We'll reach out to schedule if needed.</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {consultChoice === 'schedule' && (
+                <div className="mt-8">
+                  <ConsultScheduler value={consultDT} onChange={setConsultDT} />
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 className="font-serif text-2xl sm:text-3xl leading-tight">{step.title}</h1>
+                {step.description && <p className="text-[color:var(--brand-text-muted)] mt-2">{step.description}</p>}
+              </div>
+
+              <div className="mt-6 space-y-6">
+                {(step.fields || []).map(field => (
+                  <div key={field.id} data-testid={`field-wrap-${field.id}`}>
+                    {field.type === 'section_note' ? (
+                      <div className="rounded-xl bg-[color:var(--brand-sage-tint)]/50 p-4">
+                        {field.label && <p className="font-serif text-lg mb-1">{field.label}</p>}
+                        {field.help && <p className="text-sm text-[color:var(--brand-text-muted)]">{field.help}</p>}
+                      </div>
+                    ) : (
+                      <>
+                        <label className="eyebrow block mb-2">
+                          {field.label}{field.required && <span className="text-[color:var(--brand-coral)] ml-1">*</span>}
+                        </label>
+                        {renderField(field, values[field.id], v => setValue(field.id, v))}
+                        {field.help && field.type !== 'text' && field.type !== 'email' && field.type !== 'phone' && (
+                          <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">{field.help}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </motion.div>
       </AnimatePresence>
 
@@ -339,16 +436,50 @@ const InquiryWizardPage = () => {
         <button type="button" className="btn-secondary" onClick={prev} disabled={stepIdx === 0} data-testid="wizard-back">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
-        {stepIdx < totalSteps - 1 ? (
+        {isConsultStep ? (
+          <button type="button" className="btn-primary" onClick={attemptSubmit} disabled={submitting || !consultChoice} data-testid="wizard-submit">
+            {submitting ? 'Submitting…' : (isPreview ? 'Finish preview' : 'Submit inquiry')} <ArrowRight className="h-4 w-4" />
+          </button>
+        ) : (
           <button type="button" className="btn-primary" onClick={next} data-testid="wizard-next">
             Next <ArrowRight className="h-4 w-4" />
           </button>
-        ) : (
-          <button type="button" className="btn-primary" onClick={submit} disabled={submitting} data-testid="wizard-submit">
-            {submitting ? 'Submitting…' : (isPreview ? 'Finish preview' : 'Submit inquiry')} <ArrowRight className="h-4 w-4" />
-          </button>
         )}
       </div>
+
+      {/* Skip-consult confirmation modal */}
+      <AnimatePresence>
+        {showSkipConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowSkipConfirm(false)}
+            data-testid="skip-consult-modal"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[color:var(--brand-cream)] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-[color:var(--brand-blush-tint)] flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-[color:var(--brand-coral)]" />
+                </div>
+                <div>
+                  <p className="font-serif text-xl leading-tight">Are you sure?</p>
+                  <p className="text-sm text-[color:var(--brand-text-muted)] mt-2">A phone consultation may still be required by swell design + media to finalize your booking. We'll reach out to schedule if needed.</p>
+                </div>
+              </div>
+              <div className="mt-5 flex gap-2 justify-end">
+                <button type="button" className="btn-secondary" onClick={() => setShowSkipConfirm(false)} data-testid="skip-modal-back">Back</button>
+                <button type="button" className="btn-primary" onClick={() => doSubmit(true)} disabled={submitting} data-testid="skip-modal-confirm">
+                  {submitting ? 'Submitting…' : 'Yes, submit without consult'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

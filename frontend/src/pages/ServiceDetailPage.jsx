@@ -33,7 +33,7 @@ const ServiceDetailPage = () => {
             <p className="text-base text-[color:var(--brand-text-muted)] mt-5 leading-relaxed max-w-lg">{service.description}</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link to="/inquire" className="btn-primary" data-testid="service-inquire-cta">Start an inquiry <ArrowRight className="h-4 w-4" /></Link>
-              <Link to="/book" className="btn-secondary">Book a consult</Link>
+              <Link to="/inquire" className="btn-secondary">Start your inquiry</Link>
               {service.price_from && <span className="badge-soft">From {service.price_from}</span>}
             </div>
           </div>

@@ -1,22 +1,18 @@
 [
   {
-    "content": "Backend: add font_serif_id/font_sans_id/font_script_id fields to SiteContent with sensible defaults",
+    "content": "Phase H (Google Calendar polish) — complete",
     "status": "completed"
   },
   {
-    "content": "Frontend: create FONT_PRESETS list + FontContext that injects Google Fonts <link> and applies --font-* CSS variables from site content",
+    "content": "Phase I (Consult merged into inquiry + booking rules + .ics email + Scheduled calls) — complete",
     "status": "completed"
   },
   {
-    "content": "Frontend: register FontProvider in App.js inside SiteProvider",
+    "content": "Phase J (Media Library backend + admin UI) — complete",
     "status": "completed"
   },
   {
-    "content": "Frontend admin: 'Typography' tab in AdminSiteContent with three dropdowns + live preview swatches",
-    "status": "completed"
-  },
-  {
-    "content": "Test: verify font swap applies immediately + persists after reload",
-    "status": "completed"
+    "content": "Full testing_agent run across all 3 phases",
+    "status": "in_progress"
   }
 ]

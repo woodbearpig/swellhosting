@@ -222,7 +222,7 @@ const HomePage = () => {
             <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed">{site?.designer_bio}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link to="/about" className="btn-secondary">Read the story</Link>
-              <Link to="/book" className="btn-primary"><Calendar className="h-4 w-4" /> Book a consult</Link>
+              <Link to="/inquire" className="btn-primary"><Calendar className="h-4 w-4" /> Start your inquiry</Link>
             </div>
           </motion.div>
         </div>
@@ -256,7 +256,7 @@ const HomePage = () => {
           <p className="text-[color:var(--brand-text-muted)] max-w-lg mx-auto mt-3">Take two minutes to share your vision. We'll be in touch within 1–2 business days.</p>
           <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
             <Link to="/inquire" className="btn-primary" data-testid="home-cta-inquire">Start your inquiry <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/book" className="btn-secondary">Book a consult</Link>
+            <Link to="/inquire" className="btn-secondary">Start your inquiry</Link>
           </div>
         </motion.div>
       </section>

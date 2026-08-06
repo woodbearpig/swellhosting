@@ -179,16 +179,35 @@ export const AdminIntegrations = () => {
 
         {!gcalStatus?.connected && (
           <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className="eyebrow block mb-1">CLIENT ID</label><input className="input-cream" value={gcalForm.client_id} onChange={e => setGcalForm(f => ({ ...f, client_id: e.target.value }))} placeholder="xxxxx.apps.googleusercontent.com" data-testid="gcal-client-id" /></div>
-              <div><label className="eyebrow block mb-1">CLIENT SECRET</label><input type="password" className="input-cream" value={gcalForm.client_secret} onChange={e => setGcalForm(f => ({ ...f, client_secret: e.target.value }))} placeholder="GOCSPX-…" data-testid="gcal-client-secret" /></div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={saveGcalCreds} className="btn-secondary" data-testid="gcal-save">Save credentials</button>
-              {gcalStatus?.client_id && gcalStatus?.has_client_secret && (
-                <button onClick={connectGoogle} className="btn-primary" data-testid="gcal-connect"><LinkIcon className="h-4 w-4" /> Connect Google Calendar</button>
-              )}
-            </div>
+            {gcalStatus?.env_configured ? (
+              <div className="rounded-2xl bg-[color:var(--brand-sage-tint)] p-4 flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 mt-0.5 text-[color:var(--brand-sage-deep)] shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium mb-1">OAuth is pre-configured — one-click connect available</p>
+                  <p className="text-sm text-[color:var(--brand-text-muted)] mb-3">Click below, sign in with your Gmail, and grant Calendar access. That's it.</p>
+                  <button onClick={connectGoogle} className="btn-primary" data-testid="gcal-connect-oneclick">
+                    <LinkIcon className="h-4 w-4" /> Sign in with Google
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm">
+                  <p className="font-medium mb-1">Advanced setup — manual OAuth credentials</p>
+                  <p className="text-[color:var(--brand-text-muted)]">Your developer can pre-configure Google OAuth on the server so you'd only see a single "Sign in with Google" button here (recommended). Until then, follow the setup guide above and paste your credentials below.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><label className="eyebrow block mb-1">CLIENT ID</label><input className="input-cream" value={gcalForm.client_id} onChange={e => setGcalForm(f => ({ ...f, client_id: e.target.value }))} placeholder="xxxxx.apps.googleusercontent.com" data-testid="gcal-client-id" /></div>
+                  <div><label className="eyebrow block mb-1">CLIENT SECRET</label><input type="password" className="input-cream" value={gcalForm.client_secret} onChange={e => setGcalForm(f => ({ ...f, client_secret: e.target.value }))} placeholder="GOCSPX-…" data-testid="gcal-client-secret" /></div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveGcalCreds} className="btn-secondary" data-testid="gcal-save">Save credentials</button>
+                  {gcalStatus?.client_id && gcalStatus?.has_client_secret && (
+                    <button onClick={connectGoogle} className="btn-primary" data-testid="gcal-connect"><LinkIcon className="h-4 w-4" /> Connect Google Calendar</button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 

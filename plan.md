@@ -1,24 +1,30 @@
-# plan.md — swell design + media (V1)
+# plan.md — swell design + media (V2)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **white‑labeled client management platform** for **swell design + media**.
 - Deliver the **core lead flow** end‑to‑end:
-  - Visitor browses → submits inquiry → admin reviews/updates status → visitor books consultation.
+  - Visitor browses → submits inquiry (wizard) → (optional) schedules phone consultation → admin reviews/updates status.
 - Provide an **admin-managed CMS** so the owner can:
-  - Edit text/images/sections,
-  - **Toggle visibility of site elements** (“hide element X”),
-  - Switch **seasonal/holiday/wedding palettes** without code,
-  - Schedule palettes to auto-switch for seasons/holidays.
+  - Edit text/images/sections
+  - Toggle visibility of site elements (“hide element X”)
+  - Switch **seasonal/holiday/wedding palettes** without code
+  - Schedule palettes to auto-switch for seasons/holidays
+  - Create custom palettes from inspiration photos
+  - Customize typography (headline/body/script fonts)
+  - Customize header navigation (internal + external links)
+  - Customize the inquiry wizard steps/fields (bubble-chip options)
 - Keep deployment to **AlmaLinux 10 VPS** simple and repeatable via **Docker Compose** + `deploy.sh`.
-- Maintain strict white‑labeling (no third‑party branding references).
+- Maintain strict white‑labeling:
+  - No Emergent references in UI/content
+  - Automatically purge any Emergent-hosted asset URLs from SiteContent
 - Improve perceived UX:
-  - Eliminate “flash of full site” when **Coming Soon mode** is enabled (render gate until CMS config is loaded).
+  - Eliminate “flash of full site” when **Coming Soon mode** is enabled
 
 ## 2) Implementation Steps
 
 ### Phase 1 — Core Workflow POC (Completed)
 > Core = inquiry submission + file uploads + persistence + admin can view.
-- Implemented FastAPI + MongoDB models for: Inquiry, Upload metadata, Clients, Consultations, Availability.
+- Implemented FastAPI + MongoDB models for: Inquiry, Clients, Consultations, Availability, Newsletter.
 - Built endpoints:
   - `POST /api/inquiries`
   - `POST /api/uploads`
@@ -33,261 +39,209 @@
 
 ---
 
-### Phase 2 — V1 App Development (Mostly Completed; ongoing enhancements)
+### Phase 2 — V1 App Development (Completed + ongoing enhancements)
 #### What is already implemented
 - Frontend (React + Tailwind + Framer Motion)
   - Public pages: Home, About, Services, Gallery, Testimonials, FAQ, Blog, Contact, Privacy/Terms, 404.
-  - Inquiry Wizard + Consultation booking.
-  - Coming Soon mode with granular element toggles.
+  - Coming Soon mode with render gate (no FOUC).
+  - Dynamic inquiry form renderer.
 - Backend (FastAPI + Motor)
   - CRUD for Services, Gallery, Testimonials, FAQs, Blog, SiteContent.
-  - CRM-lite: Client auto-create and linkage.
-  - Email confirmations (best-effort).
+  - Google Calendar OAuth integration endpoints exist.
+  - Instagram Graph API integration.
+  - Email confirmations (best-effort via SMTP).
 - Admin
   - Auth-protected dashboard.
-  - Site Content editor.
-  - Integrations: Google Calendar + Instagram Graph API.
+  - Site Content editor (Home/Footer/Header/About/Services/Gallery/Contact toggles + navigation editor).
+  - Palettes admin (manual apply + schedules + photo-to-palette + custom palettes).
+  - Inquiry form builder.
+  - Admin credentials change.
 - Deployment
   - Docker-based deploy scripts working on AlmaLinux 10 VPS.
+  - `deploy.sh` now fails loudly on git auth failures and prints PAT instructions.
 
-#### Current focus (enhancements)
+---
 
 ### Phase A (P0) — Palette wiring + dynamic Home Page & Footer editors (COMPLETED ✅)
 **Goal:** Enable site-wide seasonal/holiday/wedding color themes and make Home/Footer sections fully editable & toggleable from admin.
 
 **Completed work**
-1) Frontend wiring
-- `frontend/src/App.js`
-  - App wrapped in `<PaletteProvider>` **inside** `<SiteProvider>`.
-  - Added route: `/admin/palettes`.
+- Palettes provider wired + `/admin/palettes` route + nav.
+- Home page dynamic content/toggles + process steps editor.
+- Footer visibility toggles + copyright override.
+- Expanded palette library (US holidays/seasons/wedding).
 
-2) Admin navigation
-- `frontend/src/pages/admin/AdminLayout.jsx`
-  - Added **Palettes** link under Content.
-
-3) Home page dynamic content + toggles
-- `frontend/src/pages/HomePage.jsx`
-  - Uses `site.home_*` eyebrow/title/subtitle fields.
-  - Honors section visibility toggles:
-    - `home_services_active`, `home_gallery_active`, `home_process_active`, `home_testimonials_active`, `home_designer_active`, `home_faq_active`, `home_final_cta_active`.
-  - Renders timeline from `site.home_process_steps`.
-
-4) Admin Site Content updates
-- `frontend/src/pages/admin/AdminSiteContent.jsx`
-  - Added **Home page** tab:
-    - Section visibility toggles.
-    - Eyebrow/title/subtitle editing.
-    - Process steps editor (add/remove/reorder/edit).
-  - Expanded **Footer & newsletter** tab:
-    - Footer visibility toggles.
-    - Copyright override.
-
-5) Palette library expansion
-- `backend/palettes.py`
-  - Expanded with major US holidays + seasons + wedding season presets.
-
-6) Testing
-- Testing agent report: `/app/test_reports/iteration_6.json` (100% backend + frontend flows)
-
-**Exit criteria (met)**
-- Admin can set palette → public site CSS variables update immediately.
-- Home page sections can be hidden/shown and process steps are editable.
-- Footer blocks can be hidden/shown and saved.
+**Testing**
+- `/app/test_reports/iteration_6.json`
 
 ---
 
-### Phase B (P1) — FOUC fix + Site-wide “hide element X” toggles + Custom Nav Bar (NEXT)
+### Phase B (P1) — FOUC fix + Site-wide hide toggles + Custom Nav Bar (COMPLETED ✅)
 **Goal:** Remove Coming Soon flash-of-content and let the owner hide/show core public sections and fully customize header navigation.
 
-#### B1) FOUC fix (Coming Soon)
-- **Frontend: `PublicLayout.jsx`**
-  - If `site === null`, render a full-screen **neutral cream splash** (no logo) until site content loads (~200–400ms).
-  - Once loaded, immediately render either Coming Soon page or the real site.
-
-**Exit criteria**
-- When `coming_soon_active=true`, visitors never see the full site “flash” before Coming Soon.
-
-#### B2) Hide Element Toggles (per-section scope)
-**User-confirmed scope:** per-section toggles for **About, Services list, Gallery, Contact, Header**.
-
-**Backend: `models.py` → `SiteContent` fields to add**
-- Header
-  - `header_show_logo: bool = True`
-  - `header_show_theme_toggle: bool = True`
-  - `header_show_inquire_cta: bool = True`
-- About page
-  - `about_show_image: bool = True`
-  - `about_show_designer: bool = True`
-  - `about_show_ctas: bool = True`
-- Services page
-  - `services_page_show_header: bool = True`
-  - `services_page_show_grid: bool = True`
-- Gallery page
-  - `gallery_page_show_header: bool = True`
-  - `gallery_page_show_filters: bool = True`
-  - `gallery_page_show_grid: bool = True`
-- Contact page
-  - `contact_page_show_header: bool = True`
-  - `contact_page_show_info_block: bool = True`
-  - `contact_page_show_form: bool = True`
-
-**Frontend: honor toggles**
-- `Header.jsx`: hide logo/theme toggle/CTA based on site fields.
-- `StaticPages.jsx` (AboutPage): hide image/designer/ctas.
-- `ServicesPage.jsx`: hide header and/or services grid.
-- `GalleryPage.jsx`: hide header and/or category filters and/or grid.
-- `ContactPage.jsx`: hide header and/or contact info and/or form.
-
-**Admin UI**
-- `AdminSiteContent.jsx`
-  - Add tabs/sections:
-    - “Header” (logo/theme toggle/CTA toggles)
-    - “About page”
-    - “Services page”
-    - “Gallery page”
-    - “Contact page”
-
-**Exit criteria**
-- Owner can hide each of these page sections without code.
-- Layout remains stable when sections are hidden.
-
-#### B3) Custom Nav Bar (CMS-driven)
-**User-confirmed scope:** internal + external URLs + per-link “open in new tab”.
-
-**Backend: `models.py` → `SiteContent` field to add**
-- `header_nav_items: List[Dict[str, Any]]`
-  - Each item: `{ id, label, href, visible, new_tab }`
-  - Defaulted to current links (Services/Gallery/About/Testimonials/Journal/FAQ/Contact).
-
-**Frontend**
-- `Header.jsx`
-  - Render nav from `site.header_nav_items` when present.
-  - Support internal links (`<NavLink to>` for `/path`) and external links (`<a href target="_blank" rel="noreferrer">` when `new_tab`).
-  - Mobile menu uses the same list.
-
-**Admin UI**
-- `AdminSiteContent.jsx`
-  - Add “Header & Nav” tab:
-    - Add/remove items
-    - Rename label
-    - Edit href
-    - Toggle visible
-    - Toggle new_tab
-    - Reorder via Up/Down buttons (no drag requirement)
-
-**Exit criteria**
-- Owner can add/reorder/hide/rename links, including external URLs, and control new-tab behavior.
-
-**Testing (required for Phase B)**
-- Verify Coming Soon no longer flashes.
-- Verify header toggles and nav config apply on desktop + mobile.
-- Verify About/Services/Gallery/Contact toggles persist and render correctly.
+**Completed work**
+- FOUC fix via `PublicLayout` neutral splash until SiteContent loads.
+- Per-section hide toggles for Header/About/Services/Gallery/Contact.
+- CMS-driven nav items (internal/external + new tab).
 
 ---
 
 ### Phase C (P1) — Season Auto‑Switch (Scheduled palettes) (COMPLETED ✅)
-**Goal:** Allow palettes to auto-activate by date rules (yearly recurring or one-off).
-
-**Backend**
-- Add to `SiteContent`:
-  - `palette_schedules: List[Dict[str, Any]]`
-  - Rule shape: `{ id, label, enabled, palette_id, start_date, end_date, repeats_yearly, year? }`
-    - If `repeats_yearly=true`: ignore `year`, apply annually.
-    - If `repeats_yearly=false`: require `year` (or ISO date strings for start/end).
-- Update `/api/palettes/active`
-  - Compute “effective palette” by scanning enabled schedules and returning the highest-priority match (define priority: one-off > yearly > manual active).
-  - Fallback to `active_palette_id` when no schedule matches.
-
-**Frontend (Admin)**
-- `AdminPalettes.jsx`
-  - Add “Schedules” UI:
-    - List existing rules
-    - Add/edit/delete
-    - Toggle enabled
-    - Choose palette + schedule type + date(s)
-    - Display which rule is active “today”
-
-**Exit criteria**
-- Admin can set date rules; public site palette changes automatically based on date.
-
-**Testing**
-- Unit-ish tests for schedule matching.
-- Manual test by temporarily setting a schedule covering today.
+- Schedule rules stored in `SiteContent.palette_schedules`.
+- `/api/palettes/active` computes effective palette by date rules.
 
 ---
 
-### Phase D (P1/P2) — Palette From Photo (on-device) (COMPLETED ✅)
-**Goal:** Owner can generate a custom palette from an uploaded inspiration image and save it as a reusable theme.
+### Phase D (P1/P2) — Palette From Photo (COMPLETED ✅)
+- On-device extraction using ColorThief.
+- Custom palettes stored in `custom_palettes` and merged into `/api/palettes`.
 
-**User-confirmed approach:** on-device extraction (ColorThief).
+---
+
+### Phase E (P0/P1) — Admin Credentials + Dynamic Inquiry Form Builder (COMPLETED ✅)
+**Goal:** Owner can change admin login safely + fully customize the inquiry wizard, especially bubble-shaped chip options.
+
+**Completed work**
+- Admin credentials change flow in `/admin/settings` with current-password verification.
+- Seed logic updated so password isn’t overwritten on restart (emergency `ADMIN_FORCE_RESET=1`).
+- Inquiry form schema stored in `SiteContent.inquiry_form_schema` with:
+  - Public endpoint: `GET /api/inquiry-form`
+  - Admin endpoints: `PUT /api/admin/inquiry-form`, `POST /api/admin/inquiry-form/reset`
+- InquiryWizardPage renders from schema.
+- Unknown custom fields stored in `Inquiry.extra`.
+
+---
+
+### Phase F (P1) — Typography + Hero Badges (COMPLETED ✅)
+- Typography selector in Site Content:
+  - `font_serif_id`, `font_sans_id`, `font_script_id`
+  - Google Fonts loaded dynamically via FontProvider
+- Hero badges now editable:
+  - `hero_badges_active`, `hero_badges[]`
+
+---
+
+### Phase G (P0) — White‑label asset purge (COMPLETED ✅)
+**Goal:** Ensure no Emergent-hosted asset URLs remain in live content.
+
+**Completed work**
+- Default `logo_url` no longer points to Emergent CDN.
+- Startup migration clears Emergent URLs from: `logo_url`, `hero_image_url`, `about_image_url`, `coming_soon_bg_url`, `og_image_url`, `favicon_url`.
+
+---
+
+## 3) NEXT: Client-Requested Enhancements (Planned)
+Ordering confirmed by user: **Google Calendar polish → merged consults → media library**
+
+### Phase H (P0) — Google Calendar “one-click connect” polish (Path A)
+**Goal:** Owner connects Google Calendar by clicking “Sign in with Google” (no manual client_id/secret entry in normal use).
 
 **Backend**
-- New Mongo collection: `custom_palettes`
-  - Doc shape: `{ id, name, category: 'custom', mood, colors, is_preset: false, created_at }`
-- New endpoints (admin-protected)
-  - `POST /api/admin/palettes/custom` (create/update)
-  - `DELETE /api/admin/palettes/custom/{pid}`
-- Update `/api/palettes`
-  - Merge presets + custom palettes.
-  - Add “Custom” category filter.
-- Update palette resolution
-  - Ensure active palette lookup can return either preset or custom palette.
+- Confirm OAuth redirect + token refresh behavior is robust.
+- Ensure availability computation can block time slots based on Google Calendar busy events.
+- Ensure event creation works for consult bookings.
+
+**Frontend Admin**
+- Improve `AdminIntegrations` UX:
+  - If env vars `GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET` exist: hide the manual paste UI by default.
+  - Keep manual credential entry as fallback.
+- Add “5-minute setup guide” in the UI and as `/app/OAUTH_SETUP.md`.
+
+**Exit criteria**
+- She clicks “Connect Google Calendar” → chooses `swellballoons@gmail.com` → Allow → status shows Connected.
+
+---
+
+### Phase I (P0) — Consultation becomes last step of inquiry (phone-only)
+**Goal:** Replace standalone /book with an optional final inquiry step to schedule a phone consult.
+
+**Requirements confirmed**
+- Delete standalone **/book** page.
+- Final inquiry step offers:
+  - “Schedule a phone consultation” (shows calendar + time slots)
+  - “Submit inquiry without phone consultation” (with confirm modal notice: consult may still be required)
+- Phone number is required.
+- Success screen shows consult time if scheduled.
+- Send confirmation email with **.ics calendar invite attachment**.
+- Admin keeps a separate filtered view for consult-booked inquiries ("Scheduled calls").
+
+**Backend**
+- Extend Inquiry with consult metadata (or store consult meta in `extra` but surfaced explicitly):
+  - `consult_date`, `consult_time`, `consult_duration_minutes`, `consult_status`.
+- Keep Consultation model for compatibility, but treat it as derived from Inquiry.
+- Add **Booking rules** to Availability singleton:
+  - `advance_booking_days` (default 60)
+  - `minimum_lead_hours` (default 2)
+  - `daily_max_consults` (default 6)
+  - `buffer_minutes` (default 15)
+  - `consult_duration_minutes` (default 30)
+  - `block_sundays` (default True)
+  - `blocked_dates: List[str]` (YYYY-MM-DD)
+- Availability computation returns slots for next N days honoring:
+  - weekly hours, blocked_dates, lead time, booking window, daily max, buffer, and Google Calendar busy.
+- Email service:
+  - Add `.ics` generator and attach to confirmation emails.
 
 **Frontend**
-- Add dependency: `colorthief` (frontend)
-- `AdminPalettes.jsx`
-  - “Create palette from photo” workflow:
-    - Upload/select image
-    - Extract dominant colors
-    - Map to brand keys (cream/sage/rose/etc.)
-    - Allow naming + minor adjustments (optional)
-    - Save to backend
-  - Show “Custom” category
-  - Allow apply/delete
+- InquiryWizardPage:
+  - Add final hard-coded consult step (separate from schema) that reuses Booking UI.
+  - Add confirm modal for skipping consult.
+  - Make `client_phone` required.
+- Remove `/book` route and update nav/CTAs to point to `/inquire`.
 
-**Exit criteria**
-- Admin can create custom palette from a photo and apply it site-wide.
+**Admin**
+- Remove “Consultations” tab.
+- Add “Scheduled calls” view (filtered inquiries with consult scheduled).
+- Add Booking rules UI under Admin → Settings.
 
 ---
 
-### Phase 3 — Stabilization + Deployment Package (Completed; maintenance ongoing)
-- Docker Compose deployment on AlmaLinux 10 VPS is working.
-- HTTPS issuance scripts and environment setup workflow exist.
-- Continue to keep deploy workflow stable while adding features (no breaking env changes).
+### Phase J (P1) — Media Library (uploads hub)
+**Goal:** One central upload library to reuse media anywhere, with tags and compression.
 
-**User stories (Phase 3)**
-1. As the developer, I can deploy updates via a single command.
-2. As the owner, the site loads reliably over HTTPS.
+**Backend**
+- New collection: `media_library` (MediaAsset)
+  - `{ id, url, filename, alt_text, tags[], width, height, size_bytes, created_at }`
+- Enhance `/api/uploads`:
+  - Auto-compress + resize (max 2400px width, JPEG q80) via Pillow.
+  - Index each uploaded file into `media_library`.
+- Admin endpoints:
+  - `GET /api/admin/media` (search + tag filter)
+  - `PATCH /api/admin/media/{id}` (alt/tags/filename)
+  - `DELETE /api/admin/media/{id}`
+- Startup migration:
+  - Scan existing SiteContent images + Services + Gallery + Blog covers and index them if not present.
+
+**Frontend Admin**
+- New page: `/admin/media`
+  - Thumbnail grid, search, tag filter, drag-to-upload.
+  - Edit alt + tags.
+  - Delete.
+- Add “Insert from library” modal anywhere an image URL exists.
+- Sidebar: add “Media” between Gallery and Testimonials.
 
 ---
 
-### Phase 4 — Post‑V1 / Future Enhancements (Planned)
-- P2: Dynamic Form Builder (visual multi-step wizard creation in admin).
-- P2: CRM upgrades (internal notes, tags, pipeline stages).
-- P3: Twilio SMS notifications.
-- P3: Stripe/PayPal payments.
+## 4) Testing & QA
+- After each phase (H/I/J): run **testing_agent** for backend + frontend.
+- Specific regression focus:
+  - Calendar OAuth connect/disconnect and busy-time blocking
+  - Inquiry submission with/without consult + email + .ics
+  - Media compression integrity + library indexing + picker modal
+  - White-label purge remains intact
 
-## 3) Next Actions
-1) Implement **Phase B1** (FOUC fix) first.
-2) Implement **Phase B2** (per-section hide toggles: Header/About/Services/Gallery/Contact) + admin UI.
-3) Implement **Phase B3** (Custom Nav Bar) + admin UI.
-4) Implement **Phase C** (Season Auto-Switch schedules).
-5) Implement **Phase D** (Palette From Photo + custom palette persistence).
-6) After each phase: run backend + frontend tests.
-
+## 5) Deploy
 **Deploy one-liner (Hostinger VPS)**
 ```bash
 cd /var/www/swell && ./deploy.sh
 ```
 
-## 4) Success Criteria
+## 6) Success Criteria (updated)
 - Owner can:
-  - Switch seasonal/holiday/wedding palettes from admin.
-  - Hide/show and edit Home + Footer sections without coding.
-  - Hide/show key sections on Header/About/Services/Gallery/Contact.
-  - Customize header navigation (internal/external, reorder, new-tab toggles).
-  - Schedule palettes to switch automatically.
-  - Create palettes from photos and reuse them.
-- Coming Soon mode has **no flash-of-content**.
-- Inquiry and booking flows remain fully functional.
+  - Connect Google Calendar with a single click and block busy times.
+  - Run the inquiry wizard with a final optional phone-consult booking step.
+  - Send confirmation emails that include a calendar invite (.ics) when a consult is scheduled.
+  - Manage booking rules in admin.
+  - Upload media once and reuse anywhere via a media library.
+- Strict white-labeling maintained (no Emergent URLs, automatic purge).
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.

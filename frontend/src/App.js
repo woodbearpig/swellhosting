@@ -14,7 +14,6 @@ import ServiceDetailPage from '@/pages/ServiceDetailPage';
 import GalleryPage from '@/pages/GalleryPage';
 import ContactPage from '@/pages/ContactPage';
 import InquiryWizardPage from '@/pages/InquiryWizardPage';
-import BookingPage from '@/pages/BookingPage';
 import { AboutPage, TestimonialsPage, FAQPage, BlogListPage, BlogDetailPage } from '@/pages/StaticPages';
 import { NotFoundPage, PrivacyPage, TermsPage } from '@/pages/UtilityPages';
 
@@ -34,6 +33,7 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminPalettes from '@/pages/admin/AdminPalettes';
 import AdminInquiryForm from '@/pages/admin/AdminInquiryForm';
+import AdminMedia from '@/pages/admin/AdminMedia';
 
 function App() {
   return (
@@ -58,7 +58,6 @@ function App() {
                   <Route path="/blog/:slug" element={<BlogDetailPage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/inquire" element={<InquiryWizardPage />} />
-                  <Route path="/book" element={<BookingPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
@@ -80,6 +79,7 @@ function App() {
                   <Route path="blog" element={<AdminBlog />} />
                   <Route path="site-content" element={<AdminSiteContent />} />
                   <Route path="inquiry-form" element={<AdminInquiryForm />} />
+                  <Route path="media" element={<AdminMedia />} />
                   <Route path="palettes" element={<AdminPalettes />} />
                   <Route path="integrations" element={<AdminIntegrations />} />
                   <Route path="settings" element={<AdminSettings />} />
