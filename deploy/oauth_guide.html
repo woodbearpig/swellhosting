@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Connecting Your Google Calendar</title>
+<style>
+  @page {
+    size: Letter;
+    margin: 0.75in 0.7in 0.85in 0.7in;
+    @bottom-center {
+      content: "Google Calendar Setup Guide  •  swell design + media  •  page " counter(page) " of " counter(pages);
+      font-family: 'Georgia', serif;
+      font-size: 9pt;
+      color: #8b8578;
+    }
+  }
+
+  :root {
+    --ink:        #2b2622;
+    --ink-soft:   #4a423b;
+    --accent:     #b08968;   /* warm champagne / bronze */
+    --accent-dk:  #7a5a44;
+    --paper:      #fbf8f4;   /* soft cream */
+    --paper-dk:   #f3ece0;
+    --line:       #d9cdb8;
+    --muted:      #8b8578;
+    --danger:     #a8564a;
+    --success:    #6b8759;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    color: var(--ink);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    background: white;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Helvetica Neue', 'Arial', sans-serif;
+    color: var(--ink);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  h1 { font-size: 32pt; line-height: 1.1; margin: 0 0 8pt; letter-spacing: -0.02em; }
+  h2 { font-size: 18pt; margin: 30pt 0 10pt; padding-bottom: 6pt; border-bottom: 1pt solid var(--line); }
+  h3 { font-size: 13pt; margin: 18pt 0 6pt; color: var(--accent-dk); }
+  h4 { font-size: 11pt; margin: 12pt 0 4pt; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  p { margin: 0 0 10pt; }
+
+  a { color: var(--accent-dk); text-decoration: none; border-bottom: 0.5pt solid var(--line); }
+
+  code, .mono {
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 9.5pt;
+    background: var(--paper-dk);
+    padding: 1.5pt 4pt;
+    border-radius: 2pt;
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  pre {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    background: var(--paper-dk);
+    padding: 10pt 12pt;
+    border-radius: 3pt;
+    border-left: 3pt solid var(--accent);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 6pt 0 12pt;
+  }
+
+  /* ─── COVER PAGE ────────────────────────────────────────── */
+  .cover {
+    height: 9.5in;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40pt 20pt;
+    page-break-after: always;
+    background: linear-gradient(180deg, var(--paper) 0%, #ffffff 100%);
+  }
+
+  .cover-top {
+    text-align: center;
+  }
+
+  .cover-mark {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 11pt;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 60pt;
+  }
+
+  .cover-title {
+    font-family: 'Georgia', serif;
+    font-size: 42pt;
+    line-height: 1.05;
+    color: var(--ink);
+    font-weight: 400;
+    margin: 30pt auto;
+    max-width: 5in;
+  }
+
+  .cover-title em {
+    font-style: italic;
+    color: var(--accent-dk);
+  }
+
+  .cover-sub {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 12pt;
+    color: var(--ink-soft);
+    max-width: 4.5in;
+    margin: 20pt auto 0;
+    line-height: 1.5;
+  }
+
+  .cover-meta {
+    display: flex;
+    justify-content: center;
+    gap: 40pt;
+    margin-top: 50pt;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  .cover-meta-item {
+    text-align: center;
+  }
+
+  .cover-meta-num {
+    font-size: 22pt;
+    color: var(--accent-dk);
+    font-weight: 300;
+    display: block;
+  }
+
+  .cover-meta-lbl {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-top: 4pt;
+  }
+
+  .cover-bottom {
+    text-align: center;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 9pt;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .cover-bottom strong {
+    color: var(--ink);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── CALLOUT BOXES ─────────────────────────────────────── */
+  .callout {
+    border-left: 3pt solid var(--accent);
+    background: var(--paper);
+    padding: 10pt 14pt;
+    margin: 12pt 0;
+    border-radius: 0 3pt 3pt 0;
+  }
+
+  .callout-title {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 9pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent-dk);
+    margin-bottom: 5pt;
+  }
+
+  .callout.warn { border-left-color: var(--danger); }
+  .callout.warn .callout-title { color: var(--danger); }
+
+  .callout.ok { border-left-color: var(--success); }
+  .callout.ok .callout-title { color: var(--success); }
+
+  /* ─── STEP HEADERS ──────────────────────────────────────── */
+  .step-hdr {
+    display: flex;
+    align-items: center;
+    gap: 14pt;
+    margin: 24pt 0 8pt;
+    padding-bottom: 8pt;
+    border-bottom: 1pt solid var(--line);
+  }
+
+  .step-num {
+    font-family: 'Georgia', serif;
+    font-size: 32pt;
+    font-weight: 300;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 45pt;
+  }
+
+  .step-info h2 {
+    font-size: 16pt;
+    margin: 0;
+    border: none;
+    padding: 0;
+  }
+
+  .step-info .step-time {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 3pt;
+  }
+
+  /* ─── ORDERED LIST STYLING ──────────────────────────────── */
+  ol.detailed {
+    counter-reset: item;
+    list-style: none;
+    padding-left: 0;
+    margin: 8pt 0;
+  }
+
+  ol.detailed > li {
+    counter-increment: item;
+    position: relative;
+    padding: 4pt 0 4pt 26pt;
+    margin-bottom: 6pt;
+  }
+
+  ol.detailed > li::before {
+    content: counter(item);
+    position: absolute;
+    left: 0;
+    top: 4pt;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-weight: 600;
+    font-size: 9pt;
+    color: var(--accent-dk);
+    background: var(--paper-dk);
+    width: 18pt;
+    height: 18pt;
+    line-height: 18pt;
+    text-align: center;
+    border-radius: 50%;
+  }
+
+  ul.plain {
+    margin: 4pt 0 8pt 20pt;
+    padding: 0;
+  }
+
+  ul.plain li {
+    margin-bottom: 3pt;
+  }
+
+  /* ─── SIMULATED SCREENS ─────────────────────────────────── */
+  .screen {
+    border: 1pt solid var(--line);
+    border-radius: 4pt;
+    background: white;
+    padding: 12pt 14pt;
+    margin: 8pt 0 14pt;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10pt;
+    box-shadow: 0 1pt 3pt rgba(0,0,0,0.04);
+  }
+
+  .screen-hdr {
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8pt;
+    padding-bottom: 6pt;
+    border-bottom: 1pt dashed var(--line);
+  }
+
+  .screen-field-lbl {
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 8pt;
+    margin-bottom: 3pt;
+    font-size: 10pt;
+  }
+
+  .screen-input {
+    border: 1pt solid var(--line);
+    border-radius: 3pt;
+    padding: 6pt 9pt;
+    font-family: 'Courier New', monospace;
+    font-size: 9pt;
+    background: var(--paper);
+    color: var(--ink-soft);
+    display: block;
+    word-break: break-all;
+  }
+
+  .screen-input.filled {
+    background: #fff;
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+
+  .screen-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    padding: 5pt 12pt;
+    border-radius: 3pt;
+    font-size: 9pt;
+    font-weight: 600;
+    margin-top: 8pt;
+  }
+
+  /* ─── COMPARISON TABLE ──────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10pt 0 16pt;
+    font-size: 10pt;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  table th {
+    text-align: left;
+    background: var(--paper);
+    padding: 8pt 10pt;
+    font-weight: 600;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent-dk);
+    border-bottom: 1.5pt solid var(--accent);
+  }
+
+  table td {
+    padding: 8pt 10pt;
+    border-bottom: 1pt solid var(--line);
+    vertical-align: top;
+  }
+
+  table td.check { text-align: center; font-size: 12pt; }
+  .check-yes { color: var(--success); }
+  .check-no  { color: var(--danger);  }
+
+  /* ─── PAGE BREAKS & HELPERS ─────────────────────────────── */
+  .page-break { page-break-before: always; }
+  .no-break   { page-break-inside: avoid; }
+  .center     { text-align: center; }
+  .small      { font-size: 9pt; color: var(--muted); }
+  .divider    { border: none; border-top: 1pt solid var(--line); margin: 24pt 0; }
+
+  /* ─── HERO IMAGE / SECTION HEADER ───────────────────────── */
+  .section-hdr {
+    background: var(--paper);
+    border-left: 4pt solid var(--accent);
+    padding: 14pt 18pt;
+    margin: 20pt 0 14pt;
+    border-radius: 0 3pt 3pt 0;
+  }
+
+  .section-hdr .kicker {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 8pt;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4pt;
+  }
+
+  .section-hdr h2 {
+    margin: 0;
+    border: none;
+    padding: 0;
+    font-size: 20pt;
+  }
+
+  .final-note {
+    margin-top: 40pt;
+    padding: 20pt;
+    background: var(--paper);
+    border-radius: 4pt;
+    text-align: center;
+    font-style: italic;
+    color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  COVER PAGE                                                 -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-top">
+    <div class="cover-mark">swell design + media</div>
+  </div>
+
+  <div>
+    <h1 class="cover-title">Connecting Your <em>Google Calendar</em></h1>
+    <p class="cover-sub">A one-time setup that lets your website automatically block booked dates, add new consultations to your calendar, and prevent double-bookings — all with a single click for your future you.</p>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <span class="cover-meta-num">~5</span>
+        <div class="cover-meta-lbl">Minutes</div>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-num">$0</span>
+        <div class="cover-meta-lbl">Cost</div>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-num">4</span>
+        <div class="cover-meta-lbl">Steps</div>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-num">1×</span>
+        <div class="cover-meta-lbl">Only</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cover-bottom">
+    Prepared for <strong>swellballoons&#64;gmail.com</strong>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  INTRO / WHY                                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="section-hdr">
+  <div class="kicker">Before we begin</div>
+  <h2>What this is, and why we're doing it</h2>
+</div>
+
+<p>Your new booking system needs permission to read and write to your Google Calendar. That way, when a client books a consultation on your website, it automatically appears on your calendar — and when you block off a day for a personal appointment, your website automatically hides that day from your booking calendar.</p>
+
+<p>Google (rightly!) doesn't just hand out that permission. You have to grant it, tied to <strong>your own Google account</strong>. This guide walks you through the tiny bit of Google setup required — it's a one-time task, takes about five minutes, and is completely free.</p>
+
+<div class="callout ok">
+  <div class="callout-title">Why <em>you</em> have to do this (not your web developer)</div>
+  If your developer created it under their Google account instead, your booking system would break the moment they deleted the project — and every security email from Google would go to them instead of you. Doing it under your own account keeps you in full control forever.
+</div>
+
+<h3>What you'll end up sending back</h3>
+<p>At the end of Step 4, Google will show you <strong>two values</strong> that look something like this:</p>
+
+<pre>Client ID:      847293847-abc123xyz.apps.googleusercontent.com
+Client Secret:  GOCSPX-aB3cD4eF5gH6iJ7kL8mN9oP0</pre>
+
+<p>Copy both, and send them to your developer through a secure channel — a password manager like <strong>1Password</strong>, an encrypted message, or a service like <strong>Signal</strong>. Don't send them in a plain email if you can help it.</p>
+
+<div class="callout warn">
+  <div class="callout-title">Treat these like a house key</div>
+  Anyone who has both values can talk to Google as though they were you. Once your developer has them, delete them from any chat threads or notes.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  STEP 1                                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+
+<div class="step-hdr">
+  <div class="step-num">1</div>
+  <div class="step-info">
+    <h2>Create a Google Cloud project</h2>
+    <div class="step-time">About 60 seconds</div>
+  </div>
+</div>
+
+<ol class="detailed">
+  <li>Open <a href="https://console.cloud.google.com/">console.cloud.google.com</a> in your browser.</li>
+  <li>Sign in with your Gmail (<span class="mono">swellballoons&#64;gmail.com</span>).</li>
+  <li>At the very top of the page, click the <strong>project dropdown</strong> (it usually says "Select a project"), then click <strong>New Project</strong> in the top-right of the pop-up.</li>
+  <li>Give the project a name: <span class="mono">Swell design bookings</span> (any name is fine).</li>
+  <li>Leave the "Organization" field as-is (it's usually blank or "No organization"), and click <strong>Create</strong>.</li>
+  <li>Wait about 10 seconds for Google to create the project, then <strong>select it</strong> from that same top dropdown.</li>
+</ol>
+
+<div class="callout">
+  <div class="callout-title">How to tell it worked</div>
+  Your project name (Swell design bookings) should now appear in the top bar of the console instead of "Select a project".
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  STEP 2                                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="step-hdr">
+  <div class="step-num">2</div>
+  <div class="step-info">
+    <h2>Turn on the Google Calendar service</h2>
+    <div class="step-time">About 30 seconds</div>
+  </div>
+</div>
+
+<ol class="detailed">
+  <li>In the search bar at the top of the console, type <span class="mono">Calendar API</span>.</li>
+  <li>In the results, click <strong>Google Calendar API</strong>.</li>
+  <li>Click the big blue <strong>Enable</strong> button.</li>
+  <li>Wait a few seconds. When the page changes to show a dashboard for the Calendar API, you're done with this step.</li>
+</ol>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  STEP 3                                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="step-hdr">
+  <div class="step-num">3</div>
+  <div class="step-info">
+    <h2>Fill out the "consent screen"</h2>
+    <div class="step-time">About 2 minutes</div>
+  </div>
+</div>
+
+<p>This is the screen your future self will see when clicking "Sign in with Google" — you're telling Google what to display on it.</p>
+
+<ol class="detailed">
+  <li>In the left sidebar, click <strong>APIs &amp; Services</strong>, then <strong>OAuth consent screen</strong>. (If prompted "Get Started", click it.)</li>
+  <li>Choose <strong>External</strong> as the User Type, then click <strong>Create</strong>.</li>
+  <li>Fill out <strong>App information</strong>:
+    <ul class="plain">
+      <li><strong>App name:</strong> <span class="mono">swell design + media</span></li>
+      <li><strong>User support email:</strong> <span class="mono">swellballoons&#64;gmail.com</span></li>
+      <li><strong>App logo:</strong> optional (skip if you don't have a square PNG handy)</li>
+    </ul>
+  </li>
+  <li>Fill out <strong>App domain</strong> (all fields are optional, but nicer for the consent screen):
+    <ul class="plain">
+      <li><strong>Application home page:</strong> <span class="mono">https://swelldesignla.com</span></li>
+      <li><strong>Privacy policy:</strong> <span class="mono">https://swelldesignla.com/privacy</span></li>
+      <li><strong>Terms of service:</strong> <span class="mono">https://swelldesignla.com/terms</span></li>
+    </ul>
+  </li>
+  <li>Under <strong>Authorized domains</strong>, click "+ Add domain" and enter <span class="mono">swelldesignla.com</span>.</li>
+  <li><strong>Developer contact:</strong> <span class="mono">swellballoons&#64;gmail.com</span>.</li>
+  <li>Click <strong>Save and continue</strong>.</li>
+  <li>On the <strong>Scopes</strong> page, click <strong>Add or remove scopes</strong>. Search for and tick each of:
+    <ul class="plain">
+      <li><span class="mono">.../auth/calendar.events</span></li>
+      <li><span class="mono">.../auth/calendar.readonly</span></li>
+      <li><span class="mono">.../auth/userinfo.email</span></li>
+      <li><span class="mono">.../auth/userinfo.profile</span></li>
+    </ul>
+    Click <strong>Update</strong>, then <strong>Save and continue</strong>.
+  </li>
+  <li>On the <strong>Test users</strong> page, click <strong>+ Add users</strong> and add <span class="mono">swellballoons&#64;gmail.com</span> (and any teammate's Gmail if you want them to be able to connect too).</li>
+  <li>Click <strong>Save and continue</strong>, then <strong>Back to dashboard</strong>.</li>
+</ol>
+
+<div class="callout">
+  <div class="callout-title">Leave "Publishing status" as <em>Testing</em></div>
+  You do NOT need Google verification. Keeping it in "Testing" mode is intentional — it means only the emails you list as Test Users can connect. That's perfect for a single-designer site, and it saves you a ~2 week Google review process. You can list up to 100 test users, so you'll never run out.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  STEP 4  (THE IMPORTANT ONE)                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+
+<div class="step-hdr">
+  <div class="step-num">4</div>
+  <div class="step-info">
+    <h2>Create your OAuth Client ID</h2>
+    <div class="step-time">About 60 seconds — this is where the two values you'll send back come from</div>
+  </div>
+</div>
+
+<ol class="detailed">
+  <li>In the left sidebar, click <strong>APIs &amp; Services</strong>, then <strong>Credentials</strong>.</li>
+  <li>At the top, click <strong>+ Create Credentials</strong>, then <strong>OAuth client ID</strong>.</li>
+  <li>Set <strong>Application type</strong> to <span class="mono">Web application</span>.</li>
+  <li>Set <strong>Name</strong> to <span class="mono">Swell backend</span>.</li>
+  <li>Under <strong>Authorized redirect URIs</strong>, click <strong>+ Add URI</strong> and paste each of the following on a <em>separate</em> line (add all three — takes 15 seconds and prevents future headaches):
+    <ul class="plain">
+      <li><span class="mono">https://swelldesignla.com/api/integrations/google/callback</span></li>
+      <li><span class="mono">https://www.swelldesignla.com/api/integrations/google/callback</span></li>
+      <li><span class="mono">https://balloon-decor-cms.preview.emergentagent.com/api/integrations/google/callback</span></li>
+    </ul>
+  </li>
+  <li>Click the blue <strong>Create</strong> button.</li>
+  <li>A pop-up will appear showing your <strong>Client ID</strong> and <strong>Client Secret</strong>. This is what you need to send back.</li>
+</ol>
+
+<h3>What this screen looks like</h3>
+
+<div class="screen no-break">
+  <div class="screen-hdr">Google Cloud Console — Create OAuth client ID</div>
+
+  <div class="screen-field-lbl">Application type</div>
+  <div class="screen-input filled">Web application</div>
+
+  <div class="screen-field-lbl">Name</div>
+  <div class="screen-input filled">Swell backend</div>
+
+  <div class="screen-field-lbl">Authorized redirect URIs</div>
+  <div class="screen-input filled">https://swelldesignla.com/api/integrations/google/callback</div>
+  <div class="screen-input filled" style="margin-top:3pt">https://www.swelldesignla.com/api/integrations/google/callback</div>
+  <div class="screen-input filled" style="margin-top:3pt">https://balloon-decor-cms.preview.emergentagent.com/api/integrations/google/callback</div>
+
+  <div class="screen-btn">Create</div>
+</div>
+
+<p>After clicking Create, you'll see this pop-up:</p>
+
+<div class="screen no-break">
+  <div class="screen-hdr">OAuth client created</div>
+
+  <div class="screen-field-lbl">Your Client ID</div>
+  <div class="screen-input filled">847293847-abc123xyz.apps.googleusercontent.com</div>
+
+  <div class="screen-field-lbl">Your Client Secret</div>
+  <div class="screen-input filled">GOCSPX-aB3cD4eF5gH6iJ7kL8mN9oP0</div>
+
+  <p class="small" style="margin-top:8pt">↑ These two values are what you'll send back to your developer. You can also click <em>Download JSON</em> to save them as a file.</p>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  ANATOMY / EXPLAINER                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+
+<div class="section-hdr">
+  <div class="kicker">Reference</div>
+  <h2>Three things on that screen — and what each one is</h2>
+</div>
+
+<p>You'll see three "things" on the Create OAuth client screen. It's easy to confuse them, so here's what each one actually is:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Example</th>
+      <th>Who creates it</th>
+      <th>Where it goes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Redirect URI</strong></td>
+      <td><span class="mono">https://swelldesignla.com/api/integrations/google/callback</span></td>
+      <td>You type it in (it's your website's return address)</td>
+      <td>Stays inside Google</td>
+    </tr>
+    <tr>
+      <td><strong>Client ID</strong></td>
+      <td><span class="mono">847293847-abc123xyz.apps.googleusercontent.com</span></td>
+      <td>Google generates it for you</td>
+      <td>Copy &amp; send to your developer</td>
+    </tr>
+    <tr>
+      <td><strong>Client Secret</strong></td>
+      <td><span class="mono">GOCSPX-aB3cD4eF5gH6iJ7kL8mN9oP0</span></td>
+      <td>Google generates it for you</td>
+      <td>Copy &amp; send to your developer</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="callout-title">A helpful analogy</div>
+  Think of it like setting up mail forwarding at the post office. The <strong>Redirect URI</strong> is <em>your home address</em> — you tell Google where to send things. The <strong>Client ID</strong> is <em>your account number</em> — Google gives it to you so it knows who's asking. The <strong>Client Secret</strong> is <em>your PIN</em> — Google gives it to you, and you keep it private.
+</div>
+
+<h3>Why the Redirect URI has to be exact</h3>
+<p>Google will only send visitors back to a URL that <em>exactly</em> matches one you registered. Even tiny differences count as a mismatch:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:60%">URL</th>
+      <th class="check" style="width:15%">Match?</th>
+      <th style="width:25%">Why</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="mono">https://swelldesignla.com/api/integrations/google/callback</span></td>
+      <td class="check check-yes">✓</td>
+      <td>The reference</td>
+    </tr>
+    <tr>
+      <td><span class="mono">https://www.swelldesignla.com/api/integrations/google/callback</span></td>
+      <td class="check check-no">✗</td>
+      <td>Extra "www."</td>
+    </tr>
+    <tr>
+      <td><span class="mono">http://swelldesignla.com/api/integrations/google/callback</span></td>
+      <td class="check check-no">✗</td>
+      <td>http vs https</td>
+    </tr>
+    <tr>
+      <td><span class="mono">https://swelldesignla.com/api/integrations/google/callback/</span></td>
+      <td class="check check-no">✗</td>
+      <td>Trailing slash</td>
+    </tr>
+    <tr>
+      <td><span class="mono">https://SwellDesignLA.com/api/integrations/google/callback</span></td>
+      <td class="check check-no">✗</td>
+      <td>Uppercase letters</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="small">That's why the guide asks you to add three variations — with <span class="mono">www.</span>, without <span class="mono">www.</span>, and the preview URL. It covers every place your site might send visitors back from.</p>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  WHAT HAPPENS NEXT                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="section-hdr">
+  <div class="kicker">What happens after you send the values</div>
+  <h2>Your one-time click, forever</h2>
+</div>
+
+<p>Once your developer has the two values, they'll paste them into the server that runs your website (about 30 seconds on their side). Then you'll do this <em>one time</em>, and then never again:</p>
+
+<ol class="detailed">
+  <li>Log into your admin dashboard on <span class="mono">swelldesignla.com/admin</span>.</li>
+  <li>Go to <strong>Integrations</strong> in the sidebar.</li>
+  <li>Under "Google Calendar" you'll see a big button: <strong>Sign in with Google</strong>. Click it.</li>
+  <li>Google will show you a familiar sign-in screen. Pick <span class="mono">swellballoons&#64;gmail.com</span>, click <strong>Allow</strong>.</li>
+  <li>You'll be sent back to the admin dashboard, and it'll say <strong>Connected as swellballoons&#64;gmail.com</strong>.</li>
+</ol>
+
+<div class="callout ok">
+  <div class="callout-title">That's it — the setup is done forever</div>
+  From this moment on, every consultation your clients book on the website will automatically appear on your Google Calendar, and any personal events on your calendar will automatically block those times from being booked on the website. No manual work, no double-bookings, no back-and-forth.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  TROUBLESHOOTING                                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+
+<div class="section-hdr">
+  <div class="kicker">If something goes wrong</div>
+  <h2>Troubleshooting</h2>
+</div>
+
+<h3>"Access blocked: swell design has not completed the Google verification process"</h3>
+<p>Your Gmail isn't in the Test Users list yet. Go back to <strong>Step 3, item 9</strong> and add <span class="mono">swellballoons&#64;gmail.com</span> as a Test User.</p>
+
+<h3>"Error 400: redirect_uri_mismatch"</h3>
+<p>The URL your browser is trying to go back to doesn't exactly match any of the ones you registered in Step 4, item 5. The error page will show which URL was attempted — copy it, and add it to the list of Authorized redirect URIs in Google Cloud.</p>
+
+<h3>"invalid_client"</h3>
+<p>The Client ID or Client Secret your developer entered on the server doesn't match what Google shows. Ask them to double-check by comparing to what's shown in your Google Cloud Console (Credentials → click the OAuth client you created).</p>
+
+<h3>"Nothing happens when I click Sign in with Google"</h3>
+<p>Your developer needs to check the server logs. Usually this means the credentials weren't picked up. They'll know what to do.</p>
+
+<div class="divider"></div>
+
+<h3>Where to get the values again if you lose them</h3>
+<ol class="detailed">
+  <li>Go to <a href="https://console.cloud.google.com/">console.cloud.google.com</a> and select your <em>Swell design bookings</em> project.</li>
+  <li>Sidebar → <strong>APIs &amp; Services → Credentials</strong>.</li>
+  <li>Click the OAuth client named <strong>Swell backend</strong>.</li>
+  <li>The Client ID is shown on-screen. To see the Client Secret again, click "Reset secret" (this will invalidate the old one — only do this if you truly lost it, and let your developer know so they can update the server).</li>
+</ol>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  CHECKLIST TO SEND                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="section-hdr">
+  <div class="kicker">The finish line</div>
+  <h2>Ready to send your developer?</h2>
+</div>
+
+<p>Before you send those two values, do a quick sanity check:</p>
+
+<ul class="plain" style="margin-top:12pt; font-size:11pt;">
+  <li>☐ You completed <strong>all four steps</strong>.</li>
+  <li>☐ Your Gmail is listed under <strong>Test Users</strong> (Step 3, item 9).</li>
+  <li>☐ You added <strong>at least the two URIs</strong> with and without <span class="mono">www.</span> (Step 4, item 5).</li>
+  <li>☐ You copied the <strong>Client ID</strong> — it ends in <span class="mono">.apps.googleusercontent.com</span></li>
+  <li>☐ You copied the <strong>Client Secret</strong> — it starts with <span class="mono">GOCSPX-</span></li>
+  <li>☐ You're sending both values through a <strong>secure channel</strong> (password manager, encrypted message), not plain email.</li>
+</ul>
+
+<div class="final-note">
+  <p style="margin:0">Thank you for taking the time to do this — it's the one bit of "grown-up software" work that has to happen under your own name, and once it's done, it's done forever. Any questions, just ask.</p>
+</div>
+
+</body>
+</html>
