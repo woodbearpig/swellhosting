@@ -28,3 +28,6 @@ requests>=2.31
 google-auth>=2.29
 google-auth-oauthlib>=1.2
 google-api-python-client>=2.130
+
+# Image processing (upload compression / resize)
+Pillow>=10.0

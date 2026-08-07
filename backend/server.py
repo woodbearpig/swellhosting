@@ -289,8 +289,18 @@ MAX_IMAGE_WIDTH = 2400  # auto-resize wider images to this on upload
 
 
 def _process_image(src_path: Path, dest_path: Path) -> Dict[str, Any]:
-    """Compress + resize an uploaded image. Returns {width, height, size}."""
-    from PIL import Image
+    """Compress + resize an uploaded image. Returns {width, height, size}.
+    Falls back to raw copy if PIL isn't available or processing fails."""
+    try:
+        from PIL import Image
+    except ImportError as e:
+        logger.warning(
+            "Pillow not installed — skipping image compression (%s). "
+            "Add 'Pillow>=10.0' to backend/requirements.txt and rebuild.", e
+        )
+        if src_path.resolve() != dest_path.resolve():
+            shutil.copy(src_path, dest_path)
+        return {"width": 0, "height": 0, "size_bytes": dest_path.stat().st_size}
     try:
         img = Image.open(src_path)
         # Preserve transparency for PNGs; convert others to RGB

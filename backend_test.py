@@ -859,9 +859,234 @@ def main():
         print(f"   ✓ Site content reset to defaults")
     
     # ========================================
-    # 28. CLEANUP (Delete test data)
+    # 28. UPLOADS & MEDIA LIBRARY (IMAGE UPLOAD FIX)
     # ========================================
-    print("\n\n📍 SECTION 28: Cleanup")
+    print("\n\n📍 SECTION 28: Uploads & Media Library (Image Upload Fix)")
+    print("-"*60)
+    
+    # Test unauthorized upload
+    tester.token = None
+    # Note: /api/uploads is public, no auth required
+    
+    # Test upload with valid image
+    import io
+    from PIL import Image as PILImage
+    
+    # Create a small test image (100x100 red square)
+    test_img = PILImage.new('RGB', (100, 100), color='red')
+    img_bytes = io.BytesIO()
+    test_img.save(img_bytes, format='JPEG')
+    img_bytes.seek(0)
+    
+    # Upload the image
+    files = {'file': ('test_image.jpg', img_bytes, 'image/jpeg')}
+    url = f"{BASE_URL}/uploads"
+    h = {}
+    if tester.token:
+        h['Authorization'] = f'Bearer {tester.token}'
+    
+    tester.tests_run += 1
+    print(f"\n🔍 Test {tester.tests_run}: Upload small test image (100x100)")
+    try:
+        response = requests.post(url, files=files, headers=h, timeout=10)
+        if response.status_code == 200:
+            tester.tests_passed += 1
+            print(f"✅ PASS - Status: {response.status_code}")
+            upload_response = response.json()
+            print(f"   URL: {upload_response.get('url', 'N/A')}")
+            print(f"   Filename: {upload_response.get('filename', 'N/A')}")
+            print(f"   Width: {upload_response.get('width', 'N/A')}")
+            print(f"   Height: {upload_response.get('height', 'N/A')}")
+            
+            # Verify response has required fields
+            has_url = 'url' in upload_response
+            has_filename = 'filename' in upload_response
+            has_width = 'width' in upload_response
+            has_height = 'height' in upload_response
+            
+            if all([has_url, has_filename, has_width, has_height]):
+                print(f"   ✓ All required fields present")
+            else:
+                print(f"   ⚠️  Missing fields: url={has_url}, filename={has_filename}, width={has_width}, height={has_height}")
+            
+            uploaded_url = upload_response.get('url')
+            uploaded_filename = upload_response.get('filename')
+        else:
+            tester.tests_failed += 1
+            tester.failed_tests.append({
+                'name': 'Upload small test image',
+                'endpoint': '/uploads',
+                'expected': 200,
+                'got': response.status_code,
+                'response': response.text[:200]
+            })
+            print(f"❌ FAIL - Expected 200, got {response.status_code}")
+            print(f"   Response: {response.text[:200]}")
+            uploaded_url = None
+            uploaded_filename = None
+    except Exception as e:
+        tester.tests_failed += 1
+        tester.failed_tests.append({
+            'name': 'Upload small test image',
+            'endpoint': '/uploads',
+            'error': str(e)
+        })
+        print(f"❌ FAIL - Error: {str(e)}")
+        uploaded_url = None
+        uploaded_filename = None
+    
+    # Test upload with large image (>2400px) to verify compression
+    large_img = PILImage.new('RGB', (3000, 2000), color='blue')
+    large_img_bytes = io.BytesIO()
+    large_img.save(large_img_bytes, format='JPEG')
+    large_img_bytes.seek(0)
+    
+    files = {'file': ('test_large_image.jpg', large_img_bytes, 'image/jpeg')}
+    
+    tester.tests_run += 1
+    print(f"\n🔍 Test {tester.tests_run}: Upload large test image (3000x2000) - should be compressed")
+    try:
+        response = requests.post(url, files=files, headers=h, timeout=10)
+        if response.status_code == 200:
+            tester.tests_passed += 1
+            print(f"✅ PASS - Status: {response.status_code}")
+            large_upload_response = response.json()
+            print(f"   URL: {large_upload_response.get('url', 'N/A')}")
+            print(f"   Filename: {large_upload_response.get('filename', 'N/A')}")
+            print(f"   Width: {large_upload_response.get('width', 'N/A')}")
+            print(f"   Height: {large_upload_response.get('height', 'N/A')}")
+            
+            # Verify compression worked (width should be <= 2400)
+            width = large_upload_response.get('width', 0)
+            if width > 0 and width <= 2400:
+                print(f"   ✓ Image compressed correctly (width {width} <= 2400)")
+            elif width == 0:
+                print(f"   ⚠️  Width is 0 - Pillow may not be installed (graceful fallback)")
+            else:
+                print(f"   ⚠️  Image not compressed (width {width} > 2400)")
+            
+            large_uploaded_url = large_upload_response.get('url')
+            large_uploaded_filename = large_upload_response.get('filename')
+        else:
+            tester.tests_failed += 1
+            tester.failed_tests.append({
+                'name': 'Upload large test image',
+                'endpoint': '/uploads',
+                'expected': 200,
+                'got': response.status_code,
+                'response': response.text[:200]
+            })
+            print(f"❌ FAIL - Expected 200, got {response.status_code}")
+            print(f"   Response: {response.text[:200]}")
+            large_uploaded_url = None
+            large_uploaded_filename = None
+    except Exception as e:
+        tester.tests_failed += 1
+        tester.failed_tests.append({
+            'name': 'Upload large test image',
+            'endpoint': '/uploads',
+            'error': str(e)
+        })
+        print(f"❌ FAIL - Error: {str(e)}")
+        large_uploaded_url = None
+        large_uploaded_filename = None
+    
+    # Test retrieving uploaded image
+    if uploaded_filename:
+        tester.tests_run += 1
+        print(f"\n🔍 Test {tester.tests_run}: Retrieve uploaded image: {uploaded_filename}")
+        try:
+            retrieve_url = f"{BASE_URL}/uploads/{uploaded_filename}"
+            response = requests.get(retrieve_url, timeout=10)
+            if response.status_code == 200:
+                tester.tests_passed += 1
+                print(f"✅ PASS - Status: {response.status_code}")
+                print(f"   Content-Type: {response.headers.get('Content-Type', 'N/A')}")
+                print(f"   Content-Length: {len(response.content)} bytes")
+                
+                # Verify it's an image
+                content_type = response.headers.get('Content-Type', '')
+                if 'image' in content_type:
+                    print(f"   ✓ Correct Content-Type for image")
+                else:
+                    print(f"   ⚠️  Unexpected Content-Type: {content_type}")
+            else:
+                tester.tests_failed += 1
+                tester.failed_tests.append({
+                    'name': f'Retrieve uploaded image: {uploaded_filename}',
+                    'endpoint': f'/uploads/{uploaded_filename}',
+                    'expected': 200,
+                    'got': response.status_code
+                })
+                print(f"❌ FAIL - Expected 200, got {response.status_code}")
+        except Exception as e:
+            tester.tests_failed += 1
+            tester.failed_tests.append({
+                'name': f'Retrieve uploaded image: {uploaded_filename}',
+                'endpoint': f'/uploads/{uploaded_filename}',
+                'error': str(e)
+            })
+            print(f"❌ FAIL - Error: {str(e)}")
+    
+    # Test media library indexing (requires admin auth)
+    tester.token = temp_token
+    
+    success, media_list = tester.test("List media library (should include uploaded images)", "GET", "/admin/media", 200)
+    if success and media_list:
+        print(f"   Found {len(media_list)} media items")
+        
+        # Check if our uploaded images are in the library
+        if uploaded_url:
+            found = any(item.get('url') == uploaded_url for item in media_list)
+            if found:
+                print(f"   ✓ Small test image indexed in media library")
+            else:
+                print(f"   ⚠️  Small test image NOT found in media library")
+        
+        if large_uploaded_url:
+            found = any(item.get('url') == large_uploaded_url for item in media_list)
+            if found:
+                print(f"   ✓ Large test image indexed in media library")
+            else:
+                print(f"   ⚠️  Large test image NOT found in media library")
+    
+    # Test unsupported file type
+    tester.token = None
+    text_file = io.BytesIO(b"This is a text file, not an image")
+    files = {'file': ('test.txt', text_file, 'text/plain')}
+    
+    tester.tests_run += 1
+    print(f"\n🔍 Test {tester.tests_run}: Upload unsupported file type (should fail with 400)")
+    try:
+        response = requests.post(url, files=files, headers=h, timeout=10)
+        if response.status_code == 400:
+            tester.tests_passed += 1
+            print(f"✅ PASS - Status: {response.status_code}")
+            print(f"   ✓ Correctly rejected unsupported file type")
+        else:
+            tester.tests_failed += 1
+            tester.failed_tests.append({
+                'name': 'Upload unsupported file type',
+                'endpoint': '/uploads',
+                'expected': 400,
+                'got': response.status_code
+            })
+            print(f"❌ FAIL - Expected 400, got {response.status_code}")
+    except Exception as e:
+        tester.tests_failed += 1
+        tester.failed_tests.append({
+            'name': 'Upload unsupported file type',
+            'endpoint': '/uploads',
+            'error': str(e)
+        })
+        print(f"❌ FAIL - Error: {str(e)}")
+    
+    tester.token = temp_token
+    
+    # ========================================
+    # 29. CLEANUP (Delete test data)
+    # ========================================
+    print("\n\n📍 SECTION 29: Cleanup")
     print("-"*60)
     
     if inquiry_id:

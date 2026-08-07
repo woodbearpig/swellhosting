@@ -52,6 +52,9 @@ export const RichTextEditor = ({ value, onChange, placeholder = 'Write your stor
         heading: { levels: [1, 2, 3] },
         // We disable code-block for a friendlier writing surface; inline code stays.
         codeBlock: false,
+        // StarterKit ships its own Link extension in newer versions; disable
+        // it here so our explicitly-configured Link (below) isn't a duplicate.
+        link: false,
       }),
       Link.configure({
         openOnClick: false,
