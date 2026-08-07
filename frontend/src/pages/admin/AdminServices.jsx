@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, X } from 'lucide-react';
 import { api, uploadFile, publicUrl } from '@/lib/api';
+import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
 const emptyService = () => ({
   slug: '', title: '', subtitle: '', short_description: '', description: '',
@@ -80,10 +81,11 @@ export const AdminServices = () => {
               <div><label className="eyebrow block mb-1">ORDER</label><input type="number" className="input-cream" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: parseInt(e.target.value || '0', 10) })} /></div>
               <div className="sm:col-span-2">
                 <label className="eyebrow block mb-1">HERO IMAGE</label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   {editing.hero_image_url && <img src={publicUrl(editing.hero_image_url)} alt="hero" className="h-16 w-24 object-cover rounded-lg" />}
                   <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadHero(e.target.files[0])} />
-                  <input className="input-cream flex-1" value={editing.hero_image_url || ''} onChange={e => setEditing({ ...editing, hero_image_url: e.target.value })} placeholder="Or paste URL" />
+                  <MediaPickerButton testId="media-picker-service-hero" onSelect={url => setEditing({ ...editing, hero_image_url: url })} />
+                  <input className="input-cream flex-1 min-w-[200px]" value={editing.hero_image_url || ''} onChange={e => setEditing({ ...editing, hero_image_url: e.target.value })} placeholder="Or paste URL" />
                 </div>
               </div>
               <div className="sm:col-span-2">
@@ -97,7 +99,13 @@ export const AdminServices = () => {
                     <div key={i} className="relative h-16 w-24"><img src={publicUrl(u)} alt="gal" className="h-full w-full object-cover rounded-lg" /><button onClick={() => setEditing({ ...editing, images: editing.images.filter((_, idx) => idx !== i) })} className="absolute -top-2 -right-2 bg-black/70 text-white h-5 w-5 rounded-full"><X className="h-3 w-3" /></button></div>
                   ))}
                 </div>
-                <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadGallery(e.target.files[0])} />
+                <div className="flex items-center gap-3 flex-wrap">
+                  <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadGallery(e.target.files[0])} />
+                  <MediaPickerButton
+                    testId="media-picker-service-gallery"
+                    onSelect={url => setEditing({ ...editing, images: [...(editing.images || []), url] })}
+                  />
+                </div>
               </div>
               <div className="sm:col-span-2 flex items-center gap-3">
                 <input id="published" type="checkbox" checked={editing.published !== false} onChange={e => setEditing({ ...editing, published: e.target.checked })} />

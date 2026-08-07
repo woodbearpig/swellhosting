@@ -4,6 +4,7 @@ import { Save, Plus, Trash2, ArrowUp, ArrowDown, Type as TypeIcon } from 'lucide
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
 import { FONT_PRESETS, applyFonts } from '@/context/FontContext';
+import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
 const SECTIONS = [
   { key: 'brand', label: 'Brand' },
@@ -74,7 +75,10 @@ export const AdminSiteContent = () => {
             <div>
               <label className="eyebrow block mb-1">LOGO</label>
               {data.logo_url && <img src={publicUrl(data.logo_url)} alt="logo" className="h-20 w-auto rounded-lg mb-2" />}
-              <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ logo_url: r.url }); } }} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ logo_url: r.url }); } }} />
+                <MediaPickerButton testId="media-picker-logo" onSelect={url => set({ logo_url: url })} />
+              </div>
               <input className="input-cream mt-2" placeholder="Or paste URL" value={data.logo_url || ''} onChange={e => set({ logo_url: e.target.value })} />
             </div>
           </div>
@@ -180,7 +184,10 @@ export const AdminSiteContent = () => {
             <div>
               <label className="eyebrow block mb-1">HERO IMAGE</label>
               {data.hero_image_url && <img src={publicUrl(data.hero_image_url)} alt="hero" className="h-32 w-auto rounded-lg mb-2" />}
-              <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ hero_image_url: r.url }); } }} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ hero_image_url: r.url }); } }} />
+                <MediaPickerButton testId="media-picker-hero" onSelect={url => set({ hero_image_url: url })} />
+              </div>
               <input className="input-cream mt-2" value={data.hero_image_url} onChange={e => set({ hero_image_url: e.target.value })} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -271,7 +278,10 @@ export const AdminSiteContent = () => {
             <div>
               <label className="eyebrow block mb-1">ABOUT IMAGE</label>
               {data.about_image_url && <img src={publicUrl(data.about_image_url)} alt="about" className="h-32 w-auto rounded-lg mb-2" />}
-              <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ about_image_url: r.url }); } }} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ about_image_url: r.url }); } }} />
+                <MediaPickerButton testId="media-picker-about" onSelect={url => set({ about_image_url: url })} />
+              </div>
               <input className="input-cream mt-2" value={data.about_image_url} onChange={e => set({ about_image_url: e.target.value })} />
             </div>
             <div><label className="eyebrow block mb-1">DESIGNER NAME</label><input className="input-cream" value={data.designer_name} onChange={e => set({ designer_name: e.target.value })} /></div>

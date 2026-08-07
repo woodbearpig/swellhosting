@@ -22,6 +22,9 @@ const FIELD_TYPES = [
   { value: 'section_note', label: 'Help paragraph (no input)', hasOptions: false },
 ];
 
+// Field types whose value can drive a conditional (must have discrete options)
+const TRIGGER_TYPES = new Set(['chips_single', 'chips_multi', 'select', 'radio']);
+
 const RESERVED_IDS = new Set([
   'client_name', 'client_email', 'client_phone', 'preferred_contact',
   'event_type', 'event_date', 'event_backup_date', 'event_start_time', 'event_end_time',
@@ -63,7 +66,120 @@ const OptionsEditor = ({ options = [], onChange }) => (
   </div>
 );
 
-const FieldEditor = ({ field, onChange, onDelete, onMoveUp, onMoveDown, canUp, canDown, index }) => {
+// ConditionalEditor — lets the admin say "show this field only if [trigger] equals [value]"
+// availableTriggers: array of { id, label, options } for all option-based fields that appear
+// BEFORE the current field in the schema (so the value is already collected when we evaluate).
+const ConditionalEditor = ({ field, availableTriggers, onChange }) => {
+  const cond = field.conditional || null;
+  const active = !!cond;
+  const trigger = active ? availableTriggers.find(t => t.id === cond.field) : null;
+
+  const enable = () => {
+    // pick the first available trigger by default
+    const first = availableTriggers[0];
+    if (!first) return;
+    onChange({
+      ...field,
+      conditional: {
+        field: first.id,
+        equals: first.options?.[0]?.value || '',
+      },
+    });
+  };
+
+  const disable = () => {
+    const next = { ...field };
+    delete next.conditional;
+    onChange(next);
+  };
+
+  if (availableTriggers.length === 0) {
+    return (
+      <div className="pl-2 border-l-2 border-[color:var(--brand-border)]">
+        <p className="eyebrow">SHOW ONLY IF…</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)] italic mt-1">
+          Add a bubble/dropdown/radio field earlier in the form to unlock conditional rules.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pl-2 border-l-2 border-[color:var(--brand-border)] space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="eyebrow">SHOW ONLY IF…</p>
+        {active ? (
+          <button
+            type="button"
+            className="text-xs link-underline text-red-600"
+            onClick={disable}
+            data-testid={`field-${field.id}-conditional-clear`}
+          >
+            <X className="h-3 w-3 inline" /> Clear rule
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="text-xs link-underline"
+            onClick={enable}
+            data-testid={`field-${field.id}-conditional-add`}
+          >
+            + Add conditional rule
+          </button>
+        )}
+      </div>
+
+      {active && (
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-center">
+          <select
+            className="input-cream !h-9 text-sm"
+            value={cond.field}
+            onChange={e => {
+              const newTrigger = availableTriggers.find(t => t.id === e.target.value);
+              onChange({
+                ...field,
+                conditional: {
+                  field: e.target.value,
+                  equals: newTrigger?.options?.[0]?.value || '',
+                },
+              });
+            }}
+            data-testid={`field-${field.id}-conditional-field`}
+          >
+            {availableTriggers.map(t => (
+              <option key={t.id} value={t.id}>{t.label || t.id}</option>
+            ))}
+          </select>
+          <span className="text-sm text-[color:var(--brand-text-muted)] text-center px-1">equals</span>
+          <select
+            className="input-cream !h-9 text-sm"
+            value={cond.equals || ''}
+            onChange={e => onChange({
+              ...field,
+              conditional: { ...cond, equals: e.target.value },
+            })}
+            data-testid={`field-${field.id}-conditional-value`}
+          >
+            {(trigger?.options || []).map(o => (
+              <option key={o.value} value={o.value}>{o.label || o.value}</option>
+            ))}
+            {(!trigger?.options || trigger.options.length === 0) && (
+              <option value="">— that field has no options —</option>
+            )}
+          </select>
+        </div>
+      )}
+
+      {active && trigger && (
+        <p className="text-[11px] text-[color:var(--brand-text-muted)]">
+          Field is hidden until visitors pick <b>{(trigger.options || []).find(o => o.value === cond.equals)?.label || cond.equals}</b> for <b>{trigger.label || trigger.id}</b>.
+        </p>
+      )}
+    </div>
+  );
+};
+
+const FieldEditor = ({ field, onChange, onDelete, onMoveUp, onMoveDown, canUp, canDown, index, availableTriggers = [] }) => {
   const meta = FIELD_TYPES.find(t => t.value === field.type) || FIELD_TYPES[0];
   const isReserved = RESERVED_IDS.has(field.id);
   return (
@@ -129,11 +245,21 @@ const FieldEditor = ({ field, onChange, onDelete, onMoveUp, onMoveDown, canUp, c
           <OptionsEditor options={field.options} onChange={opts => onChange({ ...field, options: opts })} />
         </div>
       )}
+
+      {field.type !== 'section_note' && (
+        <div className="pl-6">
+          <ConditionalEditor
+            field={field}
+            availableTriggers={availableTriggers}
+            onChange={onChange}
+          />
+        </div>
+      )}
     </div>
   );
 };
 
-const StepCard = ({ step, index, expanded, onToggle, onChange, onDelete, onMoveUp, onMoveDown, canUp, canDown }) => (
+const StepCard = ({ step, index, expanded, onToggle, onChange, onDelete, onMoveUp, onMoveDown, canUp, canDown, triggersForField }) => (
   <div className="border border-[color:var(--brand-border)] rounded-2xl bg-white/40 overflow-hidden" data-testid={`step-${step.id}`}>
     <div className="flex items-center gap-2 px-4 py-3 bg-[color:var(--brand-surface-2)]">
       <button type="button" onClick={onToggle} className="h-8 w-8 inline-flex items-center justify-center" aria-label="Toggle step">
@@ -188,6 +314,7 @@ const StepCard = ({ step, index, expanded, onToggle, onChange, onDelete, onMoveU
               index={fi}
               canUp={fi > 0}
               canDown={fi < step.fields.length - 1}
+              availableTriggers={triggersForField ? triggersForField(field.id) : []}
               onChange={next => {
                 const list = [...step.fields];
                 list[fi] = next;
@@ -280,6 +407,23 @@ export const AdminInquiryForm = () => {
 
   if (!schema) return <p>Loading form…</p>;
 
+  // Given a target field id, return the list of trigger candidates:
+  // all option-based fields that appear BEFORE it in the schema.
+  // Guarantees no circular references and that the trigger's value
+  // will already be set by the time we evaluate the conditional.
+  const triggersForField = (targetFieldId) => {
+    const out = [];
+    for (const s of schema.steps || []) {
+      for (const f of s.fields || []) {
+        if (f.id === targetFieldId) return out;
+        if (TRIGGER_TYPES.has(f.type) && (f.options || []).length > 0) {
+          out.push({ id: f.id, label: f.label || f.id, options: f.options });
+        }
+      }
+    }
+    return out;
+  };
+
   return (
     <div className="space-y-6" data-testid="admin-inquiry-form-page">
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -302,8 +446,8 @@ export const AdminInquiryForm = () => {
       </div>
 
       <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm">
-        <p className="font-medium mb-1">Tip: "Bubble buttons" fields</p>
-        <p className="text-[color:var(--brand-text-muted)]">The chip-style choices visitors love come from field types <strong>Bubble buttons (pick one)</strong> and <strong>Bubble buttons (pick many)</strong>. Edit their options right on the field.</p>
+        <p className="font-medium mb-1">Two tips before you start</p>
+        <p className="text-[color:var(--brand-text-muted)]"><strong>Bubble buttons</strong> (the chip-style choices visitors love) come from field types <em>Bubble buttons (pick one)</em> and <em>Bubble buttons (pick many)</em>. And any field can now use <strong>"Show only if…"</strong> to appear only when a previous bubble/dropdown/radio choice matches — great for tailoring the form to different event types.</p>
       </div>
 
       <div className="space-y-3" data-testid="inquiry-form-steps-list">
@@ -320,6 +464,7 @@ export const AdminInquiryForm = () => {
             onMoveDown={() => moveStep(idx, +1)}
             canUp={idx > 0}
             canDown={idx < schema.steps.length - 1}
+            triggersForField={triggersForField}
           />
         ))}
       </div>

@@ -200,3 +200,89 @@ code {
 @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Rich-text (TipTap) content — used both in the admin editor
+   and on public Journal posts. Kept lightweight; no
+   @tailwindcss/typography dependency required.
+   ───────────────────────────────────────────────────────────── */
+.tiptap-content {
+    color: var(--brand-text);
+    font-family: var(--font-body, 'Figtree', system-ui, sans-serif);
+    line-height: 1.7;
+}
+.tiptap-content h1 {
+    font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+    font-size: 2rem;
+    line-height: 1.15;
+    margin: 1.8rem 0 0.8rem;
+    letter-spacing: -0.01em;
+}
+.tiptap-content h2 {
+    font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+    font-size: 1.5rem;
+    line-height: 1.2;
+    margin: 1.5rem 0 0.6rem;
+    letter-spacing: -0.005em;
+}
+.tiptap-content h3 {
+    font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+    font-size: 1.2rem;
+    line-height: 1.3;
+    margin: 1.2rem 0 0.5rem;
+}
+.tiptap-content p { margin: 0 0 0.9rem; }
+.tiptap-content a {
+    color: var(--brand-sage-deep, #6b8759);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+}
+.tiptap-content a:hover { color: var(--brand-sage, #7a967a); }
+.tiptap-content strong { font-weight: 600; }
+.tiptap-content em { font-style: italic; }
+.tiptap-content s { text-decoration: line-through; opacity: 0.75; }
+.tiptap-content code {
+    font-family: 'Source Code Pro', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--brand-surface-2, #f3ece0);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.tiptap-content ul, .tiptap-content ol {
+    margin: 0.6rem 0 1rem;
+    padding-left: 1.5rem;
+}
+.tiptap-content ul { list-style: disc; }
+.tiptap-content ol { list-style: decimal; }
+.tiptap-content li { margin: 0.25rem 0; }
+.tiptap-content li > p { margin: 0; }
+.tiptap-content blockquote {
+    margin: 1.2rem 0;
+    padding: 0.5rem 0 0.5rem 1rem;
+    border-left: 3px solid var(--brand-sage, #9fb69a);
+    color: var(--brand-text-muted, #6a655d);
+    font-style: italic;
+}
+.tiptap-content hr {
+    border: 0;
+    border-top: 1px solid var(--brand-border, #d9cdb8);
+    margin: 2rem 0;
+}
+.tiptap-content img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 1.25rem;
+    margin: 1.2rem auto;
+}
+
+/* Placeholder text shown in an empty editor */
+.tiptap-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: var(--brand-text-muted, #a09a90);
+    pointer-events: none;
+    height: 0;
+    font-style: italic;
+}

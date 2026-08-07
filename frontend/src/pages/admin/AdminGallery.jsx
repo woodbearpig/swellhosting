@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, X, Upload } from 'lucide-react';
 import { api, uploadFile, publicUrl } from '@/lib/api';
+import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
 const CATEGORIES = ['weddings', 'birthdays', 'corporate', 'showers', 'holidays', 'grand-openings', 'other'];
 
@@ -73,7 +74,10 @@ export const AdminGallery = () => {
               <div>
                 <label className="eyebrow block mb-1">IMAGE</label>
                 {editing.image_url && <img src={publicUrl(editing.image_url)} alt="preview" className="h-32 w-full object-cover rounded-lg mb-2" />}
-                <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); setEditing({ ...editing, image_url: r.url }); } }} />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); setEditing({ ...editing, image_url: r.url }); } }} />
+                  <MediaPickerButton testId="media-picker-gallery" onSelect={url => setEditing({ ...editing, image_url: url })} />
+                </div>
                 <input className="input-cream mt-2" placeholder="Or paste URL" value={editing.image_url || ''} onChange={e => setEditing({ ...editing, image_url: e.target.value })} />
               </div>
               <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={editing.title || ''} onChange={e => setEditing({ ...editing, title: e.target.value })} /></div>

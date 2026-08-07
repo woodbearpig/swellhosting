@@ -27,6 +27,20 @@ const isEmpty = (v) => v === null || v === undefined || v === '' ||
   (Array.isArray(v) && v.length === 0) ||
   (Array.isArray(v) && v.every(x => !x || (typeof x === 'string' && !x.trim())));
 
+// Determine whether a field should be shown to the user, based on its
+// optional `conditional` rule. Simple mode: show only if `values[cond.field]`
+// equals `cond.equals`. For array-valued fields (chips_multi) we also treat
+// the presence of the value inside the array as a match.
+const isFieldVisible = (field, values) => {
+  const cond = field?.conditional;
+  if (!cond || !cond.field || cond.equals === undefined || cond.equals === null || cond.equals === '') {
+    return true;
+  }
+  const other = values ? values[cond.field] : undefined;
+  if (Array.isArray(other)) return other.includes(cond.equals);
+  return other === cond.equals;
+};
+
 // -------------------- Individual field components --------------------
 const ChipsField = ({ field, value, onChange, multi }) => {
   const selected = multi ? (value || []) : value;
@@ -240,7 +254,9 @@ const InquiryWizardPage = () => {
 
   const missing = useMemo(() => {
     if (!step) return [];
-    return (step.fields || []).filter(f => f.required && f.type !== 'section_note' && isEmpty(values[f.id]));
+    return (step.fields || []).filter(f =>
+      f.required && f.type !== 'section_note' && isFieldVisible(f, values) && isEmpty(values[f.id])
+    );
   }, [step, values]);
 
   const next = () => {
@@ -406,7 +422,7 @@ const InquiryWizardPage = () => {
               </div>
 
               <div className="mt-6 space-y-6">
-                {(step.fields || []).map(field => (
+                {(step.fields || []).filter(f => isFieldVisible(f, values)).map(field => (
                   <div key={field.id} data-testid={`field-wrap-${field.id}`}>
                     {field.type === 'section_note' ? (
                       <div className="rounded-xl bg-[color:var(--brand-sage-tint)]/50 p-4">

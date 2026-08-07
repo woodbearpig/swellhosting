@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, X } from 'lucide-react';
 import { api, uploadFile, publicUrl } from '@/lib/api';
+import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
+import { RichTextEditor } from '@/components/admin/RichTextEditor';
 
 export const AdminBlog = () => {
   const [items, setItems] = useState([]);
@@ -49,10 +51,20 @@ export const AdminBlog = () => {
               <div>
                 <label className="eyebrow block mb-1">COVER IMAGE</label>
                 {editing.cover_image_url && <img src={publicUrl(editing.cover_image_url)} alt="cover" className="h-32 w-full object-cover rounded-lg mb-2" />}
-                <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); setEditing({ ...editing, cover_image_url: r.url }); } }} />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); setEditing({ ...editing, cover_image_url: r.url }); } }} />
+                  <MediaPickerButton testId="media-picker-blog-cover" onSelect={url => setEditing({ ...editing, cover_image_url: url })} />
+                </div>
                 <input className="input-cream mt-2" placeholder="Or paste URL" value={editing.cover_image_url || ''} onChange={e => setEditing({ ...editing, cover_image_url: e.target.value })} />
               </div>
-              <textarea className="input-cream textarea-cream" rows={10} placeholder="Content (plain text or markdown-like)" value={editing.content} onChange={e => setEditing({ ...editing, content: e.target.value })} />
+              <div>
+                <label className="eyebrow block mb-1">CONTENT</label>
+                <RichTextEditor
+                  value={editing.content || ''}
+                  onChange={html => setEditing({ ...editing, content: html })}
+                  placeholder="Tell the story of this event…"
+                />
+              </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.published !== false} onChange={e => setEditing({ ...editing, published: e.target.checked })} /> Published</label>
             </div>
             <div className="mt-4 flex justify-end gap-3"><button onClick={() => setEditing(null)} className="btn-secondary">Cancel</button><button onClick={save} className="btn-primary">Save</button></div>

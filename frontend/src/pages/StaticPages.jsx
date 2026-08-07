@@ -137,7 +137,15 @@ export const BlogDetailPage = () => {
           <img src={post.cover_image_url} alt={post.title} className="h-full w-full object-cover" />
         </div>
       )}
-      <div className="prose max-w-none text-base leading-relaxed whitespace-pre-line">{post.content}</div>
+      {/* Content: if it looks like HTML (contains a tag), render as HTML; else render preserving newlines. */}
+      {/^\s*<(p|h[1-6]|ul|ol|blockquote|img|figure|hr|div)/i.test(post.content || '') ? (
+        <div
+          className="tiptap-content prose max-w-none text-base leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: post.content || '' }}
+        />
+      ) : (
+        <div className="prose max-w-none text-base leading-relaxed whitespace-pre-line">{post.content}</div>
+      )}
     </article>
   );
 };

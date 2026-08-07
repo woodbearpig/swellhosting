@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, ExternalLink, RefreshCw, Trash2, Copy, Link as LinkIcon, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, ExternalLink, RefreshCw, Trash2, Copy, Link as LinkIcon, Info, FileText, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -158,6 +158,26 @@ export const AdminIntegrations = () => {
         <button onClick={() => setShowGcalSetup(v => !v)} className="text-sm link-underline">
           <Info className="h-4 w-4 inline mr-1" /> {showGcalSetup ? 'Hide' : 'Show'} step-by-step setup guide
         </button>
+
+        {/* Client-facing PDF guide */}
+        <div className="rounded-2xl border border-[color:var(--brand-line)] bg-[color:var(--brand-surface-2)] p-4 flex items-start gap-3" data-testid="oauth-pdf-guide-card">
+          <FileText className="h-5 w-5 mt-0.5 text-[color:var(--brand-sage-deep)] shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium leading-tight">OAuth setup guide for client (PDF)</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">
+              A polished 12-page walkthrough you can email to your client. Explains the 5-minute Google Cloud setup in plain English, with screenshots-in-words, an analogy for the technical bits, and a troubleshooting section.
+            </p>
+          </div>
+          <a
+            href="/docs/oauth-setup-guide.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary shrink-0"
+            data-testid="oauth-pdf-guide-download"
+          >
+            <Download className="h-4 w-4" /> Download PDF
+          </a>
+        </div>
 
         {showGcalSetup && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="rounded-2xl bg-[color:var(--brand-surface-2)] p-5 space-y-4">

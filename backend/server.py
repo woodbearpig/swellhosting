@@ -9,7 +9,9 @@ from datetime import datetime, timezone, timedelta, date, time as dt_time
 from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, Form
-from fastapi.responses import FileResponse, JSONResponse
+import io
+import csv
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -516,6 +518,13 @@ async def update_inquiry_form(payload: Dict[str, Any], admin=Depends(require_adm
                     if isinstance(o, dict) and "value" in o and "label" in o:
                         opts.append({"value": str(o["value"]), "label": str(o["label"])})
                 fld["options"] = opts
+            # Conditional display rule (simple mode): { field: <id>, equals: <value> }
+            cond = f.get("conditional")
+            if isinstance(cond, dict) and cond.get("field") and cond.get("equals") not in (None, ""):
+                fld["conditional"] = {
+                    "field": str(cond["field"]).strip(),
+                    "equals": str(cond["equals"]),
+                }
             fields.append(fld)
         cleaned_steps.append({
             "id": str(s.get("id") or f"step-{uuid.uuid4().hex[:8]}"),
@@ -920,6 +929,101 @@ async def admin_list_inquiries(status: Optional[str] = None, admin=Depends(requi
         query["status"] = status
     docs = await db.inquiries.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
     return docs
+
+
+@api.get("/admin/inquiries.csv")
+async def admin_export_inquiries_csv(
+    status: Optional[str] = None,
+    admin=Depends(require_admin),
+):
+    """Export inquiries as CSV. Accepts same ?status filter as the list endpoint.
+    Flattens the `extra` (dynamic form) fields into extra_<key> columns so that
+    every custom question the owner adds via the Inquiry Form Builder ends up in
+    its own column in the spreadsheet."""
+    query: Dict[str, Any] = {}
+    if status and status != "all":
+        query["status"] = status
+    docs = await db.inquiries.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+
+    # Core columns (stable order, first)
+    core_cols = [
+        "id",
+        "created_at",
+        "status",
+        "client_name",
+        "client_email",
+        "client_phone",
+        "event_type",
+        "event_date",
+        "event_start_time",
+        "event_backup_date",
+        "guest_count",
+        "venue_name",
+        "venue_address",
+        "indoor_outdoor",
+        "theme",
+        "color_palette",
+        "budget_range",
+        "services_needed",
+        "inspiration_notes",
+        "inspiration_links",
+        "upload_urls",
+        "has_consult",
+        "consult_date",
+        "consult_time",
+        "consult_duration_minutes",
+        "consult_status",
+        "admin_notes",
+        "referral_source",
+    ]
+
+    # Collect all extra_* keys across the batch (deterministic order)
+    extra_keys: List[str] = []
+    seen_extra = set()
+    for d in docs:
+        ex = d.get("extra") or {}
+        if isinstance(ex, dict):
+            for k in ex.keys():
+                if k not in seen_extra:
+                    seen_extra.add(k)
+                    extra_keys.append(k)
+
+    headers = core_cols + [f"extra_{k}" for k in extra_keys]
+
+    def _fmt(v):
+        if v is None:
+            return ""
+        if isinstance(v, list):
+            return "; ".join(str(x) for x in v)
+        if isinstance(v, dict):
+            # Compact dict → JSON-ish inline
+            try:
+                import json as _json
+                return _json.dumps(v, ensure_ascii=False)
+            except Exception:
+                return str(v)
+        if isinstance(v, bool):
+            return "yes" if v else "no"
+        return str(v)
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for d in docs:
+        ex = d.get("extra") or {}
+        row = [_fmt(d.get(col)) for col in core_cols]
+        for k in extra_keys:
+            row.append(_fmt(ex.get(k)))
+        writer.writerow(row)
+
+    buf.seek(0)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"swell-inquiries-{ts}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @api.get("/admin/inquiries/{iid}")

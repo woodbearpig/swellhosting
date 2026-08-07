@@ -1,7 +1,7 @@
-# plan.md — swell design + media (V2)
+# plan.md — swell design + media (V4)
 
 ## 1) Objectives
-- Ship a **presentable, luxury public website** + **white‑labeled client management platform** for **swell design + media**.
+- Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
 - Deliver the **core lead flow** end‑to‑end:
   - Visitor browses → submits inquiry (wizard) → (optional) schedules phone consultation → admin reviews/updates status.
 - Provide an **admin-managed CMS** so the owner can:
@@ -13,12 +13,18 @@
   - Customize typography (headline/body/script fonts)
   - Customize header navigation (internal + external links)
   - Customize the inquiry wizard steps/fields (bubble-chip options)
-- Keep deployment to **AlmaLinux 10 VPS** simple and repeatable via **Docker Compose** + `deploy.sh`.
+  - Add **simple conditional display rules** to inquiry fields (show field X only if a previous field equals value)
+  - Export inquiries as CSV
+  - Author Journal posts with rich text + image embeds
+  - Reuse images site-wide via a central Media Library (“upload once, use everywhere”)
+- Keep deployment to **AlmaLinux 10 VPS** simple and repeatable via **Docker Compose** + `deploy.sh` (single-command deploy).
 - Maintain strict white‑labeling:
-  - No Emergent references in UI/content
-  - Automatically purge any Emergent-hosted asset URLs from SiteContent
+  - No references to any third-party builder brand in UI/content
+  - Automatically purge any non-owned hosted asset URLs from SiteContent
 - Improve perceived UX:
   - Eliminate “flash of full site” when **Coming Soon mode** is enabled
+
+---
 
 ## 2) Implementation Steps
 
@@ -42,12 +48,12 @@
 ### Phase 2 — V1 App Development (Completed + ongoing enhancements)
 #### What is already implemented
 - Frontend (React + Tailwind + Framer Motion)
-  - Public pages: Home, About, Services, Gallery, Testimonials, FAQ, Blog, Contact, Privacy/Terms, 404.
+  - Public pages: Home, About, Services, Gallery, Testimonials, FAQ, Blog/Journal, Contact, Privacy/Terms, 404.
   - Coming Soon mode with render gate (no FOUC).
   - Dynamic inquiry form renderer.
 - Backend (FastAPI + Motor)
   - CRUD for Services, Gallery, Testimonials, FAQs, Blog, SiteContent.
-  - Google Calendar OAuth integration endpoints exist.
+  - Google Calendar OAuth integration endpoints.
   - Instagram Graph API integration.
   - Email confirmations (best-effort via SMTP).
 - Admin
@@ -58,7 +64,7 @@
   - Admin credentials change.
 - Deployment
   - Docker-based deploy scripts working on AlmaLinux 10 VPS.
-  - `deploy.sh` now fails loudly on git auth failures and prints PAT instructions.
+  - `deploy.sh` fails loudly on git auth failures and prints PAT instructions.
 
 ---
 
@@ -99,7 +105,7 @@
 ---
 
 ### Phase E (P0/P1) — Admin Credentials + Dynamic Inquiry Form Builder (COMPLETED ✅)
-**Goal:** Owner can change admin login safely + fully customize the inquiry wizard, especially bubble-shaped chip options.
+**Goal:** Owner can change admin login safely + fully customize the inquiry wizard.
 
 **Completed work**
 - Admin credentials change flow in `/admin/settings` with current-password verification.
@@ -122,126 +128,174 @@
 ---
 
 ### Phase G (P0) — White‑label asset purge (COMPLETED ✅)
-**Goal:** Ensure no Emergent-hosted asset URLs remain in live content.
+**Goal:** Ensure no non-owned hosted asset URLs remain in live content.
 
 **Completed work**
-- Default `logo_url` no longer points to Emergent CDN.
-- Startup migration clears Emergent URLs from: `logo_url`, `hero_image_url`, `about_image_url`, `coming_soon_bg_url`, `og_image_url`, `favicon_url`.
+- Default `logo_url` no longer points to any third-party builder CDN.
+- Startup migration clears legacy hosted URLs from: `logo_url`, `hero_image_url`, `about_image_url`, `coming_soon_bg_url`, `og_image_url`, `favicon_url`.
 
 ---
 
-## 3) NEXT: Client-Requested Enhancements (Planned)
-Ordering confirmed by user: **Google Calendar polish → merged consults → media library**
+## 3) Client-Requested Enhancements (Delivered)
 
-### Phase H (P0) — Google Calendar “one-click connect” polish (Path A)
-**Goal:** Owner connects Google Calendar by clicking “Sign in with Google” (no manual client_id/secret entry in normal use).
+### Phase H (P0) — Google Calendar “one-click connect” polish (COMPLETED ✅)
+**Goal:** Owner connects Google Calendar by clicking “Sign in with Google”.
 
-**Backend**
-- Confirm OAuth redirect + token refresh behavior is robust.
-- Ensure availability computation can block time slots based on Google Calendar busy events.
-- Ensure event creation works for consult bookings.
+**Completed work**
+- OAuth redirect + token storage/refresh.
+- Busy-time blocking in availability.
+- Consult booking creates Google Calendar events.
+- Added setup guide: `/app/OAUTH_SETUP.md`.
 
-**Frontend Admin**
-- Improve `AdminIntegrations` UX:
-  - If env vars `GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET` exist: hide the manual paste UI by default.
-  - Keep manual credential entry as fallback.
-- Add “5-minute setup guide” in the UI and as `/app/OAUTH_SETUP.md`.
-
-**Exit criteria**
-- She clicks “Connect Google Calendar” → chooses `swellballoons@gmail.com` → Allow → status shows Connected.
+**Exit criteria met**
+- She clicks “Sign in with Google” → chooses Gmail → Allow → admin shows Connected.
 
 ---
 
-### Phase I (P0) — Consultation becomes last step of inquiry (phone-only)
-**Goal:** Replace standalone /book with an optional final inquiry step to schedule a phone consult.
+### Phase I (P0) — Consultation becomes last step of inquiry (phone-only) (COMPLETED ✅)
+**Goal:** Replace standalone `/book` with an optional final inquiry step to schedule a phone consult.
 
-**Requirements confirmed**
-- Delete standalone **/book** page.
-- Final inquiry step offers:
-  - “Schedule a phone consultation” (shows calendar + time slots)
-  - “Submit inquiry without phone consultation” (with confirm modal notice: consult may still be required)
-- Phone number is required.
-- Success screen shows consult time if scheduled.
-- Send confirmation email with **.ics calendar invite attachment**.
-- Admin keeps a separate filtered view for consult-booked inquiries ("Scheduled calls").
-
-**Backend**
-- Extend Inquiry with consult metadata (or store consult meta in `extra` but surfaced explicitly):
-  - `consult_date`, `consult_time`, `consult_duration_minutes`, `consult_status`.
-- Keep Consultation model for compatibility, but treat it as derived from Inquiry.
-- Add **Booking rules** to Availability singleton:
-  - `advance_booking_days` (default 60)
-  - `minimum_lead_hours` (default 2)
-  - `daily_max_consults` (default 6)
-  - `buffer_minutes` (default 15)
-  - `consult_duration_minutes` (default 30)
-  - `block_sundays` (default True)
-  - `blocked_dates: List[str]` (YYYY-MM-DD)
-- Availability computation returns slots for next N days honoring:
-  - weekly hours, blocked_dates, lead time, booking window, daily max, buffer, and Google Calendar busy.
-- Email service:
-  - Add `.ics` generator and attach to confirmation emails.
-
-**Frontend**
-- InquiryWizardPage:
-  - Add final hard-coded consult step (separate from schema) that reuses Booking UI.
-  - Add confirm modal for skipping consult.
-  - Make `client_phone` required.
-- Remove `/book` route and update nav/CTAs to point to `/inquire`.
-
-**Admin**
-- Remove “Consultations” tab.
-- Add “Scheduled calls” view (filtered inquiries with consult scheduled).
-- Add Booking rules UI under Admin → Settings.
+**Completed work**
+- Removed standalone booking route.
+- InquiryWizard final step can schedule consult or skip with confirmation.
+- Booking rules enforced (lead time, buffer, window, daily max, blocked dates).
+- `.ics` calendar invites attached to confirmation emails.
+- Admin includes “Scheduled calls” view.
 
 ---
 
-### Phase J (P1) — Media Library (uploads hub)
+### Phase J (P1) — Media Library (uploads hub) (COMPLETED ✅)
 **Goal:** One central upload library to reuse media anywhere, with tags and compression.
 
-**Backend**
-- New collection: `media_library` (MediaAsset)
-  - `{ id, url, filename, alt_text, tags[], width, height, size_bytes, created_at }`
-- Enhance `/api/uploads`:
-  - Auto-compress + resize (max 2400px width, JPEG q80) via Pillow.
-  - Index each uploaded file into `media_library`.
+**Completed work**
+- New `media_library` collection (MediaAsset model).
+- `/api/uploads` auto-compresses images via Pillow and indexes assets.
 - Admin endpoints:
   - `GET /api/admin/media` (search + tag filter)
-  - `PATCH /api/admin/media/{id}` (alt/tags/filename)
+  - `PATCH /api/admin/media/{id}`
   - `DELETE /api/admin/media/{id}`
-- Startup migration:
-  - Scan existing SiteContent images + Services + Gallery + Blog covers and index them if not present.
+- Admin page `/admin/media` with upload, grid, tags, delete.
+- Reusable picker UI (“Insert from library”) integrated into all existing admin image fields (see Phase K3).
 
-**Frontend Admin**
-- New page: `/admin/media`
-  - Thumbnail grid, search, tag filter, drag-to-upload.
-  - Edit alt + tags.
-  - Delete.
-- Add “Insert from library” modal anywhere an image URL exists.
-- Sidebar: add “Media” between Gallery and Testimonials.
+---
+
+### Phase K (P0/P1) — Session Enhancements (COMPLETED ✅)
+All items were implemented and validated (curl + browser automation screenshots). No known regressions.
+
+#### K1 — Admin Integrations: downloadable OAuth PDF guide (P0) (COMPLETED ✅)
+**Goal:** Provide a polished, client-ready PDF setup guide accessible in the admin.
+
+**Completed work**
+- Produced the client-facing guide PDF:
+  - `/app/deploy/Google_Calendar_Setup_Guide.pdf` (12-page, client-ready)
+- Added a download link in `/admin/integrations` (Google Calendar section):
+  - Label: **“OAuth setup guide for client (PDF)”**
+  - Served from: `frontend/public/docs/oauth-setup-guide.pdf`
+- Kept `/app/OAUTH_SETUP.md` as the developer/ops reference.
+
+**Acceptance criteria met**
+- Admin can click link and download/open the PDF.
+- Link is visible near the Google Calendar connection UI.
+
+#### K2 — Inquiry CSV Export (P1) (COMPLETED ✅)
+**Goal:** One-click export of inquiries for reporting/backup.
+
+**Completed work**
+- Added **Export CSV** button to `/admin/inquiries`.
+- Added backend endpoint:
+  - `GET /api/admin/inquiries.csv` (auth-protected)
+  - Supports `?status=` filter (matches UI filter)
+  - Exports core columns + flattens dynamic fields as `extra_<key>` columns
+
+**Acceptance criteria met**
+- Admin clicks Export → downloads a `.csv`.
+
+#### K3 — Media Library picker integration (P0) (COMPLETED ✅)
+**Goal:** Fulfill the promise: reuse uploaded media without re-uploading.
+
+**Completed work**
+- Implemented reusable picker component:
+  - `frontend/src/components/admin/MediaPickerDialog.jsx`
+  - Provides search, tag filter, selection, and insert
+- Wired the picker into all existing image fields (7 total):
+  - `AdminSiteContent.jsx` (Logo, Hero Image, About Image)
+  - `AdminBlog.jsx` (Cover Image)
+  - `AdminGallery.jsx` (Gallery Item Image)
+  - `AdminServices.jsx` (Service Hero Image, Service Gallery Images)
+
+**Acceptance criteria met**
+- Any image field can pick an existing library asset.
+
+#### K4 — Conditional Logic in Inquiry Form Builder (SIMPLE mode) (P1) (COMPLETED ✅)
+**Goal:** Show/hide a field based on another field value.
+
+**Scope (simple only)**
+- Rule type: **Show field X only if field Y equals value Z**
+- Single condition per field initially (no AND/OR groups).
+
+**Completed work**
+- Schema support: `field.conditional = { field: <triggerFieldId>, equals: <value> }`
+- Backend: updated sanitizer in `PUT /api/admin/inquiry-form` to preserve `conditional`.
+- Admin UI: added “Show only if…” section per field with dropdowns.
+- Public runtime: `InquiryWizardPage.jsx`:
+  - Hides fields when condition not met
+  - Excludes hidden fields from required validation
+
+**Acceptance criteria met**
+- Admin sets rule → public inquiry wizard immediately respects it.
+
+#### K5 — Rich-text Blog Editor + image embeds (P2) (COMPLETED ✅)
+**Goal:** Upgrade Journal authoring.
+
+**Completed work**
+- Installed TipTap and added rich editor component:
+  - `frontend/src/components/admin/RichTextEditor.jsx`
+- Rich editor supports: headings, bold/italic/strike, lists, quote, horizontal rule, links, undo/redo.
+- Image embeds: integrates Media Library picker to insert images into post content.
+- Public rendering updated to support both:
+  - New HTML content (`dangerouslySetInnerHTML` gated by “looks like HTML” heuristic)
+  - Legacy plain-text posts (rendered with `whitespace-pre-line`)
+- Added lightweight CSS styling for `.tiptap-content` in `frontend/src/index.css`.
+
+**Acceptance criteria met**
+- Admin can format text and embed images.
 
 ---
 
 ## 4) Testing & QA
-- After each phase (H/I/J): run **testing_agent** for backend + frontend.
-- Specific regression focus:
-  - Calendar OAuth connect/disconnect and busy-time blocking
-  - Inquiry submission with/without consult + email + .ics
-  - Media compression integrity + library indexing + picker modal
-  - White-label purge remains intact
+- After each Phase K item: quick smoke test in browser.
+- Completed validation included:
+  - Auth guard on CSV export
+  - Media picker shows assets, inserts URLs into fields, and respects filters
+  - Conditional logic persists and hides fields + required validation honors visibility
+  - Rich editor saves HTML and public blog detail renders correctly
+- Prior test reports remain in `/app/test_reports/`.
+
+---
 
 ## 5) Deploy
-**Deploy one-liner (Hostinger VPS)**
+**Deploy one-liner (AlmaLinux VPS)**
 ```bash
 cd /var/www/swell && ./deploy.sh
 ```
 
-## 6) Success Criteria (updated)
+---
+
+## 6) Success Criteria (current)
 - Owner can:
   - Connect Google Calendar with a single click and block busy times.
   - Run the inquiry wizard with a final optional phone-consult booking step.
-  - Send confirmation emails that include a calendar invite (.ics) when a consult is scheduled.
-  - Manage booking rules in admin.
-  - Upload media once and reuse anywhere via a media library.
-- Strict white-labeling maintained (no Emergent URLs, automatic purge).
+  - Send confirmation emails including a calendar invite (.ics) when a consult is scheduled.
+  - Upload media once and reuse anywhere via a media library + picker.
+  - Download a client-friendly OAuth PDF guide from `/admin/integrations`.
+  - Export inquiries to CSV.
+  - Configure **simple conditional logic** in the inquiry form builder.
+  - Create Journal posts with rich text and embedded images.
+- Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
+
+---
+
+## 7) Explicitly Deferred / Out of Scope (for now)
+- Social feed / Facebook posts on homepage: user will use a paid specialist embed service (e.g., Juicer.io).
+- CRM Enhancements (notes/tags/pipeline): deferred to the next session (primary next milestone).

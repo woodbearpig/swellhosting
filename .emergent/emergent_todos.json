@@ -1,18 +1,22 @@
 [
   {
-    "content": "Phase H (Google Calendar polish) — complete",
+    "content": "K1 — Add PDF download link to /admin/integrations (Google Calendar section)",
     "status": "completed"
   },
   {
-    "content": "Phase I (Consult merged into inquiry + booking rules + .ics email + Scheduled calls) — complete",
+    "content": "K2 — CSV Export button on /admin/inquiries + backend endpoint",
     "status": "completed"
   },
   {
-    "content": "Phase J (Media Library backend + admin UI) — complete",
+    "content": "K3 — 'Insert from Library' picker on every image field in AdminSiteContent.jsx",
     "status": "completed"
   },
   {
-    "content": "Full testing_agent run across all 3 phases",
-    "status": "in_progress"
+    "content": "K4 — Simple Conditional Logic in Inquiry Form Builder (show field X if field Y = value)",
+    "status": "completed"
+  },
+  {
+    "content": "K5 — Rich-text Blog Editor with Media Library image embeds",
+    "status": "completed"
   }
 ]

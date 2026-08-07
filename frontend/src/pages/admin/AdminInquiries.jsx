@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Download } from 'lucide-react';
 import { api, publicUrl } from '@/lib/api';
 import { formatDate, eventTypeLabel, statusLabel } from '@/lib/utils';
 
@@ -10,18 +10,58 @@ const STATUSES = ['new', 'needs_follow_up', 'consult_scheduled', 'proposal_sent'
 export const AdminInquiriesList = () => {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     api.get('/admin/inquiries', { params: filter !== 'all' ? { status: filter } : {} }).then(r => setItems(r.data));
   }, [filter]);
 
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const params = filter !== 'all' ? { status: filter } : {};
+      const res = await api.get('/admin/inquiries.csv', { params, responseType: 'blob' });
+      // Try to read filename from Content-Disposition, fall back to a sensible default
+      let filename = 'swell-inquiries.csv';
+      const cd = res.headers['content-disposition'] || res.headers['Content-Disposition'];
+      if (cd) {
+        const m = /filename\*?=(?:UTF-8''|)"?([^"]+)"?/i.exec(cd);
+        if (m && m[1]) filename = decodeURIComponent(m[1]);
+      }
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Exported ${items.length} ${items.length === 1 ? 'inquiry' : 'inquiries'}`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div data-testid="admin-inquiries-page">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="eyebrow">INQUIRIES</p>
           <h1 className="font-serif text-3xl sm:text-4xl mt-1">Inquiries</h1>
         </div>
+        <button
+          onClick={exportCsv}
+          disabled={exporting || items.length === 0}
+          className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="admin-inquiries-export-csv"
+          title={items.length === 0 ? 'No inquiries to export' : 'Download the current view as a CSV file'}
+        >
+          <Download className="h-4 w-4" />
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </button>
       </div>
       <div className="mt-6 flex flex-wrap gap-2">
         <button onClick={() => setFilter('all')} className={`chip ${filter === 'all' ? 'selected' : ''}`}>All</button>
