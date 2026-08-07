@@ -177,7 +177,7 @@ class SiteContent(Base):
         {"id": "nav-gallery", "label": "Gallery", "href": "/gallery", "visible": True, "new_tab": False},
         {"id": "nav-about", "label": "About", "href": "/about", "visible": True, "new_tab": False},
         {"id": "nav-testimonials", "label": "Testimonials", "href": "/testimonials", "visible": True, "new_tab": False},
-        {"id": "nav-blog", "label": "Journal", "href": "/blog", "visible": True, "new_tab": False},
+        {"id": "nav-blog", "label": "Blog", "href": "/blog", "visible": True, "new_tab": False},
         {"id": "nav-faq", "label": "FAQ", "href": "/faq", "visible": True, "new_tab": False},
         {"id": "nav-contact", "label": "Contact", "href": "/contact", "visible": True, "new_tab": False},
     ])
@@ -313,6 +313,7 @@ class BlogPost(Base):
     content: str = ""
     cover_image_url: str = ""
     tags: List[str] = Field(default_factory=list)
+    featured: bool = False   # if True, gets a bigger 2x2 tile in the public grid
     author: str = "swell design + media"
     published: bool = True
     published_at: datetime = Field(default_factory=_now)

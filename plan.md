@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V4)
+# plan.md — swell design + media (V5)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -15,7 +15,8 @@
   - Customize the inquiry wizard steps/fields (bubble-chip options)
   - Add **simple conditional display rules** to inquiry fields (show field X only if a previous field equals value)
   - Export inquiries as CSV
-  - Author Journal posts with rich text + image embeds
+  - Author **Blog** posts with rich text + image embeds
+  - Present an **Instagram-style Blog gallery** (image-first grid with filtering)
   - Reuse images site-wide via a central Media Library (“upload once, use everywhere”)
 - Keep deployment to **AlmaLinux 10 VPS** simple and repeatable via **Docker Compose** + `deploy.sh` (single-command deploy).
 - Maintain strict white‑labeling:
@@ -48,7 +49,7 @@
 ### Phase 2 — V1 App Development (Completed + ongoing enhancements)
 #### What is already implemented
 - Frontend (React + Tailwind + Framer Motion)
-  - Public pages: Home, About, Services, Gallery, Testimonials, FAQ, Blog/Journal, Contact, Privacy/Terms, 404.
+  - Public pages: Home, About, Services, Gallery, Testimonials, FAQ, Blog, Contact, Privacy/Terms, 404.
   - Coming Soon mode with render gate (no FOUC).
   - Dynamic inquiry form renderer.
 - Backend (FastAPI + Motor)
@@ -245,7 +246,7 @@ All items were implemented and validated (curl + browser automation screenshots)
 - Admin sets rule → public inquiry wizard immediately respects it.
 
 #### K5 — Rich-text Blog Editor + image embeds (P2) (COMPLETED ✅)
-**Goal:** Upgrade Journal authoring.
+**Goal:** Upgrade Blog/Journal authoring.
 
 **Completed work**
 - Installed TipTap and added rich editor component:
@@ -262,13 +263,58 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 ---
 
+### Phase L (P1/P2) — Blog naming + Instagram-style Blog gallery + Integration copy polish (COMPLETED ✅)
+
+#### L1 — Integrations copy clarification (COMPLETED ✅)
+**Goal:** Remove confusion on Google Calendar setup messaging.
+
+**Completed work**
+- Rewrote the “Advanced setup — manual OAuth credentials” panel copy in `/admin/integrations` to clarify:
+  - Recommended approach: store OAuth keys in server `.env` (then only a single connect button is needed)
+  - Fallback: paste credentials in-browser only if SSH access is not available
+
+#### L2 — Rename “Journal” → “Blog” across the product (COMPLETED ✅)
+**Goal:** Consistent naming for visitors and admin.
+
+**Completed work**
+- Updated user-facing text:
+  - Header nav label default
+  - Footer link label
+  - Public list eyebrow (“BLOG”)
+  - Admin sidebar label + admin page heading
+- Added a one-time startup migration to update existing DB nav item:
+  - Renames `header_nav_items[].label` for `id="nav-blog"` from “Journal” → “Blog”
+
+#### L3 — Instagram-style Blog gallery (COMPLETED ✅)
+**Goal:** Make the Blog index page image-first and portfolio-like.
+
+**Completed work**
+- Backend schema:
+  - Added `featured: bool` to `BlogPost` model (tags already existed)
+- Admin UI (`/admin/blog`):
+  - Added comma-separated **Tags** input
+  - Added **Featured** checkbox (“bigger 2×2 tile on the blog grid”)
+  - Added Featured badge and tag summary in list cards
+- Public `/blog` page:
+  - Replaced the card list with an edge-to-edge **square-tile grid**:
+    - Responsive: 2 columns mobile, 3 columns desktop
+    - Tag filter pills auto-generated from all post tags
+    - Featured posts render as `col-span-2 row-span-2` with a star badge
+    - Hover/focus overlay reveals title, excerpt, and up to 3 tag chips
+    - Handles empty state
+    - Handles missing cover images (falls back to title tile)
+    - Images are lazy-loaded
+
+---
+
 ## 4) Testing & QA
-- After each Phase K item: quick smoke test in browser.
+- After each phase item: quick smoke test in browser.
 - Completed validation included:
   - Auth guard on CSV export
   - Media picker shows assets, inserts URLs into fields, and respects filters
   - Conditional logic persists and hides fields + required validation honors visibility
   - Rich editor saves HTML and public blog detail renders correctly
+  - Blog gallery shows correct tile layout, filtering, and featured behavior
 - Prior test reports remain in `/app/test_reports/`.
 
 ---
@@ -290,7 +336,8 @@ cd /var/www/swell && ./deploy.sh
   - Download a client-friendly OAuth PDF guide from `/admin/integrations`.
   - Export inquiries to CSV.
   - Configure **simple conditional logic** in the inquiry form builder.
-  - Create Journal posts with rich text and embedded images.
+  - Create **Blog** posts with rich text and embedded images.
+  - Curate the public Blog gallery with **tags** and **featured** tiles.
 - Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
 

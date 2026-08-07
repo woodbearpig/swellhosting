@@ -62,7 +62,7 @@ export const Footer = () => {
               <li><Link to="/services" className="link-underline">Services</Link></li>
               <li><Link to="/gallery" className="link-underline">Gallery</Link></li>
               <li><Link to="/about" className="link-underline">About</Link></li>
-              <li><Link to="/blog" className="link-underline">Journal</Link></li>
+              <li><Link to="/blog" className="link-underline">Blog</Link></li>
               <li><Link to="/faq" className="link-underline">FAQ</Link></li>
               <li><Link to="/contact" className="link-underline">Contact</Link></li>
             </ul>

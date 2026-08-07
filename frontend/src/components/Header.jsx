@@ -10,7 +10,7 @@ const DEFAULT_NAV = [
   { id: 'nav-gallery', label: 'Gallery', href: '/gallery', visible: true, new_tab: false },
   { id: 'nav-about', label: 'About', href: '/about', visible: true, new_tab: false },
   { id: 'nav-testimonials', label: 'Testimonials', href: '/testimonials', visible: true, new_tab: false },
-  { id: 'nav-blog', label: 'Journal', href: '/blog', visible: true, new_tab: false },
+  { id: 'nav-blog', label: 'Blog', href: '/blog', visible: true, new_tab: false },
   { id: 'nav-faq', label: 'FAQ', href: '/faq', visible: true, new_tab: false },
   { id: 'nav-contact', label: 'Contact', href: '/contact', visible: true, new_tab: false },
 ];

@@ -23,7 +23,7 @@ const groups = [
       { to: '/admin/media', label: 'Media library', icon: FolderOpen },
       { to: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
       { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
-      { to: '/admin/blog', label: 'Journal', icon: BookOpen },
+      { to: '/admin/blog', label: 'Blog', icon: BookOpen },
       { to: '/admin/site-content', label: 'Site content', icon: LayoutIcon },
       { to: '/admin/inquiry-form', label: 'Inquiry form', icon: FileText },
       { to: '/admin/palettes', label: 'Palettes', icon: Palette },

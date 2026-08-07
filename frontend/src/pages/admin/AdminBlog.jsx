@@ -23,16 +23,19 @@ export const AdminBlog = () => {
   return (
     <div className="space-y-6" data-testid="admin-blog-page">
       <div className="flex items-center justify-between">
-        <div><p className="eyebrow">CONTENT</p><h1 className="font-serif text-3xl sm:text-4xl mt-1">Journal</h1></div>
-        <button className="btn-primary" onClick={() => setEditing({ title: '', slug: '', excerpt: '', content: '', cover_image_url: '', published: true })}><Plus className="h-4 w-4" /> New post</button>
+        <div><p className="eyebrow">CONTENT</p><h1 className="font-serif text-3xl sm:text-4xl mt-1">Blog</h1></div>
+        <button className="btn-primary" onClick={() => setEditing({ title: '', slug: '', excerpt: '', content: '', cover_image_url: '', tags: [], featured: false, published: true })}><Plus className="h-4 w-4" /> New post</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {items.map(p => (
           <div key={p.id} className="card-cream overflow-hidden">
             {p.cover_image_url && <img src={publicUrl(p.cover_image_url)} alt={p.title} className="aspect-video w-full object-cover" />}
             <div className="p-5">
-              <p className="font-serif text-xl">{p.title}</p>
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">/blog/{p.slug} · {p.published ? 'Published' : 'Draft'}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-serif text-xl">{p.title}</p>
+                {p.featured && <span className="badge-soft text-[10px] uppercase tracking-wider">Featured</span>}
+              </div>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">/blog/{p.slug} · {p.published ? 'Published' : 'Draft'}{p.tags?.length ? ' · ' + p.tags.slice(0, 3).join(', ') : ''}</p>
               <p className="text-sm mt-2 line-clamp-2">{p.excerpt}</p>
               <div className="mt-3 flex gap-3"><button onClick={() => setEditing(p)} className="link-underline text-sm">Edit</button><button onClick={() => remove(p.id)} className="text-red-600"><Trash2 className="h-4 w-4" /></button></div>
             </div>
@@ -65,7 +68,24 @@ export const AdminBlog = () => {
                   placeholder="Tell the story of this event…"
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.published !== false} onChange={e => setEditing({ ...editing, published: e.target.checked })} /> Published</label>
+              <div>
+                <label className="eyebrow block mb-1">TAGS</label>
+                <input
+                  className="input-cream"
+                  placeholder="weddings, birthdays, behind-the-scenes"
+                  value={(editing.tags || []).join(', ')}
+                  onChange={e => setEditing({ ...editing, tags: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) })}
+                  data-testid="admin-blog-tags"
+                />
+                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Comma-separated. These become the filter pills at the top of the public Blog page.</p>
+              </div>
+              <div className="flex items-center gap-6 flex-wrap">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={!!editing.featured} onChange={e => setEditing({ ...editing, featured: e.target.checked })} data-testid="admin-blog-featured" />
+                  <span>Featured (bigger 2×2 tile on the blog grid)</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={editing.published !== false} onChange={e => setEditing({ ...editing, published: e.target.checked })} /> Published</label>
+              </div>
             </div>
             <div className="mt-4 flex justify-end gap-3"><button onClick={() => setEditing(null)} className="btn-secondary">Cancel</button><button onClick={save} className="btn-primary">Save</button></div>
           </div>

@@ -1,22 +1,22 @@
 [
   {
-    "content": "K1 — Add PDF download link to /admin/integrations (Google Calendar section)",
+    "content": "L1 — Rewrite the confusing 'Advanced setup' text on /admin/integrations",
     "status": "completed"
   },
   {
-    "content": "K2 — CSV Export button on /admin/inquiries + backend endpoint",
+    "content": "L2 — Rename 'Journal' → 'Blog' across all user-facing strings",
     "status": "completed"
   },
   {
-    "content": "K3 — 'Insert from Library' picker on every image field in AdminSiteContent.jsx",
+    "content": "L3a — Backend: add `featured` + `tags` fields to BlogPost model",
     "status": "completed"
   },
   {
-    "content": "K4 — Simple Conditional Logic in Inquiry Form Builder (show field X if field Y = value)",
+    "content": "L3b — Admin: add featured toggle + tags editor to blog form",
     "status": "completed"
   },
   {
-    "content": "K5 — Rich-text Blog Editor with Media Library image embeds",
+    "content": "L3c — Public: replace list page with Instagram-style grid + tag filter + featured 2×2 tile + hover overlay",
     "status": "completed"
   }
 ]

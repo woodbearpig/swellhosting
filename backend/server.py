@@ -181,6 +181,24 @@ async def _startup():
         except Exception as e:
             logger.warning("Media library migration failed: %s", e)
 
+        # Rename any legacy "Journal" nav item to "Blog" (one-time, safe if already renamed)
+        try:
+            sc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "header_nav_items": 1}) or {}
+            nav = sc.get("header_nav_items") or []
+            changed = False
+            for item in nav:
+                if isinstance(item, dict) and item.get("id") == "nav-blog" and item.get("label") == "Journal":
+                    item["label"] = "Blog"
+                    changed = True
+            if changed:
+                await db.site_content.update_one(
+                    {"id": "site_content_singleton"},
+                    {"$set": {"header_nav_items": nav}},
+                )
+                logger.info("Renamed legacy 'Journal' nav item to 'Blog'")
+        except Exception as e:
+            logger.warning("Journal->Blog nav rename failed: %s", e)
+
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
             logger.info("Seeded availability at startup")

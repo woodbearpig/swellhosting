@@ -212,9 +212,10 @@ export const AdminIntegrations = () => {
               </div>
             ) : (
               <>
-                <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm">
-                  <p className="font-medium mb-1">Advanced setup — manual OAuth credentials</p>
-                  <p className="text-[color:var(--brand-text-muted)]">Your developer can pre-configure Google OAuth on the server so you'd only see a single "Sign in with Google" button here (recommended). Until then, follow the setup guide above and paste your credentials below.</p>
+                <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm space-y-2">
+                  <p className="font-medium">Manual OAuth credentials — fallback only</p>
+                  <p className="text-[color:var(--brand-text-muted)]">The recommended setup is to put <code className="text-xs font-mono">GOOGLE_CLIENT_ID</code> and <code className="text-xs font-mono">GOOGLE_CLIENT_SECRET</code> in your server's <code className="text-xs font-mono">.env</code> file (see the PDF guide above) — then this whole section disappears and you get a single one-click "Sign in with Google" button.</p>
+                  <p className="text-[color:var(--brand-text-muted)]">If you can't SSH into the server right now, you can paste the same two values here instead. The connect flow is identical either way — this is just a browser-based fallback.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className="eyebrow block mb-1">CLIENT ID</label><input className="input-cream" value={gcalForm.client_id} onChange={e => setGcalForm(f => ({ ...f, client_id: e.target.value }))} placeholder="xxxxx.apps.googleusercontent.com" data-testid="gcal-client-id" /></div>
