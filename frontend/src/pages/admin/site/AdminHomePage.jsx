@@ -620,6 +620,19 @@ const AdminHomePage = () => {
               )}
             </div>
             <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Optional. If left blank, the photo from Admin → About page is used automatically.</p>
+            <div className="mt-3">
+              <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Layout</label>
+              <select
+                className="input-cream !h-9 text-sm w-full"
+                value={data.designer_image_layout || 'side'}
+                onChange={e => set({ designer_image_layout: e.target.value })}
+                data-testid="admin-designer-image-layout"
+              >
+                <option value="side">Beside the text (side by side)</option>
+                <option value="stacked">Above the text (full width) — best for wide photos</option>
+                <option value="sticky">Beside the text, follows scroll (sticky)</option>
+              </select>
+            </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Ratio</label>
@@ -651,7 +664,7 @@ const AdminHomePage = () => {
               </div>
             </div>
             <p className="text-[11px] text-[color:var(--brand-text-muted)] mt-2 leading-snug">
-              <b>Tip for wide diptych photos:</b> pick <em>Wide (2:1)</em> ratio with <em>Fill</em>, or <em>Auto</em> ratio with <em>Fit</em> — either shows both halves without cropping the middle.
+              <b>Wide diptych photo?</b> Pick <em>Above the text (full width)</em> as the Layout with <em>Auto</em> ratio — both halves stay visible, no whitespace, no cropping.
             </p>
           </div>
 

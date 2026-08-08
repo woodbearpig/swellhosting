@@ -28,6 +28,19 @@ const AdminAboutPage = () => {
           </div>
           <TextField className="mt-2" placeholder="Or paste URL" value={data.about_image_url || ''} onCommit={v => set({ about_image_url: v })} />
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
+            <div className="sm:col-span-2">
+              <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Layout</label>
+              <select
+                className="input-cream !h-9 text-sm w-full"
+                value={data.about_image_layout || 'side'}
+                onChange={e => set({ about_image_layout: e.target.value })}
+                data-testid="admin-about-image-layout"
+              >
+                <option value="side">Beside the text (side by side)</option>
+                <option value="stacked">Above the text (full width) — best for wide photos</option>
+                <option value="sticky">Beside the text, follows scroll (sticky)</option>
+              </select>
+            </div>
             <div>
               <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Ratio</label>
               <select
@@ -58,7 +71,7 @@ const AdminAboutPage = () => {
             </div>
           </div>
           <p className="text-[11px] text-[color:var(--brand-text-muted)] mt-2 leading-snug max-w-xl">
-            <b>For wide diptych photos:</b> use <em>Wide (2:1)</em> + <em>Fill</em>, or <em>Fill (match text height)</em> + <em>Fill</em> to expand the photo to match the paragraph height on the right.
+            <b>Wide diptych photo?</b> Pick <em>Above the text (full width)</em> as the Layout with <em>Auto</em> ratio — both halves stay visible, no whitespace, no cropping.
           </p>
         </div>
         <div><label className="eyebrow block mb-1">DESIGNER NAME</label><TextField value={data.designer_name || ''} onCommit={v => set({ designer_name: v })} /></div>

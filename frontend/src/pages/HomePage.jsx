@@ -185,6 +185,7 @@ const HomePage = () => {
       {/* MEET THE DESIGNER */}
       {site?.home_designer_active !== false && (() => {
         const aspect = site?.designer_image_aspect || 'portrait';
+        const layout = site?.designer_image_layout || 'side';
         const aspectClass = {
           portrait: 'aspect-[5/6]',
           landscape: 'aspect-[4/3]',
@@ -193,21 +194,75 @@ const HomePage = () => {
           auto: '',
           fill: '',
         }[aspect] || 'aspect-[5/6]';
-        // "fill" mode: image container stretches to full row height so it
-        // matches the (usually taller) text column. Combined with items-stretch
-        // this eliminates dead space above/below the photo.
-        const useFill = aspect === 'fill';
-        const fitClass = (site?.designer_image_fit === 'contain') ? 'object-contain' : 'object-cover';
+        // Legacy "fill" aspect maps to "match text height" – only meaningful in side layout.
+        const useFill = aspect === 'fill' && layout === 'side';
+        const isContain = site?.designer_image_fit === 'contain';
+        const fitClass = isContain ? 'object-contain' : 'object-cover';
+        // Only apply the cream background when we're actively cropping (cover).
+        // With `contain`, a cream box would visibly letterbox the image – so we
+        // let the section background show through instead.
+        const bgClass = isContain ? '' : 'bg-[color:var(--brand-surface-2)]';
+        const imageUrl = publicUrl(site?.designer_image_url || site?.about_image_url) || 'https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
+        const designerName = site?.designer_name || 'Meet the designer';
+
+        // -------- STACKED LAYOUT (photo full-width ABOVE the text) --------
+        // Best for wide diptych photos where a two-column split cropped
+        // or letterboxed the composition awkwardly.
+        if (layout === 'stacked') {
+          return (
+            <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-designer-section">
+              <motion.div
+                {...fadeInUp}
+                className={`rounded-[2rem] overflow-hidden ${bgClass} lift-shadow ${aspect === 'auto' || aspect === 'fill' ? '' : aspectClass}`}
+                data-testid="home-designer-image"
+              >
+                <img
+                  src={imageUrl}
+                  alt={designerName}
+                  className={`w-full ${aspect === 'auto' || aspect === 'fill' ? 'h-auto block' : `h-full ${fitClass}`}`}
+                />
+              </motion.div>
+              <motion.div {...fadeInUp} className="mt-8 sm:mt-10 max-w-3xl">
+                {(site?.designer_eyebrow || 'MEET THE DESIGNER').trim() && (
+                  <div className="eyebrow mb-3">{site?.designer_eyebrow || 'MEET THE DESIGNER'}</div>
+                )}
+                <h2 className="font-serif text-3xl sm:text-4xl leading-[1.1] mb-4">{designerName}</h2>
+                <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed whitespace-pre-line">{site?.designer_bio}</p>
+                {(site?.designer_signature || '').trim() && (
+                  <p className="font-script text-4xl sm:text-5xl text-[color:var(--brand-sage-deep)] mt-4" data-testid="home-designer-signature">
+                    {site.designer_signature}
+                  </p>
+                )}
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {(site?.designer_cta_secondary_label || '').trim() && (
+                    <Link to={site?.designer_cta_secondary_href || '/about'} className="btn-secondary" data-testid="home-designer-secondary-cta">
+                      {site?.designer_cta_secondary_label}
+                    </Link>
+                  )}
+                  {(site?.designer_cta_primary_label || '').trim() && (
+                    <Link to={site?.designer_cta_primary_href || '/inquire'} className="btn-primary" data-testid="home-designer-primary-cta">
+                      <Calendar className="h-4 w-4" /> {site?.designer_cta_primary_label}
+                    </Link>
+                  )}
+                </div>
+              </motion.div>
+            </section>
+          );
+        }
+
+        // -------- SIDE / STICKY LAYOUTS (two-column) --------
+        const isSticky = layout === 'sticky';
         return (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-designer-section">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 ${useFill ? 'lg:items-stretch items-center' : 'items-center'}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 ${useFill ? 'lg:items-stretch items-center' : 'items-start lg:items-center'}`}>
           <motion.div
             {...fadeInUp}
-            className={`rounded-[2rem] overflow-hidden bg-[color:var(--brand-surface-2)] lift-shadow ${aspectClass} ${useFill ? 'lg:h-full lg:aspect-auto min-h-[420px]' : ''}`}
+            className={`rounded-[2rem] overflow-hidden ${bgClass} lift-shadow ${aspectClass} ${useFill ? 'lg:h-full lg:aspect-auto min-h-[420px]' : ''} ${isSticky ? 'lg:sticky lg:top-24 self-start' : ''}`}
+            data-testid="home-designer-image"
           >
             <img
-              src={publicUrl(site?.designer_image_url || site?.about_image_url) || 'https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'}
-              alt={site?.designer_name || 'Meet the designer'}
+              src={imageUrl}
+              alt={designerName}
               className={`h-full w-full ${fitClass}`}
             />
           </motion.div>
@@ -215,7 +270,7 @@ const HomePage = () => {
             {(site?.designer_eyebrow || 'MEET THE DESIGNER').trim() && (
               <div className="eyebrow mb-3">{site?.designer_eyebrow || 'MEET THE DESIGNER'}</div>
             )}
-            <h2 className="font-serif text-3xl sm:text-4xl leading-[1.1] mb-4">{site?.designer_name || 'Meet the designer'}</h2>
+            <h2 className="font-serif text-3xl sm:text-4xl leading-[1.1] mb-4">{designerName}</h2>
             <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed whitespace-pre-line">{site?.designer_bio}</p>
             {(site?.designer_signature || '').trim() && (
               <p className="font-script text-4xl sm:text-5xl text-[color:var(--brand-sage-deep)] mt-4" data-testid="home-designer-signature">

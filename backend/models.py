@@ -85,6 +85,13 @@ class SiteContent(Base):
     # About page hero image. Defaults kept safe for the current image.
     about_image_aspect: str = "portrait"  # 'portrait'|'landscape'|'wide'|'square'|'auto'|'fill'
     about_image_fit: str = "cover"        # 'cover' | 'contain'
+    # How the About image sits relative to the bio text.
+    #   'side'    – classic two-column, image left, text right (current default)
+    #   'stacked' – single column, image spans full width ABOVE the text.
+    #               Ideal for wide diptych photos so both halves stay visible.
+    #   'sticky'  – two-column, but the image pins to the viewport and follows
+    #               the reader as they scroll a longer bio.
+    about_image_layout: str = "side"
     designer_name: str = "Meet the designer"
     designer_bio: str = "Hi, I'm the heart behind swell design + media. I fell in love with balloons after decorating my daughter's first birthday — and haven't stopped since. I care deeply about the small details that make an event feel unmistakably you."
     # Optional overrides for the homepage "Meet the designer" section. Any
@@ -99,6 +106,8 @@ class SiteContent(Base):
     # to preserve the whole composition.
     designer_image_aspect: str = "portrait"  # 'portrait' | 'landscape' | 'wide' | 'square' | 'auto' | 'fill'
     designer_image_fit: str = "cover"        # 'cover' | 'contain'
+    # Layout mode – see about_image_layout above for semantics.
+    designer_image_layout: str = "side"      # 'side' | 'stacked' | 'sticky'
     designer_cta_primary_label: str = "Start your inquiry"
     designer_cta_primary_href: str = "/inquire"
     designer_cta_secondary_label: str = "Read the story"

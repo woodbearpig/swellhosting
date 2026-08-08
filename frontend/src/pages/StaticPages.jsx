@@ -13,6 +13,7 @@ export const AboutPage = () => {
   const showDesigner = site?.about_show_designer !== false;
   const showCtas = site?.about_show_ctas !== false;
   const aspect = site?.about_image_aspect || 'portrait';
+  const layout = site?.about_image_layout || 'side';
   const aspectClass = {
     portrait: 'aspect-[4/5]',
     landscape: 'aspect-[4/3]',
@@ -21,40 +22,62 @@ export const AboutPage = () => {
     auto: '',
     fill: '',
   }[aspect] || 'aspect-[4/5]';
-  const useFill = aspect === 'fill';
-  const fitClass = (site?.about_image_fit === 'contain') ? 'object-contain' : 'object-cover';
+  const useFill = aspect === 'fill' && layout === 'side';
+  const isContain = site?.about_image_fit === 'contain';
+  const fitClass = isContain ? 'object-contain' : 'object-cover';
+  const bgClass = isContain ? '' : 'bg-[color:var(--brand-surface-2)]';
+  const isSticky = layout === 'sticky';
+  const isStacked = layout === 'stacked';
+
+  const TextBlock = (
+    <div>
+      <p className="font-script text-4xl text-[color:var(--brand-sage-deep)] mb-2">a warm welcome</p>
+      <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed whitespace-pre-line">{site?.about_full}</p>
+      {showDesigner && (
+        <div data-testid="about-designer-block">
+          <p className="font-serif text-2xl mt-8">{site?.designer_name}</p>
+          <p className="text-base text-[color:var(--brand-text-muted)] mt-2 leading-relaxed whitespace-pre-line">{site?.designer_bio}</p>
+        </div>
+      )}
+      {showCtas && (
+        <div className="mt-6 flex flex-wrap gap-3" data-testid="about-ctas-block">
+          <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
+          <Link to="/portfolio" className="btn-secondary">See the work</Link>
+        </div>
+      )}
+    </div>
+  );
+
+  const ImageBlock = showImage ? (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className={`rounded-[2rem] overflow-hidden ${bgClass} lift-shadow ${isStacked && (aspect === 'auto' || aspect === 'fill') ? '' : aspectClass} ${useFill ? 'lg:h-full lg:aspect-auto min-h-[420px]' : ''} ${isSticky ? 'lg:sticky lg:top-24 self-start' : ''}`}
+      data-testid="about-image-block"
+    >
+      <img
+        src={publicUrl(site?.about_image_url)}
+        alt="About swell design + media"
+        className={`w-full ${isStacked && (aspect === 'auto' || aspect === 'fill') ? 'h-auto block' : `h-full ${fitClass}`}`}
+      />
+    </motion.div>
+  ) : null;
+
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="about-page">
       <SectionHeader eyebrow="ABOUT" title="About swell design + media" subtitle="A boutique LA-based studio dedicated to thoughtful, custom event styling." />
-      <div className={`mt-10 grid grid-cols-1 gap-10 ${showImage ? 'lg:grid-cols-2' : ''} ${useFill ? 'lg:items-stretch items-center' : 'items-center'}`}>
-        {showImage && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className={`rounded-[2rem] overflow-hidden bg-[color:var(--brand-surface-2)] lift-shadow ${aspectClass} ${useFill ? 'lg:h-full lg:aspect-auto min-h-[420px]' : ''}`}
-          data-testid="about-image-block"
-        >
-          <img src={publicUrl(site?.about_image_url)} alt="About swell design + media" className={`h-full w-full ${fitClass}`} />
-        </motion.div>
-        )}
-        <div>
-          <p className="font-script text-4xl text-[color:var(--brand-sage-deep)] mb-2">a warm welcome</p>
-          <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed">{site?.about_full}</p>
-          {showDesigner && (
-            <div data-testid="about-designer-block">
-              <p className="font-serif text-2xl mt-8">{site?.designer_name}</p>
-              <p className="text-base text-[color:var(--brand-text-muted)] mt-2 leading-relaxed">{site?.designer_bio}</p>
-            </div>
-          )}
-          {showCtas && (
-            <div className="mt-6 flex flex-wrap gap-3" data-testid="about-ctas-block">
-              <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
-              <Link to="/portfolio" className="btn-secondary">See the work</Link>
-            </div>
-          )}
+      {isStacked ? (
+        <div className="mt-10 space-y-10">
+          {ImageBlock}
+          <div className="max-w-3xl">{TextBlock}</div>
         </div>
-      </div>
+      ) : (
+        <div className={`mt-10 grid grid-cols-1 gap-10 ${showImage ? 'lg:grid-cols-2' : ''} ${useFill ? 'lg:items-stretch items-center' : 'items-start lg:items-center'}`}>
+          {ImageBlock}
+          {TextBlock}
+        </div>
+      )}
     </div>
   );
 };
