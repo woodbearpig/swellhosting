@@ -91,6 +91,9 @@ class SiteContent(Base):
     designer_cta_primary_href: str = "/inquire"
     designer_cta_secondary_label: str = "Read the story"
     designer_cta_secondary_href: str = "/about"
+    # Optional hand-signed signature rendered under the bio in the script font
+    # (e.g. "— Sam" or the owner's first name). Leave blank to hide.
+    designer_signature: str = ""
 
     # Promo
     promo_active: bool = True

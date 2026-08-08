@@ -199,6 +199,11 @@ const HomePage = () => {
             )}
             <h2 className="font-serif text-3xl sm:text-4xl leading-[1.1] mb-4">{site?.designer_name || 'Meet the designer'}</h2>
             <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed whitespace-pre-line">{site?.designer_bio}</p>
+            {(site?.designer_signature || '').trim() && (
+              <p className="font-script text-4xl sm:text-5xl text-[color:var(--brand-sage-deep)] mt-4" data-testid="home-designer-signature">
+                {site.designer_signature}
+              </p>
+            )}
             <div className="mt-6 flex flex-wrap gap-3">
               {(site?.designer_cta_secondary_label || '').trim() && (
                 <Link to={site?.designer_cta_secondary_href || '/about'} className="btn-secondary" data-testid="home-designer-secondary-cta">

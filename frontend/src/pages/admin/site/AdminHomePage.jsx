@@ -643,6 +643,15 @@ const AdminHomePage = () => {
               />
               <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines preserved as paragraph breaks.</p>
             </div>
+            <div>
+              <label className="eyebrow block mb-1">SIGNATURE (OPTIONAL)</label>
+              <TextField
+                value={data.designer_signature || ''}
+                onCommit={v => set({ designer_signature: v })}
+                placeholder="— Sam"
+              />
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Rendered under the bio in the hand-lettered script font for a personal touch. Leave blank to hide.</p>
+            </div>
             <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)]">
               <p className="eyebrow mb-2">CALL-TO-ACTION BUTTONS</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
