@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 
@@ -8,6 +9,7 @@ const AdminLogin = () => {
   const { login, user, loading } = useAuth();
   const [email, setEmail] = useState('admin@swelldesignla.com');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
@@ -33,7 +35,30 @@ const AdminLogin = () => {
         <p className="text-sm text-center text-[color:var(--brand-text-muted)] mt-2">Access your admin dashboard.</p>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div><label className="eyebrow block mb-2">EMAIL</label><input required type="email" className="input-cream" value={email} onChange={e => setEmail(e.target.value)} data-testid="admin-login-email" /></div>
-          <div><label className="eyebrow block mb-2">PASSWORD</label><input required type="password" className="input-cream" value={password} onChange={e => setPassword(e.target.value)} data-testid="admin-login-password" /></div>
+          <div>
+            <label className="eyebrow block mb-2">PASSWORD</label>
+            <div className="relative">
+              <input
+                required
+                type={showPassword ? 'text' : 'password'}
+                className="input-cream pr-11"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                data-testid="admin-login-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-[color:var(--brand-text-muted)] hover:text-[color:var(--brand-text)] hover:bg-[color:var(--brand-sage-tint)]/50 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                data-testid="admin-login-password-toggle"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
           <button type="submit" disabled={busy} className="btn-primary w-full" data-testid="admin-login-submit">{busy ? 'Signing in…' : 'Sign in'}</button>
         </form>
       </div>

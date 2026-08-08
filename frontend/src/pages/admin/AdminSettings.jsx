@@ -1,10 +1,43 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { KeyRound, Save, User as UserIcon, Mail } from 'lucide-react';
+import { KeyRound, Save, User as UserIcon, Mail, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { BookingRulesCard } from '@/pages/admin/BookingRulesCard';
+
+/**
+ * PasswordField — masked input with a right-side eye toggle so the owner
+ * can peek at what they've typed. Useful for confirming password-manager
+ * autofills or catching typos during a credential change.
+ */
+const PasswordField = ({ value, onChange, placeholder, autoComplete, testId, required }) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={visible ? 'text' : 'password'}
+        className="input-cream pr-11"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required={required}
+        data-testid={testId}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible(v => !v)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-[color:var(--brand-text-muted)] hover:text-[color:var(--brand-text)] hover:bg-[color:var(--brand-sage-tint)]/50 transition-colors"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        title={visible ? 'Hide password' : 'Show password'}
+        data-testid={testId ? `${testId}-toggle` : undefined}
+      >
+        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+};
 
 const ChangeCredentialsCard = () => {
   const { user } = useAuth();
@@ -97,27 +130,23 @@ const ChangeCredentialsCard = () => {
       <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-3">
         <div>
           <label className="eyebrow block mb-1">NEW PASSWORD (LEAVE BLANK TO KEEP)</label>
-          <input
-            type="password"
-            className="input-cream"
+          <PasswordField
             value={newPassword}
             onChange={e => setNewPassword(e.target.value)}
             placeholder="Minimum 8 characters"
             autoComplete="new-password"
-            data-testid="admin-credentials-new-password"
+            testId="admin-credentials-new-password"
           />
         </div>
         {newPassword && (
           <div>
             <label className="eyebrow block mb-1">CONFIRM NEW PASSWORD</label>
-            <input
-              type="password"
-              className="input-cream"
+            <PasswordField
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               placeholder="Retype the new password"
               autoComplete="new-password"
-              data-testid="admin-credentials-confirm-password"
+              testId="admin-credentials-confirm-password"
             />
           </div>
         )}
@@ -125,15 +154,13 @@ const ChangeCredentialsCard = () => {
 
       <div className="border-t border-[color:var(--brand-border)] pt-4">
         <label className="eyebrow block mb-1">CURRENT PASSWORD (REQUIRED)</label>
-        <input
-          type="password"
-          className="input-cream"
+        <PasswordField
           value={currentPassword}
           onChange={e => setCurrentPassword(e.target.value)}
           placeholder="Verify it's you"
           autoComplete="current-password"
           required
-          data-testid="admin-credentials-current-password"
+          testId="admin-credentials-current-password"
         />
       </div>
 

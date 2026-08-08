@@ -238,7 +238,7 @@ async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admi
     Requires the current password for verification. Any of new_email/new_password/new_name
     may be omitted (only fields that are provided will change).
     """
-    current_password = (payload.get("current_password") or "").strip()
+    current_password = payload.get("current_password") or ""
     if not current_password:
         raise HTTPException(status_code=400, detail="Current password is required")
 
