@@ -1,22 +1,38 @@
 [
   {
-    "content": "L1 — Rewrite the confusing 'Advanced setup' text on /admin/integrations",
-    "status": "completed"
+    "content": "M1 — Fix .input-cream padding overlap (Settings + Media search)",
+    "status": "in_progress"
   },
   {
-    "content": "L2 — Rename 'Journal' → 'Blog' across all user-facing strings",
-    "status": "completed"
+    "content": "M2 — Explore current AdminSiteContent structure to plan the split",
+    "status": "pending"
   },
   {
-    "content": "L3a — Backend: add `featured` + `tags` fields to BlogPost model",
-    "status": "completed"
+    "content": "M3 — Extract Site Content into separate admin pages: Home, Brand, About, Header nav, Footer, Coming soon",
+    "status": "pending"
   },
   {
-    "content": "L3b — Admin: add featured toggle + tags editor to blog form",
-    "status": "completed"
+    "content": "M4 — Add inline 'Recent Work' portfolio preview + quick-manage to the new /admin/home page",
+    "status": "pending"
   },
   {
-    "content": "L3c — Public: replace list page with Instagram-style grid + tag filter + featured 2×2 tile + hover overlay",
-    "status": "completed"
+    "content": "M5 — Rename 'Gallery' → 'Portfolio' in admin sidebar + page headings",
+    "status": "pending"
+  },
+  {
+    "content": "M6 — Update AdminLayout sidebar with new grouped routes",
+    "status": "pending"
+  },
+  {
+    "content": "M7 — Delete or redirect the old /admin/site-content route",
+    "status": "pending"
+  },
+  {
+    "content": "M8 — Media Library bulk actions: select mode + bulk delete + bulk tag",
+    "status": "pending"
+  },
+  {
+    "content": "M9 — Testing agent verification after all changes",
+    "status": "pending"
   }
 ]
