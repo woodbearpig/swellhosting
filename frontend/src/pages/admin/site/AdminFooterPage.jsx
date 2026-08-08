@@ -1,4 +1,4 @@
-import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 
 const AdminFooterPage = () => {
   const { data, set, save, saving, dirty } = useSiteAdminData();
@@ -15,10 +15,10 @@ const AdminFooterPage = () => {
       />
 
       <div className="card-cream p-6 space-y-4">
-        <div><label className="eyebrow block mb-1">FOOTER BLURB</label><textarea className="input-cream textarea-cream" rows={2} value={data.footer_blurb || ''} onChange={e => set({ footer_blurb: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">FOOTER BLURB</label><TextArea rows={2} value={data.footer_blurb || ''} onCommit={v => set({ footer_blurb: v })} /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">NEWSLETTER TITLE</label><input className="input-cream" value={data.newsletter_title || ''} onChange={e => set({ newsletter_title: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">NEWSLETTER SUBTITLE</label><input className="input-cream" value={data.newsletter_subtitle || ''} onChange={e => set({ newsletter_subtitle: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">NEWSLETTER TITLE</label><TextField value={data.newsletter_title || ''} onCommit={v => set({ newsletter_title: v })} /></div>
+          <div><label className="eyebrow block mb-1">NEWSLETTER SUBTITLE</label><TextField value={data.newsletter_subtitle || ''} onCommit={v => set({ newsletter_subtitle: v })} /></div>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ const AdminFooterPage = () => {
       <div className="card-cream p-6">
         <p className="eyebrow mb-1">COPYRIGHT OVERRIDE</p>
         <p className="text-sm text-[color:var(--brand-text-muted)] mb-2">Leave blank for auto: <em>© {new Date().getFullYear()} {data.business_name || 'business name'}. All rights reserved.</em></p>
-        <input className="input-cream" value={data.footer_copyright_override || ''} onChange={e => set({ footer_copyright_override: e.target.value })} placeholder="(auto-generated if blank)" />
+        <TextField value={data.footer_copyright_override || ''} onCommit={v => set({ footer_copyright_override: v })} placeholder="(auto-generated if blank)" />
       </div>
     </div>
   );

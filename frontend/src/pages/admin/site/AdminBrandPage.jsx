@@ -1,4 +1,4 @@
-import { useSiteAdminData, PageHeader } from './_shared';
+import { useSiteAdminData, PageHeader, TextField } from './_shared';
 import { uploadFile, publicUrl } from '@/lib/api';
 import { FONT_PRESETS, applyFonts } from '@/context/FontContext';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
@@ -21,8 +21,8 @@ const AdminBrandPage = () => {
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Business identity</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">BUSINESS NAME</label><input className="input-cream" value={data.business_name || ''} onChange={e => set({ business_name: e.target.value })} data-testid="brand-business-name" /></div>
-          <div><label className="eyebrow block mb-1">TAGLINE</label><input className="input-cream" value={data.tagline || ''} onChange={e => set({ tagline: e.target.value })} data-testid="brand-tagline" /></div>
+          <div><label className="eyebrow block mb-1">BUSINESS NAME</label><TextField value={data.business_name || ''} onCommit={v => set({ business_name: v })} data-testid="brand-business-name" /></div>
+          <div><label className="eyebrow block mb-1">TAGLINE</label><TextField value={data.tagline || ''} onCommit={v => set({ tagline: v })} data-testid="brand-tagline" /></div>
         </div>
         <div>
           <label className="eyebrow block mb-1">LOGO</label>
@@ -31,7 +31,7 @@ const AdminBrandPage = () => {
             <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ logo_url: r.url }); } }} />
             <MediaPickerButton testId="media-picker-logo" onSelect={url => set({ logo_url: url })} />
           </div>
-          <input className="input-cream mt-2" placeholder="Or paste URL" value={data.logo_url || ''} onChange={e => set({ logo_url: e.target.value })} />
+          <TextField className="mt-2" placeholder="Or paste URL" value={data.logo_url || ''} onCommit={v => set({ logo_url: v })} />
         </div>
       </div>
 

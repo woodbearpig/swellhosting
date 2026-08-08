@@ -1,4 +1,4 @@
-import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 
 const AdminComingSoonPage = () => {
   const { data, set, save, saving, dirty } = useSiteAdminData();
@@ -29,11 +29,11 @@ const AdminComingSoonPage = () => {
 
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Page content</p>
-        <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.coming_soon_eyebrow || ''} onChange={e => set({ coming_soon_eyebrow: e.target.value })} placeholder="SOMETHING BEAUTIFUL IS COMING" /></div>
-        <div><label className="eyebrow block mb-1">HEADLINE</label><textarea className="input-cream textarea-cream" rows={2} value={data.coming_soon_title || ''} onChange={e => set({ coming_soon_title: e.target.value })} placeholder="Leave blank to hide" /></div>
-        <div><label className="eyebrow block mb-1">SCRIPT ACCENT (handwritten line)</label><input className="input-cream" value={data.coming_soon_script || ''} onChange={e => set({ coming_soon_script: e.target.value })} placeholder="e.g. stay tuned" /></div>
-        <div><label className="eyebrow block mb-1">MESSAGE</label><textarea className="input-cream textarea-cream" rows={4} value={data.coming_soon_message || ''} onChange={e => set({ coming_soon_message: e.target.value })} /></div>
-        <div><label className="eyebrow block mb-1">LAUNCH DATE BADGE (optional)</label><input className="input-cream" value={data.coming_soon_launch_date || ''} onChange={e => set({ coming_soon_launch_date: e.target.value })} placeholder="e.g. Fall 2026" /></div>
+        <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.coming_soon_eyebrow || ''} onCommit={v => set({ coming_soon_eyebrow: v })} placeholder="SOMETHING BEAUTIFUL IS COMING" /></div>
+        <div><label className="eyebrow block mb-1">HEADLINE</label><TextArea rows={2} value={data.coming_soon_title || ''} onCommit={v => set({ coming_soon_title: v })} placeholder="Leave blank to hide" /></div>
+        <div><label className="eyebrow block mb-1">SCRIPT ACCENT (handwritten line)</label><TextField value={data.coming_soon_script || ''} onCommit={v => set({ coming_soon_script: v })} placeholder="e.g. stay tuned" /></div>
+        <div><label className="eyebrow block mb-1">MESSAGE</label><TextArea rows={4} value={data.coming_soon_message || ''} onCommit={v => set({ coming_soon_message: v })} /></div>
+        <div><label className="eyebrow block mb-1">LAUNCH DATE BADGE (optional)</label><TextField value={data.coming_soon_launch_date || ''} onCommit={v => set({ coming_soon_launch_date: v })} placeholder="e.g. Fall 2026" /></div>
       </div>
 
       <div className="card-cream p-6 space-y-4">
@@ -53,8 +53,8 @@ const AdminComingSoonPage = () => {
         <div className="card-cream p-6 space-y-3">
           <p className="font-serif text-xl">Newsletter form</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className="eyebrow block mb-1">INPUT PLACEHOLDER</label><input className="input-cream" value={data.coming_soon_newsletter_placeholder || ''} onChange={e => set({ coming_soon_newsletter_placeholder: e.target.value })} placeholder="you@email.com" /></div>
-            <div><label className="eyebrow block mb-1">BUTTON LABEL</label><input className="input-cream" value={data.coming_soon_newsletter_button || ''} onChange={e => set({ coming_soon_newsletter_button: e.target.value })} placeholder="Notify me" /></div>
+            <div><label className="eyebrow block mb-1">INPUT PLACEHOLDER</label><TextField value={data.coming_soon_newsletter_placeholder || ''} onCommit={v => set({ coming_soon_newsletter_placeholder: v })} placeholder="you@email.com" /></div>
+            <div><label className="eyebrow block mb-1">BUTTON LABEL</label><TextField value={data.coming_soon_newsletter_button || ''} onCommit={v => set({ coming_soon_newsletter_button: v })} placeholder="Notify me" /></div>
           </div>
         </div>
       )}
@@ -63,17 +63,17 @@ const AdminComingSoonPage = () => {
         <p className="font-serif text-xl">Contact overrides</p>
         <p className="text-sm text-[color:var(--brand-text-muted)]">Leave blank to inherit from Contact &amp; social. Fill any field to override just on this page.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EMAIL OVERRIDE</label><input className="input-cream" value={data.coming_soon_email_override || ''} onChange={e => set({ coming_soon_email_override: e.target.value })} placeholder={`(defaults to ${data.contact_email || 'contact email'})`} /></div>
-          <div><label className="eyebrow block mb-1">PHONE OVERRIDE</label><input className="input-cream" value={data.coming_soon_phone_override || ''} onChange={e => set({ coming_soon_phone_override: e.target.value })} placeholder={`(defaults to ${data.contact_phone || 'contact phone'})`} /></div>
-          <div><label className="eyebrow block mb-1">INSTAGRAM URL OVERRIDE</label><input className="input-cream" value={data.coming_soon_instagram_override || ''} onChange={e => set({ coming_soon_instagram_override: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">INSTAGRAM LINK LABEL</label><input className="input-cream" value={data.coming_soon_instagram_label || ''} onChange={e => set({ coming_soon_instagram_label: e.target.value })} placeholder="Follow along" /></div>
+          <div><label className="eyebrow block mb-1">EMAIL OVERRIDE</label><TextField value={data.coming_soon_email_override || ''} onCommit={v => set({ coming_soon_email_override: v })} placeholder={`(defaults to ${data.contact_email || 'contact email'})`} /></div>
+          <div><label className="eyebrow block mb-1">PHONE OVERRIDE</label><TextField value={data.coming_soon_phone_override || ''} onCommit={v => set({ coming_soon_phone_override: v })} placeholder={`(defaults to ${data.contact_phone || 'contact phone'})`} /></div>
+          <div><label className="eyebrow block mb-1">INSTAGRAM URL OVERRIDE</label><TextField value={data.coming_soon_instagram_override || ''} onCommit={v => set({ coming_soon_instagram_override: v })} /></div>
+          <div><label className="eyebrow block mb-1">INSTAGRAM LINK LABEL</label><TextField value={data.coming_soon_instagram_label || ''} onCommit={v => set({ coming_soon_instagram_label: v })} placeholder="Follow along" /></div>
         </div>
       </div>
 
       {data.coming_soon_show_footer !== false && (
         <div className="card-cream p-6 space-y-3">
           <p className="font-serif text-xl">Footer text</p>
-          <input className="input-cream" value={data.coming_soon_footer_text || ''} onChange={e => set({ coming_soon_footer_text: e.target.value })} placeholder="(auto-generated if blank)" />
+          <TextField value={data.coming_soon_footer_text || ''} onCommit={v => set({ coming_soon_footer_text: v })} placeholder="(auto-generated if blank)" />
         </div>
       )}
     </div>

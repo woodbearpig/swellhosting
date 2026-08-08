@@ -1,4 +1,4 @@
-import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { useSiteAdminData, PageHeader, ToggleRow, TextField } from './_shared';
 import { Plus, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 
 const AdminHeaderNavPage = () => {
@@ -50,8 +50,8 @@ const AdminHeaderNavPage = () => {
             <div key={item.id || idx} className="card-cream p-3 space-y-2" data-testid={`admin-nav-item-${idx}`}>
               <div className="grid grid-cols-1 md:grid-cols-[auto_1.2fr_2fr_auto] gap-2 items-center">
                 <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
-                <input className="input-cream !h-9" placeholder="Label (e.g. Gallery)" value={item.label || ''} onChange={e => { const next = [...nav]; next[idx] = { ...next[idx], label: e.target.value }; set({ header_nav_items: next }); }} />
-                <input className="input-cream !h-9" placeholder="Link (e.g. /gallery)" value={item.href || ''} onChange={e => { const next = [...nav]; next[idx] = { ...next[idx], href: e.target.value }; set({ header_nav_items: next }); }} />
+                <TextField className="!h-9" placeholder="Label (e.g. Gallery)" value={item.label || ''} onCommit={v => { const next = [...nav]; next[idx] = { ...next[idx], label: v }; set({ header_nav_items: next }); }} />
+                <TextField className="!h-9" placeholder="Link (e.g. /gallery)" value={item.href || ''} onCommit={v => { const next = [...nav]; next[idx] = { ...next[idx], href: v }; set({ header_nav_items: next }); }} />
                 <div className="flex gap-1">
                   <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swap(idx - 1, idx)} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
                   <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === nav.length - 1} onClick={() => swap(idx, idx + 1)} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>

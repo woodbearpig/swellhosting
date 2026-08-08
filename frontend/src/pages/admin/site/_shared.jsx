@@ -20,6 +20,10 @@ export const useSiteAdminData = () => {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const seededRef = useRef(false);
+  const dataRef = useRef(null);
+
+  // Keep dataRef in sync so `save` can read latest without depending on `data`.
+  useEffect(() => { dataRef.current = data; }, [data]);
 
   // Seed local state from context once. Subsequent site refreshes (e.g. after
   // save) do NOT overwrite un-saved edits, but if the user hasn't touched
@@ -41,25 +45,17 @@ export const useSiteAdminData = () => {
   }, []);
 
   const save = useCallback(async () => {
+    const current = dataRef.current;
+    if (!current) return;
     setSaving(true);
     try {
-      // Read latest data at save-time (avoids stale-closure re-creates of `save`)
-      setData(current => {
-        (async () => {
-          try {
-            await api.put('/admin/site-content', current);
-            await refresh();
-            setDirty(false);
-            toast.success('Saved');
-          } catch (e) {
-            toast.error(e?.response?.data?.detail || 'Save failed');
-          } finally {
-            setSaving(false);
-          }
-        })();
-        return current;
-      });
+      await api.put('/admin/site-content', current);
+      await refresh();
+      setDirty(false);
+      toast.success('Saved');
     } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Save failed');
+    } finally {
       setSaving(false);
     }
   }, [refresh]);

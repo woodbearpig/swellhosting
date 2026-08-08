@@ -1,4 +1,4 @@
-import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { useSiteAdminData, PageHeader, ToggleRow, TextField } from './_shared';
 
 const AdminSocialContactPage = () => {
   const { data, set, save, saving, dirty } = useSiteAdminData();
@@ -17,20 +17,20 @@ const AdminSocialContactPage = () => {
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Contact info</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EMAIL</label><input className="input-cream" value={data.contact_email || ''} onChange={e => set({ contact_email: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">PHONE</label><input className="input-cream" value={data.contact_phone || ''} onChange={e => set({ contact_phone: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">LOCATION</label><input className="input-cream" value={data.contact_location || ''} onChange={e => set({ contact_location: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">HOURS</label><input className="input-cream" value={data.contact_hours || ''} onChange={e => set({ contact_hours: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">EMAIL</label><TextField value={data.contact_email || ''} onCommit={v => set({ contact_email: v })} /></div>
+          <div><label className="eyebrow block mb-1">PHONE</label><TextField value={data.contact_phone || ''} onCommit={v => set({ contact_phone: v })} /></div>
+          <div><label className="eyebrow block mb-1">LOCATION</label><TextField value={data.contact_location || ''} onCommit={v => set({ contact_location: v })} /></div>
+          <div><label className="eyebrow block mb-1">HOURS</label><TextField value={data.contact_hours || ''} onCommit={v => set({ contact_hours: v })} /></div>
         </div>
       </div>
 
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Social URLs</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">INSTAGRAM URL</label><input className="input-cream" value={data.instagram_url || ''} onChange={e => set({ instagram_url: e.target.value })} placeholder="https://instagram.com/handle" /></div>
-          <div><label className="eyebrow block mb-1">FACEBOOK URL</label><input className="input-cream" value={data.facebook_url || ''} onChange={e => set({ facebook_url: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">PINTEREST URL</label><input className="input-cream" value={data.pinterest_url || ''} onChange={e => set({ pinterest_url: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">TIKTOK URL</label><input className="input-cream" value={data.tiktok_url || ''} onChange={e => set({ tiktok_url: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">INSTAGRAM URL</label><TextField value={data.instagram_url || ''} onCommit={v => set({ instagram_url: v })} placeholder="https://instagram.com/handle" /></div>
+          <div><label className="eyebrow block mb-1">FACEBOOK URL</label><TextField value={data.facebook_url || ''} onCommit={v => set({ facebook_url: v })} /></div>
+          <div><label className="eyebrow block mb-1">PINTEREST URL</label><TextField value={data.pinterest_url || ''} onCommit={v => set({ pinterest_url: v })} /></div>
+          <div><label className="eyebrow block mb-1">TIKTOK URL</label><TextField value={data.tiktok_url || ''} onCommit={v => set({ tiktok_url: v })} /></div>
         </div>
       </div>
 

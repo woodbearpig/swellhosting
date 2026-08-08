@@ -1,4 +1,4 @@
-import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 import { uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
@@ -17,8 +17,8 @@ const AdminAboutPage = () => {
       />
 
       <div className="card-cream p-6 space-y-4">
-        <div><label className="eyebrow block mb-1">ABOUT SHORT (home)</label><textarea className="input-cream textarea-cream" rows={2} value={data.about_short || ''} onChange={e => set({ about_short: e.target.value })} /></div>
-        <div><label className="eyebrow block mb-1">ABOUT FULL (About page)</label><textarea className="input-cream textarea-cream" rows={6} value={data.about_full || ''} onChange={e => set({ about_full: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">ABOUT SHORT (home)</label><TextArea rows={2} value={data.about_short || ''} onCommit={v => set({ about_short: v })} /></div>
+        <div><label className="eyebrow block mb-1">ABOUT FULL (About page)</label><TextArea rows={6} value={data.about_full || ''} onCommit={v => set({ about_full: v })} /></div>
         <div>
           <label className="eyebrow block mb-1">ABOUT IMAGE</label>
           {data.about_image_url && <img src={publicUrl(data.about_image_url)} alt="about" className="h-32 w-auto rounded-lg mb-2" />}
@@ -26,10 +26,10 @@ const AdminAboutPage = () => {
             <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ about_image_url: r.url }); } }} />
             <MediaPickerButton testId="media-picker-about" onSelect={url => set({ about_image_url: url })} />
           </div>
-          <input className="input-cream mt-2" placeholder="Or paste URL" value={data.about_image_url || ''} onChange={e => set({ about_image_url: e.target.value })} />
+          <TextField className="mt-2" placeholder="Or paste URL" value={data.about_image_url || ''} onCommit={v => set({ about_image_url: v })} />
         </div>
-        <div><label className="eyebrow block mb-1">DESIGNER NAME</label><input className="input-cream" value={data.designer_name || ''} onChange={e => set({ designer_name: e.target.value })} /></div>
-        <div><label className="eyebrow block mb-1">DESIGNER BIO</label><textarea className="input-cream textarea-cream" rows={4} value={data.designer_bio || ''} onChange={e => set({ designer_bio: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">DESIGNER NAME</label><TextField value={data.designer_name || ''} onCommit={v => set({ designer_name: v })} /></div>
+        <div><label className="eyebrow block mb-1">DESIGNER BIO</label><TextArea rows={4} value={data.designer_bio || ''} onCommit={v => set({ designer_bio: v })} /></div>
       </div>
 
       <div className="card-cream p-6 space-y-4">

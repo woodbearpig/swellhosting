@@ -1,46 +1,34 @@
 [
   {
-    "content": "M1 — Fix .input-cream padding overlap",
+    "content": "Convert AdminAboutPage.jsx to TextField/TextArea",
     "status": "completed"
   },
   {
-    "content": "M2 — Read AdminSiteContent structure & plan extraction",
+    "content": "Convert AdminBrandPage.jsx to TextField (keep selects as-is)",
     "status": "completed"
   },
   {
-    "content": "M3 — Extract into separate pages: /admin/home, /admin/brand, /admin/about, /admin/nav, /admin/footer, /admin/coming-soon",
+    "content": "Convert AdminComingSoonPage.jsx to TextField/TextArea",
     "status": "completed"
   },
   {
-    "content": "M4 — Inline 'Recent Work' portfolio preview on /admin/home",
+    "content": "Convert AdminFooterPage.jsx to TextField/TextArea",
     "status": "completed"
   },
   {
-    "content": "M5 — Editable IG feed section: title, subtitle, post count, hide toggle, uses site.instagram_url",
+    "content": "Convert AdminHeaderNavPage.jsx nav-item inputs to TextField",
     "status": "completed"
   },
   {
-    "content": "M6 — IG feed server-side 5-min cache for traffic spikes",
+    "content": "Convert AdminSocialContactPage.jsx to TextField",
     "status": "completed"
   },
   {
-    "content": "M7 — Rename 'Gallery' → 'Portfolio' in admin sidebar + page headings",
+    "content": "Verify esbuild compiles cleanly",
     "status": "completed"
   },
   {
-    "content": "M8 — Update AdminLayout sidebar with new grouped routes",
-    "status": "completed"
-  },
-  {
-    "content": "M9 — Delete old AdminSiteContent + redirect old route",
-    "status": "completed"
-  },
-  {
-    "content": "M10 — Media Library bulk actions (in-app confirm modal for delete)",
-    "status": "completed"
-  },
-  {
-    "content": "M11 — Testing agent verification",
-    "status": "completed"
+    "content": "Run frontend testing agent to validate lag fix + save-on-blur",
+    "status": "in_progress"
   }
 ]
