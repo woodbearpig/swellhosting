@@ -254,12 +254,20 @@ class SiteContent(Base):
     gallery_page_show_filters: bool = True
     gallery_page_show_grid: bool = True
 
-    # Backdrops page visibility toggles
+    # Backdrops page visibility toggles + editable copy for both the top
+    # "Backdrops" section header AND the (optional) "Designs" section header
+    # that appears below it on the same page.
     backdrops_page_show_header: bool = True
     backdrops_page_show_grid: bool = True
     backdrops_page_eyebrow: str = "BUILDING BLOCKS"
     backdrops_page_title: str = "Backdrops"
     backdrops_page_subtitle: str = "Our reusable structures — the anchor of every install. Add florals, balloons, and signage to make each one yours."
+    # Designs group on the /backdrops page (rendered as a second labeled
+    # section below the Backdrops group). Set show_designs=false to hide.
+    backdrops_page_show_designs: bool = True
+    backdrops_page_designs_eyebrow: str = "COMPLETE LOOKS"
+    backdrops_page_designs_title: str = "Designs"
+    backdrops_page_designs_subtitle: str = "Fully-styled setups combining florals, balloons, and signage — themed and ready to go."
 
     # Contact page visibility toggles
     contact_page_show_header: bool = True

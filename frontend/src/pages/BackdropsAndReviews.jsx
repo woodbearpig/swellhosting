@@ -68,10 +68,15 @@ export const BackdropsPage = () => {
     api.get('/backdrops').then(r => setItems(r.data)).catch(() => {});
   }, []);
 
+  // Split items by kind so the page can render two labeled sections.
+  const backdrops = items.filter(b => (b.kind || 'backdrop') === 'backdrop');
+  const designs = items.filter(b => (b.kind || 'backdrop') === 'design');
+  const showDesignsSection = site?.backdrops_page_show_designs !== false && designs.length > 0;
+
   return (
     <div data-testid="backdrops-page">
       {site?.backdrops_page_show_header !== false && (
-        <section className="container-narrow pt-14 sm:pt-20 pb-8">
+        <section className="container-narrow pt-14 sm:pt-20 pb-8" data-testid="backdrops-page-header">
           <p className="eyebrow">{site?.backdrops_page_eyebrow || 'BUILDING BLOCKS'}</p>
           <h1 className="font-serif text-4xl sm:text-5xl mt-2 max-w-2xl">{site?.backdrops_page_title || 'Backdrops'}</h1>
           <p className="mt-4 text-[color:var(--brand-text-muted)] max-w-2xl leading-relaxed">
@@ -81,23 +86,42 @@ export const BackdropsPage = () => {
       )}
 
       {site?.backdrops_page_show_grid !== false && (
-        <section className="container-narrow pb-16 sm:pb-24">
-          {items.length === 0 ? (
-            <p className="text-center text-[color:var(--brand-text-muted)] py-16">No backdrops posted yet. Check back soon.</p>
+        <section className="container-narrow pb-16 sm:pb-24" data-testid="backdrops-page-backdrops-grid">
+          {backdrops.length === 0 ? (
+            <p className="text-center text-[color:var(--brand-text-muted)] py-8">No backdrops posted yet. Check back soon.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {items.map(b => <BackdropCard key={b.id} b={b} />)}
+              {backdrops.map(b => <BackdropCard key={b.id} b={b} />)}
             </div>
           )}
-
-          <div className="mt-12 text-center">
-            <p className="text-[color:var(--brand-text-muted)] mb-4">Love a backdrop? Mention it in your inquiry.</p>
-            <Link to="/inquire" className="btn-primary" data-testid="backdrops-inquire-cta">
-              Start your inquiry <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
         </section>
       )}
+
+      {showDesignsSection && (
+        <>
+          <section className="container-narrow pt-4 sm:pt-8 pb-6 border-t border-[color:var(--brand-border)]" data-testid="backdrops-page-designs-header">
+            <p className="eyebrow">{site?.backdrops_page_designs_eyebrow || 'COMPLETE LOOKS'}</p>
+            <h2 className="font-serif text-3xl sm:text-4xl mt-2 max-w-2xl">{site?.backdrops_page_designs_title || 'Designs'}</h2>
+            <p className="mt-3 text-[color:var(--brand-text-muted)] max-w-2xl leading-relaxed">
+              {site?.backdrops_page_designs_subtitle || 'Fully-styled setups combining florals, balloons, and signage — themed and ready to go.'}
+            </p>
+          </section>
+          <section className="container-narrow pb-16 sm:pb-24" data-testid="backdrops-page-designs-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {designs.map(b => <BackdropCard key={b.id} b={b} />)}
+            </div>
+          </section>
+        </>
+      )}
+
+      <section className="container-narrow pb-16 sm:pb-24" data-testid="backdrops-page-cta">
+        <div className="text-center">
+          <p className="text-[color:var(--brand-text-muted)] mb-4">Love a piece? Mention it in your inquiry.</p>
+          <Link to="/inquire" className="btn-primary" data-testid="backdrops-inquire-cta">
+            Start your inquiry <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 };

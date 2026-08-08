@@ -1,8 +1,152 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, X, Frame, Sparkles, ArrowUp, ArrowDown, Eye, EyeOff, ChevronDown, CheckSquare, Square, Tag } from 'lucide-react';
+import { Plus, Trash2, X, Frame, Sparkles, ArrowUp, ArrowDown, Eye, EyeOff, ChevronDown, CheckSquare, Square, Tag, FileText } from 'lucide-react';
 import { api, publicUrl, uploadFile } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
+import { useSite } from '@/context/SiteContext';
+
+/**
+ * BackdropsPageCopyCard — edits the copy shown at the top of the public
+ * /backdrops page (NOT the small homepage strip; that lives under Admin →
+ * Home page → "Backdrops heading"). Split into two collapsible groups:
+ * one for the Backdrops section header, one for the Designs section header.
+ * Uses local state per field so typing feels instant, commits on blur.
+ */
+const CopyField = ({ label, hint, value, onCommit, placeholder, textarea }) => {
+  const [local, setLocal] = useState(value || '');
+  const [focused, setFocused] = useState(false);
+  useEffect(() => { if (!focused) setLocal(value || ''); }, [value, focused]);
+  const commit = () => { setFocused(false); if ((local || '') !== (value || '')) onCommit(local); };
+  return (
+    <div>
+      <label className="eyebrow block mb-1">{label}</label>
+      {textarea ? (
+        <textarea
+          className="input-cream textarea-cream"
+          rows={3}
+          value={local}
+          placeholder={placeholder}
+          onChange={e => setLocal(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={commit}
+        />
+      ) : (
+        <input
+          className="input-cream"
+          value={local}
+          placeholder={placeholder}
+          onChange={e => setLocal(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+        />
+      )}
+      {hint && <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">{hint}</p>}
+    </div>
+  );
+};
+
+const BackdropsPageCopyCard = () => {
+  const { site, refresh } = useSite();
+  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const save = async (patch) => {
+    setSaving(true);
+    try {
+      await api.put('/admin/site-content', patch);
+      await refresh();
+      toast.success('Saved');
+    } catch { toast.error('Save failed'); }
+    finally { setSaving(false); }
+  };
+
+  const showHeader = site?.backdrops_page_show_header !== false;
+  const showDesigns = site?.backdrops_page_show_designs !== false;
+
+  return (
+    <div className="card-cream p-5" data-testid="admin-backdrops-page-copy-card">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between text-left"
+        data-testid="admin-backdrops-page-copy-toggle"
+      >
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-[color:var(--brand-sage-deep)]" />
+          <div>
+            <p className="font-serif text-lg leading-tight">Public /backdrops page copy</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Edit the headers, taglines, and section toggles for the standalone Backdrops page (swelldesignla.com/backdrops).</p>
+          </div>
+        </div>
+        <span className="text-sm text-[color:var(--brand-sage-deep)] shrink-0 ml-3">{open ? 'Hide' : 'Edit copy'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-5 space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="eyebrow">BACKDROPS SECTION HEADER</p>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showHeader}
+                  onChange={e => save({ backdrops_page_show_header: e.target.checked })}
+                  disabled={saving}
+                  data-testid="admin-backdrops-page-show-header"
+                />
+                <span>Show this header on the page</span>
+              </label>
+            </div>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${showHeader ? '' : 'opacity-50'}`}>
+              <CopyField label="EYEBROW" value={site?.backdrops_page_eyebrow || ''} placeholder="BUILDING BLOCKS" onCommit={v => save({ backdrops_page_eyebrow: v })} />
+              <CopyField label="TITLE" value={site?.backdrops_page_title || ''} placeholder="Backdrops" onCommit={v => save({ backdrops_page_title: v })} />
+            </div>
+            <div className={showHeader ? '' : 'opacity-50'}>
+              <CopyField
+                label="SUBTITLE"
+                textarea
+                value={site?.backdrops_page_subtitle || ''}
+                placeholder="Our reusable structures — the anchor of every install."
+                onCommit={v => save({ backdrops_page_subtitle: v })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-4 border-t border-[color:var(--brand-border)]">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="eyebrow">DESIGNS SECTION HEADER (SAME PAGE, BELOW BACKDROPS)</p>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showDesigns}
+                  onChange={e => save({ backdrops_page_show_designs: e.target.checked })}
+                  disabled={saving}
+                  data-testid="admin-backdrops-page-show-designs"
+                />
+                <span>Show the Designs section</span>
+              </label>
+            </div>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${showDesigns ? '' : 'opacity-50'}`}>
+              <CopyField label="EYEBROW" value={site?.backdrops_page_designs_eyebrow || ''} placeholder="COMPLETE LOOKS" onCommit={v => save({ backdrops_page_designs_eyebrow: v })} />
+              <CopyField label="TITLE" value={site?.backdrops_page_designs_title || ''} placeholder="Designs" onCommit={v => save({ backdrops_page_designs_title: v })} />
+            </div>
+            <div className={showDesigns ? '' : 'opacity-50'}>
+              <CopyField
+                label="SUBTITLE"
+                textarea
+                value={site?.backdrops_page_designs_subtitle || ''}
+                placeholder="Fully-styled setups combining florals, balloons, and signage — themed and ready to go."
+                onCommit={v => save({ backdrops_page_designs_subtitle: v })}
+              />
+            </div>
+            <p className="text-xs text-[color:var(--brand-text-muted)]">The Designs section only appears if you have at least one item marked as <b>Design</b> below.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const AdminBackdrops = () => {
   const [items, setItems] = useState([]);
@@ -205,6 +349,9 @@ export const AdminBackdrops = () => {
           )}
         </div>
       </div>
+
+      <BackdropsPageCopyCard />
+
 
       <div className="flex items-center gap-1 border-b border-[color:var(--brand-border)]">
         {tabs.map(t => (
