@@ -210,6 +210,11 @@ class SiteContent(Base):
     # anytime; her existing blog posts are preserved.
     blog_page_active: bool = False
 
+    # FAQ — off by default until the client fills in her Q&As. When false:
+    # /faq redirects to home, the "FAQ" item is hidden from header & footer.
+    # Homepage FAQ preview section is separately governed by home_faq_active.
+    faq_page_active: bool = False
+
     # Home Instagram feed (editable labels + post count)
     home_instagram_eyebrow: str = "LATEST FROM INSTAGRAM"
     home_instagram_title: str = "Follow along"

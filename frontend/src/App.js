@@ -73,6 +73,18 @@ const BlogGuard = ({ children }) => {
   return children;
 };
 
+/**
+ * FaqGuard — same pattern for /faq. Off by default; the client will populate
+ * Q&As when she's ready. Homepage FAQ preview section is governed separately.
+ */
+const FaqGuard = ({ children }) => {
+  const { site } = useSite();
+  if (site && site.faq_page_active === false) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <ThemeProvider>
@@ -94,7 +106,7 @@ function App() {
                   <Route path="/testimonials" element={<TestimonialsPage />} />
                   <Route path="/leave-a-review" element={<LeaveReviewPage />} />
                   <Route path="/backdrops" element={<BackdropsPage />} />
-                  <Route path="/faq" element={<FAQPage />} />
+                  <Route path="/faq" element={<FaqGuard><FAQPage /></FaqGuard>} />
                   <Route path="/blog" element={<BlogGuard><BlogListPage /></BlogGuard>} />
                   <Route path="/blog/:slug" element={<BlogGuard><BlogDetailPage /></BlogGuard>} />
                   <Route path="/contact" element={<ContactPage />} />

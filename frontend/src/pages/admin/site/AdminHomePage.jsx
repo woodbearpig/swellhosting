@@ -497,6 +497,12 @@ const AdminHomePage = () => {
               checked={data.blog_page_active === true}
               onChange={v => set({ blog_page_active: v })}
             />
+            <ToggleRow
+              label="FAQ page (whole site)"
+              hint="Off by default. Governs the /faq page and the ‘FAQ’ item in the header & footer. Turn ON once your questions are ready; the homepage FAQ preview is a separate toggle above."
+              checked={data.faq_page_active === true}
+              onChange={v => set({ faq_page_active: v })}
+            />
           </div>
         </div>
       </SectionCard>
