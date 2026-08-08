@@ -630,7 +630,7 @@ const AdminHomePage = () => {
             <div>
               <label className="eyebrow block mb-1">SECONDARY BUTTON — LABEL</label>
               <TextField value={data.home_final_cta_secondary_label || ''} onCommit={v => set({ home_final_cta_secondary_label: v })} placeholder="See the portfolio (optional)" />
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Leave blank to hide. This fixes the duplicate-button issue where an unused secondary was showing the primary's label.</p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Leave blank to hide the secondary button.</p>
             </div>
             <div>
               <label className="eyebrow block mb-1">SECONDARY BUTTON — LINK</label>
