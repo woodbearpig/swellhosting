@@ -147,7 +147,9 @@ code {
 .btn-secondary:hover { background: #ffffff; transform: translateY(-1px); }
 .dark .btn-secondary { background: hsl(30 10% 14%); color: #F4EFE8; border-color: hsl(30 12% 20%); }
 
-.input-cream {
+/* :where() drops specificity to 0 so Tailwind utilities like pl-9 win when
+   inputs need extra left padding for an inline icon. */
+:where(.input-cream) {
     width: 100%;
     height: 2.75rem;
     padding-top: 0;
@@ -162,7 +164,7 @@ code {
 }
 .input-cream:focus { outline: none; border-color: var(--brand-sage); box-shadow: 0 0 0 4px rgba(143,174,151,0.20); }
 .dark .input-cream { background: hsl(30 8% 12%); color: #F4EFE8; border-color: hsl(30 12% 20%); }
-.textarea-cream { min-height: 7rem; padding: 0.75rem 0.9rem; height: auto; line-height: 1.55; }
+:where(.textarea-cream) { min-height: 7rem; padding: 0.75rem 0.9rem; height: auto; line-height: 1.55; }
 
 .badge-soft {
     display: inline-flex; align-items: center; gap: 0.35rem;
