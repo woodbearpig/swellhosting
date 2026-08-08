@@ -36,11 +36,11 @@
     "status": "completed"
   },
   {
-    "content": "M10 — Media Library bulk actions",
+    "content": "M10 — Media Library bulk actions (in-app confirm modal for delete)",
     "status": "completed"
   },
   {
     "content": "M11 — Testing agent verification",
-    "status": "in_progress"
+    "status": "completed"
   }
 ]
