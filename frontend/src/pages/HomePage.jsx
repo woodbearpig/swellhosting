@@ -183,14 +183,23 @@ const HomePage = () => {
       )}
 
       {/* MEET THE DESIGNER */}
-      {site?.home_designer_active !== false && (
+      {site?.home_designer_active !== false && (() => {
+        const aspectClass = {
+          portrait: 'aspect-[5/6]',
+          landscape: 'aspect-[4/3]',
+          wide: 'aspect-[2/1]',
+          square: 'aspect-square',
+          auto: '',
+        }[site?.designer_image_aspect || 'portrait'] || 'aspect-[5/6]';
+        const fitClass = (site?.designer_image_fit === 'contain') ? 'object-contain' : 'object-cover';
+        return (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-designer-section">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          <motion.div {...fadeInUp} className="rounded-[2rem] overflow-hidden aspect-[5/6] bg-[color:var(--brand-surface-2)] lift-shadow">
+          <motion.div {...fadeInUp} className={`rounded-[2rem] overflow-hidden ${aspectClass} bg-[color:var(--brand-surface-2)] lift-shadow`}>
             <img
               src={publicUrl(site?.designer_image_url || site?.about_image_url) || 'https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'}
               alt={site?.designer_name || 'Meet the designer'}
-              className="h-full w-full object-cover"
+              className={`h-full w-full ${fitClass}`}
             />
           </motion.div>
           <motion.div {...fadeInUp}>
@@ -219,7 +228,8 @@ const HomePage = () => {
           </motion.div>
         </div>
       </section>
-      )}
+        );
+      })()}
 
       {/* FAQ PREVIEW */}
       {site?.home_faq_active !== false && (

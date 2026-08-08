@@ -620,6 +620,38 @@ const AdminHomePage = () => {
               )}
             </div>
             <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Optional. If left blank, the photo from Admin → About page is used automatically.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Ratio</label>
+                <select
+                  className="input-cream !h-9 text-sm"
+                  value={data.designer_image_aspect || 'portrait'}
+                  onChange={e => set({ designer_image_aspect: e.target.value })}
+                  data-testid="admin-designer-image-aspect"
+                >
+                  <option value="portrait">Portrait (5:6)</option>
+                  <option value="landscape">Landscape (4:3)</option>
+                  <option value="wide">Wide (2:1)</option>
+                  <option value="square">Square (1:1)</option>
+                  <option value="auto">Auto (use image's own)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Fit</label>
+                <select
+                  className="input-cream !h-9 text-sm"
+                  value={data.designer_image_fit || 'cover'}
+                  onChange={e => set({ designer_image_fit: e.target.value })}
+                  data-testid="admin-designer-image-fit"
+                >
+                  <option value="cover">Fill (crops to frame)</option>
+                  <option value="contain">Fit (show whole photo)</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-[11px] text-[color:var(--brand-text-muted)] mt-2 leading-snug">
+              <b>Tip for wide diptych photos:</b> pick <em>Wide (2:1)</em> ratio with <em>Fill</em>, or <em>Auto</em> ratio with <em>Fit</em> — either shows both halves without cropping the middle.
+            </p>
           </div>
 
           <div className="lg:col-span-2 space-y-3">

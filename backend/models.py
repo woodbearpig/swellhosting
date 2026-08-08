@@ -87,6 +87,14 @@ class SiteContent(Base):
     # blank value falls back to a sensible default in the template.
     designer_eyebrow: str = "MEET THE DESIGNER"
     designer_image_url: str = ""  # Falls back to about_image_url when empty
+    # How the designer photo is framed on the homepage. `image_aspect` controls
+    # the container's aspect ratio; `image_fit` controls whether the photo is
+    # cropped ("cover") or shown in full with subtle letterboxing ("contain").
+    # Wide diptych images (like the client's silver-balloons + portrait combo)
+    # look best with aspect="wide" + fit="cover", or aspect="auto" + fit="contain"
+    # to preserve the whole composition.
+    designer_image_aspect: str = "portrait"  # 'portrait' | 'landscape' | 'wide' | 'square' | 'auto'
+    designer_image_fit: str = "cover"        # 'cover' | 'contain'
     designer_cta_primary_label: str = "Start your inquiry"
     designer_cta_primary_href: str = "/inquire"
     designer_cta_secondary_label: str = "Read the story"
