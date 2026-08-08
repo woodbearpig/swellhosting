@@ -131,17 +131,48 @@ const PhotoUploadCard = ({ onCreated, allPalettes }) => {
     setPreviewUrl(url);
   };
 
-  const runExtraction = () => {
+  const runExtraction = async () => {
     try {
       const img = imgRef.current;
-      if (!img) return;
-      const rgbPalette = getPaletteSync(img, 8);
+      if (!img || !img.naturalWidth || !img.naturalHeight) return;
+
+      // Resize onto an off-screen canvas so ColorThief can reliably process the pixels.
+      // Large phone photos (12MP+) frequently exceed canvas memory limits and huge
+      // pixel counts also make quantization extremely slow. 500px is more than enough
+      // for accurate color sampling.
+      const MAX = 500;
+      const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context unavailable');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Round-trip through a fresh in-memory Image element loaded from a data URL.
+      // This guarantees a same-origin, untainted source that ColorThief can read from,
+      // regardless of how the browser handled the original blob: URL crossOrigin.
+      const dataUrl = canvas.toDataURL('image/png');
+      const resized = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = () => reject(new Error('Failed to load resized image'));
+        i.src = dataUrl;
+      });
+
+      const colorObjects = getPaletteSync(resized, 8);
+      if (!colorObjects) throw new Error('Could not extract colors');
+      // Convert Color objects to RGB arrays [r, g, b]
+      const rgbPalette = colorObjects.map(c => c.array());
       const colors = buildPaletteFromImage(rgbPalette);
       if (!colors) throw new Error('Could not extract colors');
       setExtracted(colors);
       if (!name) setName('Custom palette');
     } catch (e) {
-      console.error(e);
+      console.error('[palette-from-photo] extraction failed', e);
       toast.error('Could not extract colors from that image. Try another photo.');
     }
   };
@@ -198,7 +229,6 @@ const PhotoUploadCard = ({ onCreated, allPalettes }) => {
               ref={imgRef}
               src={previewUrl}
               alt="Palette source"
-              crossOrigin="anonymous"
               onLoad={runExtraction}
               className="w-full max-h-64 object-cover"
               data-testid="palette-from-photo-preview"
