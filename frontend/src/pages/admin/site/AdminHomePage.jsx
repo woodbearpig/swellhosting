@@ -1,0 +1,252 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star } from 'lucide-react';
+import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { api, uploadFile, publicUrl } from '@/lib/api';
+import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
+
+const SectionCard = ({ title, children, subtitle }) => (
+  <div className="card-cream p-6 space-y-4">
+    <div>
+      <p className="font-serif text-xl">{title}</p>
+      {subtitle && <p className="text-sm text-[color:var(--brand-text-muted)] mt-0.5">{subtitle}</p>}
+    </div>
+    {children}
+  </div>
+);
+
+const EyebrowTitleSubtitleRow = ({ label, prefix, data, set }) => (
+  <div>
+    <p className="eyebrow mb-2">{label}</p>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data[`${prefix}_eyebrow`] || ''} onChange={e => set({ [`${prefix}_eyebrow`]: e.target.value })} /></div>
+      <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data[`${prefix}_title`] || ''} onChange={e => set({ [`${prefix}_title`]: e.target.value })} /></div>
+      <div><label className="eyebrow block mb-1">SUBTITLE</label><input className="input-cream" value={data[`${prefix}_subtitle`] || ''} onChange={e => set({ [`${prefix}_subtitle`]: e.target.value })} /></div>
+    </div>
+  </div>
+);
+
+// Inline "Recent Work" portfolio preview — shows featured gallery items with quick feature/unfeature.
+const RecentWorkPreview = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await api.get('/gallery');
+      setItems(r.data || []);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const toggleFeatured = async (item) => {
+    await api.put(`/admin/gallery/${item.id}`, { ...item, featured: !item.featured });
+    load();
+  };
+
+  const featured = items.filter(i => i.featured).slice(0, 6);
+  const notFeatured = items.filter(i => !i.featured);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-[color:var(--brand-text-muted)]">These 6 images show in the “Recent Work” strip on your homepage. Feature or unfeature portfolio items below — or manage the full portfolio for reordering, titles, and categories.</p>
+        <Link to="/admin/gallery" className="btn-secondary !h-8 text-xs" data-testid="admin-home-portfolio-link">Manage full portfolio <ExternalLink className="h-3.5 w-3.5" /></Link>
+      </div>
+
+      {loading && <p className="text-sm text-[color:var(--brand-text-muted)]">Loading portfolio…</p>}
+
+      {!loading && (
+        <>
+          <p className="eyebrow">SHOWING NOW ({featured.length}/6)</p>
+          {featured.length === 0 && (
+            <div className="card-cream p-4 text-sm text-[color:var(--brand-text-muted)]">No featured items yet. Star some images below and they'll appear on the homepage.</div>
+          )}
+          {featured.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {featured.map(f => (
+                <button key={f.id} type="button" onClick={() => toggleFeatured(f)} title="Click to remove from homepage" className="group relative aspect-square rounded-xl overflow-hidden bg-[color:var(--brand-surface-2)]" data-testid={`admin-home-featured-${f.id}`}>
+                  <img src={publicUrl(f.image_url)} alt={f.title || ''} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 text-[10px] uppercase tracking-wider text-white font-medium">Remove</span>
+                  </div>
+                  <Star className="absolute top-1 right-1 h-3.5 w-3.5 fill-[color:var(--brand-sage-deep)] text-[color:var(--brand-sage-deep)] drop-shadow" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {notFeatured.length > 0 && (
+            <>
+              <p className="eyebrow mt-4">PROMOTE ANY OF THESE</p>
+              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                {notFeatured.slice(0, 16).map(item => (
+                  <button key={item.id} type="button" onClick={() => toggleFeatured(item)} title="Click to feature on homepage" className="group relative aspect-square rounded-xl overflow-hidden bg-[color:var(--brand-surface-2)] opacity-70 hover:opacity-100" data-testid={`admin-home-promote-${item.id}`}>
+                    <img src={publicUrl(item.image_url)} alt={item.title || ''} className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                      <Star className="h-4 w-4 text-white opacity-0 group-hover:opacity-100" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {notFeatured.length > 16 && (
+                <p className="text-xs text-[color:var(--brand-text-muted)]">… and {notFeatured.length - 16} more — <Link to="/admin/gallery" className="link-underline">manage all in portfolio</Link>.</p>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+const AdminHomePage = () => {
+  const { data, set, save, saving, dirty } = useSiteAdminData();
+  if (!data) return <p>Loading…</p>;
+
+  const badges = Array.isArray(data.hero_badges) ? data.hero_badges : [];
+  const swapBadges = (a, b) => { const next = [...badges]; [next[a], next[b]] = [next[b], next[a]]; set({ hero_badges: next }); };
+  const swapSteps = (a, b) => { const next = [...(data.home_process_steps || [])]; [next[a], next[b]] = [next[b], next[a]]; set({ home_process_steps: next }); };
+
+  return (
+    <div className="space-y-6" data-testid="admin-home-page">
+      <PageHeader
+        eyebrow="PAGE"
+        title="Home page"
+        subtitle="Everything visitors see on your homepage: hero, sections, Recent Work, Instagram feed, process timeline."
+        saving={saving} dirty={dirty} onSave={save}
+        saveTestId="admin-home-save"
+      />
+
+      <SectionCard title="Hero" subtitle="The big top banner — headline, subhead, buttons, and image.">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.hero_eyebrow || ''} onChange={e => set({ hero_eyebrow: e.target.value })} /></div>
+        </div>
+        <div><label className="eyebrow block mb-1">HEADLINE</label><textarea className="input-cream textarea-cream" rows={2} value={data.hero_headline || ''} onChange={e => set({ hero_headline: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">SUBHEAD</label><textarea className="input-cream textarea-cream" rows={3} value={data.hero_subhead || ''} onChange={e => set({ hero_subhead: e.target.value })} /></div>
+        <div>
+          <label className="eyebrow block mb-1">HERO IMAGE</label>
+          {data.hero_image_url && <img src={publicUrl(data.hero_image_url)} alt="hero" className="h-32 w-auto rounded-lg mb-2" />}
+          <div className="flex items-center gap-2 flex-wrap">
+            <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ hero_image_url: r.url }); } }} />
+            <MediaPickerButton testId="media-picker-hero" onSelect={url => set({ hero_image_url: url })} />
+          </div>
+          <input className="input-cream mt-2" value={data.hero_image_url || ''} onChange={e => set({ hero_image_url: e.target.value })} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">PRIMARY CTA LABEL</label><input className="input-cream" value={data.hero_primary_cta_label || ''} onChange={e => set({ hero_primary_cta_label: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">PRIMARY CTA LINK</label><input className="input-cream" value={data.hero_primary_cta_href || ''} onChange={e => set({ hero_primary_cta_href: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">SECONDARY CTA LABEL</label><input className="input-cream" value={data.hero_secondary_cta_label || ''} onChange={e => set({ hero_secondary_cta_label: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">SECONDARY CTA LINK</label><input className="input-cream" value={data.hero_secondary_cta_href || ''} onChange={e => set({ hero_secondary_cta_href: e.target.value })} /></div>
+        </div>
+
+        <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="eyebrow">HERO BADGES</p>
+            <button type="button" className="btn-secondary !h-8 text-xs" onClick={() => set({ hero_badges: [...badges, 'New badge'] })}><Plus className="h-3.5 w-3.5" /> Add badge</button>
+          </div>
+          <ToggleRow label="Show hero badges" hint="Turn off to hide the whole row of chips." checked={data.hero_badges_active !== false} onChange={v => set({ hero_badges_active: v })} />
+          {badges.map((badge, idx) => (
+            <div key={idx} className="card-cream p-2 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
+              <input className="input-cream !h-9 flex-1" value={badge} onChange={e => { const next = [...badges]; next[idx] = e.target.value; set({ hero_badges: next }); }} placeholder="Badge text" />
+              <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swapBadges(idx - 1, idx)}><ArrowUp className="h-3.5 w-3.5" /></button>
+              <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === badges.length - 1} onClick={() => swapBadges(idx, idx + 1)}><ArrowDown className="h-3.5 w-3.5" /></button>
+              <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => set({ hero_badges: badges.filter((_, i) => i !== idx) })}><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Section visibility" subtitle="Toggle any full section on or off.">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ToggleRow label="Services grid" hint="Six services on the home page." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
+          <ToggleRow label="Recent Work preview" hint="Portfolio strip linking to /gallery." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
+          <ToggleRow label="Instagram feed" hint="Live IG posts strip." checked={data.home_instagram_active !== false} onChange={v => set({ home_instagram_active: v })} />
+          <ToggleRow label="Process timeline" hint="Numbered step boxes." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
+          <ToggleRow label="Testimonials" hint="Client reviews." checked={data.home_testimonials_active !== false} onChange={v => set({ home_testimonials_active: v })} />
+          <ToggleRow label="Meet the designer" hint="Bio + photo block." checked={data.home_designer_active !== false} onChange={v => set({ home_designer_active: v })} />
+          <ToggleRow label="FAQ preview" hint="Common questions with link to full FAQ." checked={data.home_faq_active !== false} onChange={v => set({ home_faq_active: v })} />
+          <ToggleRow label="Final call-to-action" hint="Closing card near the footer." checked={data.home_final_cta_active !== false} onChange={v => set({ home_final_cta_active: v })} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid.">
+        <EyebrowTitleSubtitleRow label="" prefix="home_services" data={data} set={set} />
+      </SectionCard>
+
+      <SectionCard title="Recent Work" subtitle="Eyebrow, title, subtitle — plus which portfolio items appear.">
+        <EyebrowTitleSubtitleRow label="" prefix="home_gallery" data={data} set={set} />
+        <div className="border-t border-[color:var(--brand-border)] pt-4">
+          <RecentWorkPreview />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Instagram feed" subtitle="Latest posts strip. Auto-hides if not connected.">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_instagram_eyebrow || ''} onChange={e => set({ home_instagram_eyebrow: e.target.value })} placeholder="LATEST FROM INSTAGRAM" data-testid="admin-ig-eyebrow" /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_instagram_title || ''} onChange={e => set({ home_instagram_title: e.target.value })} placeholder="Follow along" data-testid="admin-ig-title" /></div>
+          <div><label className="eyebrow block mb-1">SUBTITLE (optional)</label><input className="input-cream" value={data.home_instagram_subtitle || ''} onChange={e => set({ home_instagram_subtitle: e.target.value })} placeholder="(leave blank to hide)" data-testid="admin-ig-subtitle" /></div>
+          <div>
+            <label className="eyebrow block mb-1">POSTS TO SHOW</label>
+            <select className="input-cream" value={data.home_instagram_count || 12} onChange={e => set({ home_instagram_count: Number(e.target.value) })} data-testid="admin-ig-count">
+              {[6, 8, 12, 18, 24].map(n => <option key={n} value={n}>{n} posts</option>)}
+            </select>
+          </div>
+        </div>
+        <p className="text-xs text-[color:var(--brand-text-muted)]">The “@ handle” button in the top-right uses your <strong>Instagram URL</strong> from <Link to="/admin/social-contact" className="link-underline">Contact &amp; social</Link>.</p>
+      </SectionCard>
+
+      <SectionCard title="The Process (timeline)" subtitle="The 5 numbered step boxes shown mid-page.">
+        <EyebrowTitleSubtitleRow label="" prefix="home_process" data={data} set={set} />
+        <div className="border-t border-[color:var(--brand-border)] pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="eyebrow">TIMELINE STEPS</p>
+            <button type="button" className="btn-secondary !h-8 text-xs" onClick={() => set({ home_process_steps: [...(data.home_process_steps || []), { title: 'New step', description: '' }] })}><Plus className="h-3.5 w-3.5" /> Add step</button>
+          </div>
+          <div className="space-y-2">
+            {(data.home_process_steps || []).map((step, idx) => (
+              <div key={idx} className="card-cream p-3 grid grid-cols-1 md:grid-cols-[auto_1fr_2fr_auto] gap-2 items-start">
+                <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
+                <input className="input-cream !h-9" placeholder="Title" value={step.title || ''} onChange={e => { const next = [...data.home_process_steps]; next[idx] = { ...next[idx], title: e.target.value }; set({ home_process_steps: next }); }} />
+                <input className="input-cream !h-9" placeholder="Description" value={step.description || ''} onChange={e => { const next = [...data.home_process_steps]; next[idx] = { ...next[idx], description: e.target.value }; set({ home_process_steps: next }); }} />
+                <div className="flex gap-1">
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swapSteps(idx - 1, idx)}><ArrowUp className="h-3.5 w-3.5" /></button>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === (data.home_process_steps || []).length - 1} onClick={() => swapSteps(idx, idx + 1)}><ArrowDown className="h-3.5 w-3.5" /></button>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => set({ home_process_steps: data.home_process_steps.filter((_, i) => i !== idx) })}><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Testimonials heading">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_testimonials_eyebrow || ''} onChange={e => set({ home_testimonials_eyebrow: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_testimonials_title || ''} onChange={e => set({ home_testimonials_title: e.target.value })} /></div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="FAQ heading">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_faq_eyebrow || ''} onChange={e => set({ home_faq_eyebrow: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_faq_title || ''} onChange={e => set({ home_faq_title: e.target.value })} /></div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Promo banner" subtitle="Optional highlight bar on the homepage.">
+        <label className="flex items-center gap-2"><input type="checkbox" checked={!!data.promo_active} onChange={e => set({ promo_active: e.target.checked })} /> Show promo banner on homepage</label>
+        <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.promo_title || ''} onChange={e => set({ promo_title: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">TEXT</label><textarea className="input-cream textarea-cream" rows={2} value={data.promo_text || ''} onChange={e => set({ promo_text: e.target.value })} /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">CTA LABEL</label><input className="input-cream" value={data.promo_cta_label || ''} onChange={e => set({ promo_cta_label: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">CTA LINK</label><input className="input-cream" value={data.promo_cta_href || ''} onChange={e => set({ promo_cta_href: e.target.value })} /></div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+};
+
+export default AdminHomePage;

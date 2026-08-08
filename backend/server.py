@@ -1557,10 +1557,27 @@ async def ig_disconnect(admin=Depends(require_admin)):
     return {"ok": True}
 
 
+# In-process cache for the public Instagram feed to shield Meta rate limits
+# during traffic spikes (e.g. announcement / launch day).
+_IG_CACHE: Dict[str, Any] = {"ts": 0.0, "posts": None}
+_IG_CACHE_TTL_SECONDS = 300  # 5 minutes
+
+
 @api.get("/instagram/feed")
 async def instagram_feed_public():
-    posts = await ig.public_feed(db, limit=12)
-    return posts
+    import time as _t
+    now = _t.time()
+    if _IG_CACHE["posts"] is not None and (now - _IG_CACHE["ts"]) < _IG_CACHE_TTL_SECONDS:
+        return _IG_CACHE["posts"]
+    try:
+        posts = await ig.public_feed(db, limit=24)
+        _IG_CACHE["posts"] = posts
+        _IG_CACHE["ts"] = now
+        return posts
+    except Exception as e:
+        logger.warning("Instagram feed fetch failed: %s", e)
+        # Serve stale cache if we have one, otherwise empty list
+        return _IG_CACHE["posts"] or []
 
 
 

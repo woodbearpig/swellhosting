@@ -1,38 +1,46 @@
 [
   {
-    "content": "M1 — Fix .input-cream padding overlap (Settings + Media search)",
+    "content": "M1 — Fix .input-cream padding overlap",
+    "status": "completed"
+  },
+  {
+    "content": "M2 — Read AdminSiteContent structure & plan extraction",
+    "status": "completed"
+  },
+  {
+    "content": "M3 — Extract into separate pages: /admin/home, /admin/brand, /admin/about, /admin/nav, /admin/footer, /admin/coming-soon",
+    "status": "completed"
+  },
+  {
+    "content": "M4 — Inline 'Recent Work' portfolio preview on /admin/home",
+    "status": "completed"
+  },
+  {
+    "content": "M5 — Editable IG feed section: title, subtitle, post count, hide toggle, uses site.instagram_url",
+    "status": "completed"
+  },
+  {
+    "content": "M6 — IG feed server-side 5-min cache for traffic spikes",
+    "status": "completed"
+  },
+  {
+    "content": "M7 — Rename 'Gallery' → 'Portfolio' in admin sidebar + page headings",
+    "status": "completed"
+  },
+  {
+    "content": "M8 — Update AdminLayout sidebar with new grouped routes",
+    "status": "completed"
+  },
+  {
+    "content": "M9 — Delete old AdminSiteContent + redirect old route",
+    "status": "completed"
+  },
+  {
+    "content": "M10 — Media Library bulk actions",
+    "status": "completed"
+  },
+  {
+    "content": "M11 — Testing agent verification",
     "status": "in_progress"
-  },
-  {
-    "content": "M2 — Explore current AdminSiteContent structure to plan the split",
-    "status": "pending"
-  },
-  {
-    "content": "M3 — Extract Site Content into separate admin pages: Home, Brand, About, Header nav, Footer, Coming soon",
-    "status": "pending"
-  },
-  {
-    "content": "M4 — Add inline 'Recent Work' portfolio preview + quick-manage to the new /admin/home page",
-    "status": "pending"
-  },
-  {
-    "content": "M5 — Rename 'Gallery' → 'Portfolio' in admin sidebar + page headings",
-    "status": "pending"
-  },
-  {
-    "content": "M6 — Update AdminLayout sidebar with new grouped routes",
-    "status": "pending"
-  },
-  {
-    "content": "M7 — Delete or redirect the old /admin/site-content route",
-    "status": "pending"
-  },
-  {
-    "content": "M8 — Media Library bulk actions: select mode + bulk delete + bulk tag",
-    "status": "pending"
-  },
-  {
-    "content": "M9 — Testing agent verification after all changes",
-    "status": "pending"
   }
 ]

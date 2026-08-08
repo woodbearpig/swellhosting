@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import '@/App.css';
 
 import PublicLayout from '@/components/PublicLayout';
@@ -28,7 +28,13 @@ import AdminGallery from '@/pages/admin/AdminGallery';
 import AdminTestimonials from '@/pages/admin/AdminTestimonials';
 import AdminFAQs from '@/pages/admin/AdminFAQs';
 import AdminBlog from '@/pages/admin/AdminBlog';
-import AdminSiteContent from '@/pages/admin/AdminSiteContent';
+import AdminHomePage from '@/pages/admin/site/AdminHomePage';
+import AdminBrandPage from '@/pages/admin/site/AdminBrandPage';
+import AdminAboutPage from '@/pages/admin/site/AdminAboutPage';
+import AdminHeaderNavPage from '@/pages/admin/site/AdminHeaderNavPage';
+import AdminFooterPage from '@/pages/admin/site/AdminFooterPage';
+import AdminSocialContactPage from '@/pages/admin/site/AdminSocialContactPage';
+import AdminComingSoonPage from '@/pages/admin/site/AdminComingSoonPage';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminPalettes from '@/pages/admin/AdminPalettes';
@@ -77,7 +83,16 @@ function App() {
                   <Route path="testimonials" element={<AdminTestimonials />} />
                   <Route path="faqs" element={<AdminFAQs />} />
                   <Route path="blog" element={<AdminBlog />} />
-                  <Route path="site-content" element={<AdminSiteContent />} />
+                  {/* Split site content pages (formerly /admin/site-content) */}
+                  <Route path="home" element={<AdminHomePage />} />
+                  <Route path="brand" element={<AdminBrandPage />} />
+                  <Route path="about" element={<AdminAboutPage />} />
+                  <Route path="nav" element={<AdminHeaderNavPage />} />
+                  <Route path="footer" element={<AdminFooterPage />} />
+                  <Route path="social-contact" element={<AdminSocialContactPage />} />
+                  <Route path="coming-soon" element={<AdminComingSoonPage />} />
+                  {/* Back-compat: old /admin/site-content redirects to /admin/home */}
+                  <Route path="site-content" element={<Navigate to="/admin/home" replace />} />
                   <Route path="inquiry-form" element={<AdminInquiryForm />} />
                   <Route path="media" element={<AdminMedia />} />
                   <Route path="palettes" element={<AdminPalettes />} />

@@ -42,7 +42,7 @@ export const AdminGallery = () => {
   return (
     <div className="space-y-6" data-testid="admin-gallery-page">
       <div className="flex items-center justify-between">
-        <div><p className="eyebrow">CONTENT</p><h1 className="font-serif text-3xl sm:text-4xl mt-1">Gallery</h1></div>
+        <div><p className="eyebrow">CONTENT</p><h1 className="font-serif text-3xl sm:text-4xl mt-1">Portfolio</h1><p className="text-sm text-[color:var(--brand-text-muted)] mt-1">Curated photos of finished events. Featured items also appear on the homepage.</p></div>
         <div className="flex gap-2">
           <label className="btn-secondary cursor-pointer"><Upload className="h-4 w-4" /> Bulk upload <input type="file" accept="image/*" multiple hidden onChange={e => bulkUpload(e.target.files || [])} /></label>
           <button className="btn-primary" onClick={openNew}><Plus className="h-4 w-4" /> Add photo</button>

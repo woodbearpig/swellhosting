@@ -149,7 +149,12 @@ code {
 
 .input-cream {
     width: 100%;
-    height: 2.75rem; padding: 0 0.9rem; border-radius: 0.75rem;
+    height: 2.75rem;
+    padding-top: 0;
+    padding-right: 0.9rem;
+    padding-bottom: 0;
+    padding-left: 0.9rem;
+    border-radius: 0.75rem;
     background: #ffffff; color: var(--brand-text);
     border: 1px solid var(--brand-border);
     font-family: var(--font-sans);

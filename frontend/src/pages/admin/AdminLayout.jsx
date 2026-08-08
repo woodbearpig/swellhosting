@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
@@ -16,16 +16,32 @@ const groups = [
     ],
   },
   {
+    label: 'Pages',
+    items: [
+      { to: '/admin/home', label: 'Home page', icon: Home },
+      { to: '/admin/about', label: 'About page', icon: UserIcon },
+      { to: '/admin/coming-soon', label: 'Coming soon', icon: EyeOff },
+    ],
+  },
+  {
     label: 'Content',
     items: [
       { to: '/admin/services', label: 'Services', icon: Boxes },
-      { to: '/admin/gallery', label: 'Gallery', icon: Image },
+      { to: '/admin/gallery', label: 'Portfolio', icon: Image },
       { to: '/admin/media', label: 'Media library', icon: FolderOpen },
       { to: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
       { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
       { to: '/admin/blog', label: 'Blog', icon: BookOpen },
-      { to: '/admin/site-content', label: 'Site content', icon: LayoutIcon },
       { to: '/admin/inquiry-form', label: 'Inquiry form', icon: FileText },
+    ],
+  },
+  {
+    label: 'Site chrome',
+    items: [
+      { to: '/admin/brand', label: 'Brand & fonts', icon: Sparkles },
+      { to: '/admin/nav', label: 'Header & nav', icon: Navigation },
+      { to: '/admin/footer', label: 'Footer', icon: PanelBottom },
+      { to: '/admin/social-contact', label: 'Contact & social', icon: AtSign },
       { to: '/admin/palettes', label: 'Palettes', icon: Palette },
     ],
   },

@@ -147,11 +147,18 @@ class SiteContent(Base):
     # Home section visibility
     home_services_active: bool = True
     home_gallery_active: bool = True
+    home_instagram_active: bool = True
     home_process_active: bool = True
     home_testimonials_active: bool = True
     home_designer_active: bool = True
     home_faq_active: bool = True
     home_final_cta_active: bool = True
+
+    # Home Instagram feed (editable labels + post count)
+    home_instagram_eyebrow: str = "LATEST FROM INSTAGRAM"
+    home_instagram_title: str = "Follow along"
+    home_instagram_subtitle: str = ""
+    home_instagram_count: int = 12
 
     # Footer element visibility + copyright override
     footer_show_logo: bool = True
