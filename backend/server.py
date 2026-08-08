@@ -1063,6 +1063,34 @@ async def delete_gallery(gid: str, admin=Depends(require_admin)):
     return {"ok": True}
 
 
+@api.post("/admin/gallery/bulk-delete")
+async def bulk_delete_gallery(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Delete multiple gallery items in one shot. Payload: {ids: [str, ...]}."""
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        raise HTTPException(status_code=400, detail="ids required")
+    r = await db.gallery.delete_many({"id": {"$in": ids}})
+    return {"ok": True, "deleted": r.deleted_count}
+
+
+@api.post("/admin/gallery/bulk-update")
+async def bulk_update_gallery(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Bulk-set fields on multiple gallery items.
+    Payload: {ids: [str,...], patch: {category?: str, featured?: bool, ...}}.
+    Only whitelisted fields can be mass-updated to avoid accidental clobbering.
+    """
+    ids = payload.get("ids") or []
+    patch = payload.get("patch") or {}
+    if not isinstance(ids, list) or not ids:
+        raise HTTPException(status_code=400, detail="ids required")
+    allowed = {"category", "featured", "tags"}
+    safe = {k: v for k, v in patch.items() if k in allowed}
+    if not safe:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    r = await db.gallery.update_many({"id": {"$in": ids}}, {"$set": safe})
+    return {"ok": True, "matched": r.matched_count, "modified": r.modified_count}
+
+
 # =========================================================
 # Testimonials
 # =========================================================
@@ -1248,6 +1276,35 @@ async def reorder_backdrops(payload: Dict[str, Any], admin=Depends(require_admin
     for idx, bid in enumerate(order):
         await db.backdrops.update_one({"id": bid}, {"$set": {"order": idx}})
     return {"ok": True}
+
+
+@api.post("/admin/backdrops/bulk-delete")
+async def bulk_delete_backdrops(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Delete multiple backdrops/designs at once. Payload: {ids: [str, ...]}."""
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        raise HTTPException(status_code=400, detail="ids required")
+    r = await db.backdrops.delete_many({"id": {"$in": ids}})
+    return {"ok": True, "deleted": r.deleted_count}
+
+
+@api.post("/admin/backdrops/bulk-update")
+async def bulk_update_backdrops(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Bulk-set whitelisted fields on multiple backdrops.
+    Payload: {ids: [str,...], patch: {kind?: 'backdrop'|'design', featured?: bool, active?: bool}}.
+    """
+    ids = payload.get("ids") or []
+    patch = payload.get("patch") or {}
+    if not isinstance(ids, list) or not ids:
+        raise HTTPException(status_code=400, detail="ids required")
+    allowed = {"kind", "featured", "active"}
+    safe = {k: v for k, v in patch.items() if k in allowed}
+    if not safe:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    if "kind" in safe and safe["kind"] not in ("backdrop", "design"):
+        raise HTTPException(status_code=400, detail="kind must be 'backdrop' or 'design'")
+    r = await db.backdrops.update_many({"id": {"$in": ids}}, {"$set": safe})
+    return {"ok": True, "matched": r.matched_count, "modified": r.modified_count}
 
 
 # =========================================================

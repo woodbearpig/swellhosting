@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, X, Frame, Sparkles, ArrowUp, ArrowDown, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, X, Frame, Sparkles, ArrowUp, ArrowDown, Eye, EyeOff, ChevronDown, CheckSquare, Square, Tag } from 'lucide-react';
 import { api, publicUrl, uploadFile } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
@@ -10,6 +10,8 @@ export const AdminBackdrops = () => {
   const [tab, setTab] = useState('all'); // 'all' | 'backdrop' | 'design'
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const newMenuRef = useRef(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(new Set());
 
   useEffect(() => {
     const onDocClick = (e) => {
@@ -53,7 +55,9 @@ export const AdminBackdrops = () => {
   };
 
   const kindOf = (b) => b.kind || 'backdrop';
-  const filtered = tab === 'all' ? items : items.filter(b => kindOf(b) === tab);
+  const filtered = useMemo(() => (
+    tab === 'all' ? items : items.filter(b => kindOf(b) === tab)
+  ), [items, tab]);
   const counts = {
     all: items.length,
     backdrop: items.filter(b => kindOf(b) === 'backdrop').length,
@@ -64,6 +68,61 @@ export const AdminBackdrops = () => {
     { id: 'backdrop', label: 'Backdrops' },
     { id: 'design', label: 'Designs' },
   ];
+
+  // -------- Selection helpers --------
+  const enterSelect = () => { setSelectMode(true); setSelected(new Set()); };
+  const exitSelect = () => { setSelectMode(false); setSelected(new Set()); };
+  const toggleOne = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const allVisibleSelected = filtered.length > 0 && filtered.every(b => selected.has(b.id));
+  const toggleAllVisible = () => {
+    setSelected(prev => {
+      if (allVisibleSelected) {
+        const next = new Set(prev);
+        filtered.forEach(b => next.delete(b.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach(b => next.add(b.id));
+      return next;
+    });
+  };
+  const bulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} item${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    try {
+      await api.post('/admin/backdrops/bulk-delete', { ids });
+      toast.success(`Deleted ${ids.length}`);
+      exitSelect();
+      load();
+    } catch { toast.error('Bulk delete failed'); }
+  };
+  const bulkSetKind = async (kind) => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    try {
+      await api.post('/admin/backdrops/bulk-update', { ids, patch: { kind } });
+      toast.success(`Set ${ids.length} to ${kind}`);
+      exitSelect();
+      load();
+    } catch { toast.error('Bulk update failed'); }
+  };
+  const bulkSetActive = async (active) => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    try {
+      await api.post('/admin/backdrops/bulk-update', { ids, patch: { active } });
+      toast.success(`${active ? 'Shown' : 'Hidden'} ${ids.length}`);
+      exitSelect();
+      load();
+    } catch { toast.error('Bulk update failed'); }
+  };
 
   return (
     <div className="space-y-6" data-testid="admin-backdrops-page">
@@ -77,54 +136,72 @@ export const AdminBackdrops = () => {
             Both share the same form; the public site groups them into separate sections.
           </p>
         </div>
-        <div className="relative" ref={newMenuRef}>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setNewMenuOpen(o => !o)}
-            data-testid="admin-backdrops-new"
-            aria-haspopup="menu"
-            aria-expanded={newMenuOpen}
-          >
-            <Plus className="h-4 w-4" /> New… <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-          {newMenuOpen && (
-            <div
-              className="absolute right-0 top-full mt-2 w-64 z-50 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] shadow-lg overflow-hidden"
-              role="menu"
-              data-testid="admin-backdrops-new-menu"
-            >
+        <div className="flex items-center gap-2 flex-wrap">
+          {!selectMode ? (
+            <>
               <button
                 type="button"
-                role="menuitem"
-                onClick={() => startNew('backdrop')}
-                className="w-full text-left px-3 py-3 hover:bg-[color:var(--brand-sage-tint)] border-b border-[color:var(--brand-border)] transition-colors"
-                data-testid="admin-backdrops-new-backdrop"
+                className="btn-secondary"
+                onClick={enterSelect}
+                disabled={items.length === 0}
+                data-testid="admin-backdrops-select-mode"
+                title="Select multiple items for bulk actions"
               >
-                <div className="flex items-center gap-2">
-                  <Frame className="h-4 w-4 text-[color:var(--brand-sage-deep)]" />
-                  <div>
-                    <p className="font-medium text-sm">New backdrop</p>
-                    <p className="text-xs text-[color:var(--brand-text-muted)]">A reusable structure (arch, hoop…)</p>
-                  </div>
-                </div>
+                <CheckSquare className="h-4 w-4" /> Select
               </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => startNew('design')}
-                className="w-full text-left px-3 py-3 hover:bg-[color:var(--brand-blush-tint)] transition-colors"
-                data-testid="admin-backdrops-new-design"
-              >
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[color:var(--brand-coral)]" />
-                  <div>
-                    <p className="font-medium text-sm">New design</p>
-                    <p className="text-xs text-[color:var(--brand-text-muted)]">A complete themed setup</p>
+              <div className="relative" ref={newMenuRef}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setNewMenuOpen(o => !o)}
+                  data-testid="admin-backdrops-new"
+                  aria-haspopup="menu"
+                  aria-expanded={newMenuOpen}
+                >
+                  <Plus className="h-4 w-4" /> New… <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                {newMenuOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-64 z-50 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] shadow-lg overflow-hidden"
+                    role="menu"
+                    data-testid="admin-backdrops-new-menu"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => startNew('backdrop')}
+                      className="w-full text-left px-3 py-3 hover:bg-[color:var(--brand-sage-tint)] border-b border-[color:var(--brand-border)] transition-colors"
+                      data-testid="admin-backdrops-new-backdrop"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Frame className="h-4 w-4 text-[color:var(--brand-sage-deep)]" />
+                        <div>
+                          <p className="font-medium text-sm">New backdrop</p>
+                          <p className="text-xs text-[color:var(--brand-text-muted)]">A reusable structure (arch, hoop…)</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => startNew('design')}
+                      className="w-full text-left px-3 py-3 hover:bg-[color:var(--brand-blush-tint)] transition-colors"
+                      data-testid="admin-backdrops-new-design"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[color:var(--brand-coral)]" />
+                        <div>
+                          <p className="font-medium text-sm">New design</p>
+                          <p className="text-xs text-[color:var(--brand-text-muted)]">A complete themed setup</p>
+                        </div>
+                      </div>
+                    </button>
                   </div>
-                </div>
-              </button>
-            </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <button type="button" className="btn-secondary" onClick={exitSelect} data-testid="admin-backdrops-select-cancel">Cancel</button>
           )}
         </div>
       </div>
@@ -147,6 +224,31 @@ export const AdminBackdrops = () => {
         ))}
       </div>
 
+      {selectMode && (
+        <div className="sticky top-0 z-20 -mx-2 px-2 py-3 bg-[color:var(--brand-cream)]/95 backdrop-blur border-b border-[color:var(--brand-border)] flex items-center justify-between flex-wrap gap-3" data-testid="admin-backdrops-selection-toolbar">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={toggleAllVisible} className="inline-flex items-center gap-2 text-sm font-medium hover:text-[color:var(--brand-sage-deep)]" data-testid="admin-backdrops-select-all">
+              {allVisibleSelected ? <CheckSquare className="h-4 w-4 text-[color:var(--brand-sage-deep)]" /> : <Square className="h-4 w-4" />}
+              {allVisibleSelected ? 'Deselect all' : `Select all ${filtered.length}`}
+            </button>
+            <span className="text-sm text-[color:var(--brand-text-muted)]">{selected.size} selected</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" className="btn-secondary text-sm" onClick={() => bulkSetKind('backdrop')} disabled={selected.size === 0} data-testid="admin-backdrops-bulk-kind-backdrop">
+              <Frame className="h-3.5 w-3.5" /> Mark as backdrop
+            </button>
+            <button type="button" className="btn-secondary text-sm" onClick={() => bulkSetKind('design')} disabled={selected.size === 0} data-testid="admin-backdrops-bulk-kind-design">
+              <Sparkles className="h-3.5 w-3.5" /> Mark as design
+            </button>
+            <button type="button" className="btn-secondary text-sm" onClick={() => bulkSetActive(true)} disabled={selected.size === 0}>Show</button>
+            <button type="button" className="btn-secondary text-sm" onClick={() => bulkSetActive(false)} disabled={selected.size === 0}>Hide</button>
+            <button type="button" className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium disabled:opacity-40" onClick={bulkDelete} disabled={selected.size === 0} data-testid="admin-backdrops-bulk-delete">
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </button>
+          </div>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="card-cream p-8 text-center">
           <Frame className="h-8 w-8 mx-auto text-[color:var(--brand-text-muted)] mb-2" />
@@ -155,15 +257,30 @@ export const AdminBackdrops = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((b, idx) => (
-            <div key={b.id} className="card-cream overflow-hidden" data-testid={`admin-backdrop-card-${b.id}`}>
+          {filtered.map((b, idx) => {
+            const isSelected = selected.has(b.id);
+            return (
+            <div key={b.id} className={`card-cream overflow-hidden relative transition-all ${isSelected ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`} data-testid={`admin-backdrop-card-${b.id}`}>
+              {selectMode && (
+                <button
+                  type="button"
+                  onClick={() => toggleOne(b.id)}
+                  className="absolute inset-0 z-10 flex items-start justify-start p-2 cursor-pointer group/select"
+                  aria-label={isSelected ? 'Deselect' : 'Select'}
+                  data-testid={`admin-backdrop-select-${b.id}`}
+                >
+                  <span className={`h-7 w-7 rounded-md flex items-center justify-center border-2 shadow-sm transition-colors ${isSelected ? 'bg-[color:var(--brand-sage-deep)] border-[color:var(--brand-sage-deep)] text-white' : 'bg-white/90 border-white/90 group-hover/select:bg-white'}`}>
+                    {isSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4 opacity-60" />}
+                  </span>
+                </button>
+              )}
               <div className="aspect-[3/4] bg-[color:var(--brand-surface-2)] relative">
                 {b.image_url ? (
                   <img src={publicUrl(b.image_url)} alt={b.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[color:var(--brand-text-muted)]"><Frame className="h-10 w-10" /></div>
                 )}
-                <span className={`absolute top-2 left-2 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${kindOf(b) === 'design' ? 'bg-[color:var(--brand-blush-tint)] text-[color:var(--brand-coral)]' : 'bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]'}`}>
+                <span className={`absolute top-2 right-2 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${kindOf(b) === 'design' ? 'bg-[color:var(--brand-blush-tint)] text-[color:var(--brand-coral)]' : 'bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]'}`}>
                   {kindOf(b)}
                 </span>
               </div>
@@ -178,17 +295,20 @@ export const AdminBackdrops = () => {
                     {b.active === false && <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">Hidden</span>}
                   </div>
                 </div>
-                <div className="mt-3 flex items-center gap-1">
-                  <button onClick={() => setEditing(b)} className="link-underline text-sm">Edit</button>
-                  <div className="ml-auto flex gap-1">
-                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(items.indexOf(b), -1)} disabled={items.indexOf(b) === 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
-                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(items.indexOf(b), +1)} disabled={items.indexOf(b) === items.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
-                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => remove(b.id)} aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                {!selectMode && (
+                  <div className="mt-3 flex items-center gap-1">
+                    <button onClick={() => setEditing(b)} className="link-underline text-sm">Edit</button>
+                    <div className="ml-auto flex gap-1">
+                      <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(items.indexOf(b), -1)} disabled={items.indexOf(b) === 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                      <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(items.indexOf(b), +1)} disabled={items.indexOf(b) === items.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                      <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => remove(b.id)} aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
