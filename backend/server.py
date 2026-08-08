@@ -306,13 +306,15 @@ async def consolidate_admins(payload: Dict[str, Any], admin=Depends(require_admi
 
     Behavior:
       1. Verify caller's `current_password` against the caller's stored hash.
-         (This is the same check as change-credentials — proves the caller is
-         authorized and owns a working password.)
-      2. Find the admin row whose `email` matches `keep_email` (case-insensitive).
-         If none exists, keep the caller's own row and rewrite its email.
-      3. Rewrite that row's password_hash from `new_password`.
-      4. Delete all other admin_users rows.
-      5. Issue a fresh JWT bound to the kept row.
+         With duplicate rows sharing the same `id`, MongoDB's find_one is arbitrary,
+         so we try to verify against ANY row that has the caller's id.
+      2. Find one specific row to keep (prefer email match, else caller row).
+         Pin it by its MongoDB _id ObjectId (guaranteed unique).
+      3. Rewrite that row: correct email, new password_hash, sane defaults.
+      4. Delete every OTHER row by _id (bulletproof — works even when many rows
+         share the same `id` field).
+      5. Add unique indexes on `id` and `email` so this never happens again.
+      6. Issue a fresh JWT bound to the kept row.
     """
     keep_email = (payload.get("keep_email") or "").strip().lower()
     new_password = payload.get("new_password") or ""
@@ -325,23 +327,41 @@ async def consolidate_admins(payload: Dict[str, Any], admin=Depends(require_admi
     if not current_password:
         raise HTTPException(status_code=400, detail="current_password is required to authorize cleanup")
 
-    # 1. Verify caller
-    caller = await db.admin_users.find_one({"id": admin["sub"]}, {"_id": 0})
-    if not caller:
-        raise HTTPException(status_code=404, detail="Caller admin record not found")
-    if not verify_password(current_password, caller["password_hash"]):
-        raise HTTPException(status_code=401, detail="current_password does not match caller's stored hash")
+    # 1. Verify caller — with duplicate `id` rows, find_one is arbitrary so try
+    #    ANY row that has matching id (or matching email as a fallback).
+    candidate_rows = []
+    async for u in db.admin_users.find({"$or": [{"id": admin["sub"]}, {"email": admin.get("email", "")}]}):
+        candidate_rows.append(u)
+    if not candidate_rows:
+        raise HTTPException(status_code=404, detail="No admin rows found matching your session")
 
-    # 2. Pick the row to keep (prefer match on keep_email, else caller row).
-    keep_row = await db.admin_users.find_one({"email": keep_email}, {"_id": 0})
+    caller_authorized = any(
+        verify_password(current_password, r.get("password_hash", "")) for r in candidate_rows
+    )
+    if not caller_authorized:
+        logger.warning(
+            "consolidate-admins: no candidate row accepted current_password. sub=%s candidates=%d",
+            admin.get("sub"), len(candidate_rows),
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="current_password does not match any admin row matching your session id/email",
+        )
+
+    # 2. Pick the row to keep. Prefer one with keep_email; then a caller row
+    #    that has an email; then any candidate row. Pin by _id.
+    keep_row = await db.admin_users.find_one({"email": keep_email})
     if not keep_row:
-        keep_row = caller
-    keep_id = keep_row["id"]
+        # No row with keep_email — pick a candidate that has any email
+        candidates_with_email = [r for r in candidate_rows if r.get("email")]
+        keep_row = candidates_with_email[0] if candidates_with_email else candidate_rows[0]
+    kept_object_id = keep_row["_id"]
 
-    # 3. Rewrite kept row.
+    # 3. Rewrite kept row precisely by _id.
     await db.admin_users.update_one(
-        {"id": keep_id},
+        {"_id": kept_object_id},
         {"$set": {
+            "id": "admin_root",  # normalize to canonical id
             "email": keep_email,
             "name": keep_row.get("name") or "Admin",
             "password_hash": hash_password(new_password),
@@ -349,37 +369,26 @@ async def consolidate_admins(payload: Dict[str, Any], admin=Depends(require_admi
         }},
     )
 
-    # 4. Delete every other admin_users row (also removes any legit duplicates
-    # with the same `id`).
-    delete_result = await db.admin_users.delete_many({"id": {"$ne": keep_id}})
-    # Also collapse duplicates that share the kept id but were different documents
-    # (delete_many with $ne wouldn't catch them). Keep one, delete rest.
-    dupes_with_same_id = []
-    async for u in db.admin_users.find({"id": keep_id}, {"_id": 1}):
-        dupes_with_same_id.append(u["_id"])
-    dup_extra_deleted = 0
-    if len(dupes_with_same_id) > 1:
-        # Keep the first, delete the rest.
-        for _id in dupes_with_same_id[1:]:
-            await db.admin_users.delete_one({"_id": _id})
-            dup_extra_deleted += 1
+    # 4. Delete every other row by MongoDB _id (works even with duplicate `id` fields).
+    delete_result = await db.admin_users.delete_many({"_id": {"$ne": kept_object_id}})
 
-    # 5. Ensure the kept row's id field is unique going forward — best-effort index.
-    try:
-        await db.admin_users.create_index("id", unique=True)
-    except Exception as e:
-        logger.warning("Could not create unique index on admin_users.id (may already exist): %s", e)
-    try:
-        await db.admin_users.create_index("email", unique=True)
-    except Exception as e:
-        logger.warning("Could not create unique index on admin_users.email (may already exist): %s", e)
+    # 5. Add unique indexes so this can't happen again.
+    for field in ("id", "email"):
+        try:
+            await db.admin_users.create_index(field, unique=True)
+        except Exception as e:
+            logger.warning("Could not create unique index on admin_users.%s (may exist already): %s", field, e)
 
-    refreshed = await db.admin_users.find_one({"id": keep_id}, {"_id": 0, "password_hash": 0})
+    refreshed = await db.admin_users.find_one({"_id": kept_object_id}, {"_id": 0, "password_hash": 0})
     new_token = create_token(refreshed)
+    logger.info(
+        "consolidate-admins: kept _id=%s id=%s email=%s deleted_others=%d",
+        kept_object_id, refreshed.get("id"), refreshed.get("email"), delete_result.deleted_count,
+    )
     return {
         "ok": True,
         "deleted_other_admins": delete_result.deleted_count,
-        "deleted_id_duplicates": dup_extra_deleted,
+        "deleted_id_duplicates": 0,  # kept for backward-compat with older UI builds
         "kept": refreshed,
         "token": new_token,
     }
