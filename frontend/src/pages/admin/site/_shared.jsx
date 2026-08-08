@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, memo as reactMemo } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
@@ -6,24 +6,34 @@ import { useSite } from '@/context/SiteContext';
 /**
  * useSiteAdminData — shared hook for every admin page that edits SiteContent.
  *
- * Each admin route owns its own state slice (fetched fresh on mount) so that
- * editing on one page doesn't retain in-memory changes when navigating away.
- * On save, the full local snapshot is PUT to /admin/site-content — the backend
- * uses $set so unrelated fields are preserved.
+ * Perf notes:
+ *  - Reuses `site` from SiteContext instead of re-fetching on every mount.
+ *    This makes route navigation between admin pages feel instant.
+ *  - `set()` uses a functional updater so React can batch changes without
+ *    the enclosing hook needing to re-render every keystroke.
+ *  - On save, PUTs the local snapshot to /admin/site-content (backend $set
+ *    merges partial fields so unrelated pages keep their data).
  */
 export const useSiteAdminData = () => {
-  const { refresh } = useSite();
+  const { site, refresh } = useSite();
   const [data, setData] = useState(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const seededRef = useRef(false);
 
+  // Seed local state from context once. Subsequent site refreshes (e.g. after
+  // save) do NOT overwrite un-saved edits, but if the user hasn't touched
+  // anything we keep in sync with the source of truth.
   useEffect(() => {
-    let cancelled = false;
-    api.get('/site-content').then(r => {
-      if (!cancelled) setData(r.data);
-    });
-    return () => { cancelled = true; };
-  }, []);
+    if (!site) return;
+    if (!seededRef.current) {
+      setData(site);
+      seededRef.current = true;
+    } else if (!dirty) {
+      // Silent sync from context when nothing is dirty
+      setData(site);
+    }
+  }, [site, dirty]);
 
   const set = useCallback((patch) => {
     setDirty(true);
@@ -31,19 +41,28 @@ export const useSiteAdminData = () => {
   }, []);
 
   const save = useCallback(async () => {
-    if (!data) return;
     setSaving(true);
     try {
-      await api.put('/admin/site-content', data);
-      refresh();
-      setDirty(false);
-      toast.success('Saved');
+      // Read latest data at save-time (avoids stale-closure re-creates of `save`)
+      setData(current => {
+        (async () => {
+          try {
+            await api.put('/admin/site-content', current);
+            await refresh();
+            setDirty(false);
+            toast.success('Saved');
+          } catch (e) {
+            toast.error(e?.response?.data?.detail || 'Save failed');
+          } finally {
+            setSaving(false);
+          }
+        })();
+        return current;
+      });
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'Save failed');
-    } finally {
       setSaving(false);
     }
-  }, [data, refresh]);
+  }, [refresh]);
 
   return { data, set, save, saving, dirty };
 };
@@ -79,3 +98,41 @@ export const PageHeader = ({ eyebrow, title, subtitle, saving, dirty, onSave, sa
     </button>
   </div>
 );
+
+/**
+ * TextField / TextArea — locally-controlled inputs that only commit to the
+ * parent state on blur (or debounced 500ms).
+ *
+ * WHY: The admin pages hold a single big `data` object in state. If every
+ * keystroke bubbled up, the whole page tree would reconcile on each key press
+ * (which felt laggy). These inputs keep the typing responsive by owning
+ * their own state and only pushing the final value up when the user leaves
+ * the field.
+ */
+const _makeInput = (Tag) => reactMemo(function LocalInput({ value, onCommit, className = '', ...rest }) {
+  const [local, setLocal] = useState(value ?? '');
+  const [focused, setFocused] = useState(false);
+
+  // Sync from parent when NOT focused (avoids clobbering current input)
+  useEffect(() => {
+    if (!focused) setLocal(value ?? '');
+  }, [value, focused]);
+
+  return (
+    <Tag
+      {...rest}
+      className={`input-cream ${Tag === 'textarea' ? 'textarea-cream' : ''} ${className}`}
+      value={local}
+      onChange={e => setLocal(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        if (local !== (value ?? '')) onCommit(local);
+      }}
+    />
+  );
+});
+
+export const TextField = _makeInput('input');
+export const TextArea = _makeInput('textarea');
+

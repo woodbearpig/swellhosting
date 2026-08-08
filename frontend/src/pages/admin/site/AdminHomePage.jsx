@@ -1,33 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star } from 'lucide-react';
-import { useSiteAdminData, PageHeader, ToggleRow } from './_shared';
+import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
-const SectionCard = ({ title, children, subtitle }) => (
-  <div className="card-cream p-6 space-y-4">
-    <div>
-      <p className="font-serif text-xl">{title}</p>
-      {subtitle && <p className="text-sm text-[color:var(--brand-text-muted)] mt-0.5">{subtitle}</p>}
+const SectionCard = memo(function SectionCard({ title, children, subtitle }) {
+  return (
+    <div className="card-cream p-6 space-y-4">
+      <div>
+        <p className="font-serif text-xl">{title}</p>
+        {subtitle && <p className="text-sm text-[color:var(--brand-text-muted)] mt-0.5">{subtitle}</p>}
+      </div>
+      {children}
     </div>
-    {children}
-  </div>
-);
+  );
+});
 
-const EyebrowTitleSubtitleRow = ({ label, prefix, data, set }) => (
-  <div>
-    <p className="eyebrow mb-2">{label}</p>
+const EyebrowTitleSubtitleRow = memo(function EyebrowTitleSubtitleRow({ prefix, data, set }) {
+  return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data[`${prefix}_eyebrow`] || ''} onChange={e => set({ [`${prefix}_eyebrow`]: e.target.value })} /></div>
-      <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data[`${prefix}_title`] || ''} onChange={e => set({ [`${prefix}_title`]: e.target.value })} /></div>
-      <div><label className="eyebrow block mb-1">SUBTITLE</label><input className="input-cream" value={data[`${prefix}_subtitle`] || ''} onChange={e => set({ [`${prefix}_subtitle`]: e.target.value })} /></div>
+      <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data[`${prefix}_eyebrow`] || ''} onCommit={v => set({ [`${prefix}_eyebrow`]: v })} /></div>
+      <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data[`${prefix}_title`] || ''} onCommit={v => set({ [`${prefix}_title`]: v })} /></div>
+      <div><label className="eyebrow block mb-1">SUBTITLE</label><TextField value={data[`${prefix}_subtitle`] || ''} onCommit={v => set({ [`${prefix}_subtitle`]: v })} /></div>
     </div>
-  </div>
-);
+  );
+});
 
 // Inline "Recent Work" portfolio preview — shows featured gallery items with quick feature/unfeature.
-const RecentWorkPreview = () => {
+// memo() prevents re-fetching whenever the parent's `data` object changes.
+const RecentWorkPreview = memo(function RecentWorkPreview() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,7 +101,7 @@ const RecentWorkPreview = () => {
       )}
     </div>
   );
-};
+});
 
 const AdminHomePage = () => {
   const { data, set, save, saving, dirty } = useSiteAdminData();
@@ -121,10 +123,10 @@ const AdminHomePage = () => {
 
       <SectionCard title="Hero" subtitle="The big top banner — headline, subhead, buttons, and image.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.hero_eyebrow || ''} onChange={e => set({ hero_eyebrow: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.hero_eyebrow || ''} onCommit={v => set({ hero_eyebrow: v })} /></div>
         </div>
-        <div><label className="eyebrow block mb-1">HEADLINE</label><textarea className="input-cream textarea-cream" rows={2} value={data.hero_headline || ''} onChange={e => set({ hero_headline: e.target.value })} /></div>
-        <div><label className="eyebrow block mb-1">SUBHEAD</label><textarea className="input-cream textarea-cream" rows={3} value={data.hero_subhead || ''} onChange={e => set({ hero_subhead: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">HEADLINE</label><TextArea rows={2} value={data.hero_headline || ''} onCommit={v => set({ hero_headline: v })} /></div>
+        <div><label className="eyebrow block mb-1">SUBHEAD</label><TextArea rows={3} value={data.hero_subhead || ''} onCommit={v => set({ hero_subhead: v })} /></div>
         <div>
           <label className="eyebrow block mb-1">HERO IMAGE</label>
           {data.hero_image_url && <img src={publicUrl(data.hero_image_url)} alt="hero" className="h-32 w-auto rounded-lg mb-2" />}
@@ -132,13 +134,13 @@ const AdminHomePage = () => {
             <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ hero_image_url: r.url }); } }} />
             <MediaPickerButton testId="media-picker-hero" onSelect={url => set({ hero_image_url: url })} />
           </div>
-          <input className="input-cream mt-2" value={data.hero_image_url || ''} onChange={e => set({ hero_image_url: e.target.value })} />
+          <TextField className="mt-2" value={data.hero_image_url || ''} onCommit={v => set({ hero_image_url: v })} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">PRIMARY CTA LABEL</label><input className="input-cream" value={data.hero_primary_cta_label || ''} onChange={e => set({ hero_primary_cta_label: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">PRIMARY CTA LINK</label><input className="input-cream" value={data.hero_primary_cta_href || ''} onChange={e => set({ hero_primary_cta_href: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">SECONDARY CTA LABEL</label><input className="input-cream" value={data.hero_secondary_cta_label || ''} onChange={e => set({ hero_secondary_cta_label: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">SECONDARY CTA LINK</label><input className="input-cream" value={data.hero_secondary_cta_href || ''} onChange={e => set({ hero_secondary_cta_href: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">PRIMARY CTA LABEL</label><TextField value={data.hero_primary_cta_label || ''} onCommit={v => set({ hero_primary_cta_label: v })} /></div>
+          <div><label className="eyebrow block mb-1">PRIMARY CTA LINK</label><TextField value={data.hero_primary_cta_href || ''} onCommit={v => set({ hero_primary_cta_href: v })} /></div>
+          <div><label className="eyebrow block mb-1">SECONDARY CTA LABEL</label><TextField value={data.hero_secondary_cta_label || ''} onCommit={v => set({ hero_secondary_cta_label: v })} /></div>
+          <div><label className="eyebrow block mb-1">SECONDARY CTA LINK</label><TextField value={data.hero_secondary_cta_href || ''} onCommit={v => set({ hero_secondary_cta_href: v })} /></div>
         </div>
 
         <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-2">
@@ -150,7 +152,7 @@ const AdminHomePage = () => {
           {badges.map((badge, idx) => (
             <div key={idx} className="card-cream p-2 flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
-              <input className="input-cream !h-9 flex-1" value={badge} onChange={e => { const next = [...badges]; next[idx] = e.target.value; set({ hero_badges: next }); }} placeholder="Badge text" />
+              <TextField className="!h-9 flex-1" value={badge} onCommit={v => { const next = [...badges]; next[idx] = v; set({ hero_badges: next }); }} placeholder="Badge text" />
               <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swapBadges(idx - 1, idx)}><ArrowUp className="h-3.5 w-3.5" /></button>
               <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === badges.length - 1} onClick={() => swapBadges(idx, idx + 1)}><ArrowDown className="h-3.5 w-3.5" /></button>
               <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => set({ hero_badges: badges.filter((_, i) => i !== idx) })}><Trash2 className="h-3.5 w-3.5" /></button>
@@ -173,11 +175,11 @@ const AdminHomePage = () => {
       </SectionCard>
 
       <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid.">
-        <EyebrowTitleSubtitleRow label="" prefix="home_services" data={data} set={set} />
+        <EyebrowTitleSubtitleRow prefix="home_services" data={data} set={set} />
       </SectionCard>
 
       <SectionCard title="Recent Work" subtitle="Eyebrow, title, subtitle — plus which portfolio items appear.">
-        <EyebrowTitleSubtitleRow label="" prefix="home_gallery" data={data} set={set} />
+        <EyebrowTitleSubtitleRow prefix="home_gallery" data={data} set={set} />
         <div className="border-t border-[color:var(--brand-border)] pt-4">
           <RecentWorkPreview />
         </div>
@@ -185,9 +187,9 @@ const AdminHomePage = () => {
 
       <SectionCard title="Instagram feed" subtitle="Latest posts strip. Auto-hides if not connected.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_instagram_eyebrow || ''} onChange={e => set({ home_instagram_eyebrow: e.target.value })} placeholder="LATEST FROM INSTAGRAM" data-testid="admin-ig-eyebrow" /></div>
-          <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_instagram_title || ''} onChange={e => set({ home_instagram_title: e.target.value })} placeholder="Follow along" data-testid="admin-ig-title" /></div>
-          <div><label className="eyebrow block mb-1">SUBTITLE (optional)</label><input className="input-cream" value={data.home_instagram_subtitle || ''} onChange={e => set({ home_instagram_subtitle: e.target.value })} placeholder="(leave blank to hide)" data-testid="admin-ig-subtitle" /></div>
+          <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.home_instagram_eyebrow || ''} onCommit={v => set({ home_instagram_eyebrow: v })} placeholder="LATEST FROM INSTAGRAM" data-testid="admin-ig-eyebrow" /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.home_instagram_title || ''} onCommit={v => set({ home_instagram_title: v })} placeholder="Follow along" data-testid="admin-ig-title" /></div>
+          <div><label className="eyebrow block mb-1">SUBTITLE (optional)</label><TextField value={data.home_instagram_subtitle || ''} onCommit={v => set({ home_instagram_subtitle: v })} placeholder="(leave blank to hide)" data-testid="admin-ig-subtitle" /></div>
           <div>
             <label className="eyebrow block mb-1">POSTS TO SHOW</label>
             <select className="input-cream" value={data.home_instagram_count || 12} onChange={e => set({ home_instagram_count: Number(e.target.value) })} data-testid="admin-ig-count">
@@ -199,7 +201,7 @@ const AdminHomePage = () => {
       </SectionCard>
 
       <SectionCard title="The Process (timeline)" subtitle="The 5 numbered step boxes shown mid-page.">
-        <EyebrowTitleSubtitleRow label="" prefix="home_process" data={data} set={set} />
+        <EyebrowTitleSubtitleRow prefix="home_process" data={data} set={set} />
         <div className="border-t border-[color:var(--brand-border)] pt-4">
           <div className="flex items-center justify-between mb-2">
             <p className="eyebrow">TIMELINE STEPS</p>
@@ -209,8 +211,8 @@ const AdminHomePage = () => {
             {(data.home_process_steps || []).map((step, idx) => (
               <div key={idx} className="card-cream p-3 grid grid-cols-1 md:grid-cols-[auto_1fr_2fr_auto] gap-2 items-start">
                 <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium">{idx + 1}</div>
-                <input className="input-cream !h-9" placeholder="Title" value={step.title || ''} onChange={e => { const next = [...data.home_process_steps]; next[idx] = { ...next[idx], title: e.target.value }; set({ home_process_steps: next }); }} />
-                <input className="input-cream !h-9" placeholder="Description" value={step.description || ''} onChange={e => { const next = [...data.home_process_steps]; next[idx] = { ...next[idx], description: e.target.value }; set({ home_process_steps: next }); }} />
+                <TextField className="!h-9" placeholder="Title" value={step.title || ''} onCommit={v => { const next = [...data.home_process_steps]; next[idx] = { ...next[idx], title: v }; set({ home_process_steps: next }); }} />
+                <TextField className="!h-9" placeholder="Description" value={step.description || ''} onCommit={v => { const next = [...data.home_process_steps]; next[idx] = { ...next[idx], description: v }; set({ home_process_steps: next }); }} />
                 <div className="flex gap-1">
                   <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swapSteps(idx - 1, idx)}><ArrowUp className="h-3.5 w-3.5" /></button>
                   <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === (data.home_process_steps || []).length - 1} onClick={() => swapSteps(idx, idx + 1)}><ArrowDown className="h-3.5 w-3.5" /></button>
@@ -224,25 +226,25 @@ const AdminHomePage = () => {
 
       <SectionCard title="Testimonials heading">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_testimonials_eyebrow || ''} onChange={e => set({ home_testimonials_eyebrow: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_testimonials_title || ''} onChange={e => set({ home_testimonials_title: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.home_testimonials_eyebrow || ''} onCommit={v => set({ home_testimonials_eyebrow: v })} /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.home_testimonials_title || ''} onCommit={v => set({ home_testimonials_title: v })} /></div>
         </div>
       </SectionCard>
 
       <SectionCard title="FAQ heading">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EYEBROW</label><input className="input-cream" value={data.home_faq_eyebrow || ''} onChange={e => set({ home_faq_eyebrow: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.home_faq_title || ''} onChange={e => set({ home_faq_title: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.home_faq_eyebrow || ''} onCommit={v => set({ home_faq_eyebrow: v })} /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.home_faq_title || ''} onCommit={v => set({ home_faq_title: v })} /></div>
         </div>
       </SectionCard>
 
       <SectionCard title="Promo banner" subtitle="Optional highlight bar on the homepage.">
         <label className="flex items-center gap-2"><input type="checkbox" checked={!!data.promo_active} onChange={e => set({ promo_active: e.target.checked })} /> Show promo banner on homepage</label>
-        <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={data.promo_title || ''} onChange={e => set({ promo_title: e.target.value })} /></div>
-        <div><label className="eyebrow block mb-1">TEXT</label><textarea className="input-cream textarea-cream" rows={2} value={data.promo_text || ''} onChange={e => set({ promo_text: e.target.value })} /></div>
+        <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.promo_title || ''} onCommit={v => set({ promo_title: v })} /></div>
+        <div><label className="eyebrow block mb-1">TEXT</label><TextArea rows={2} value={data.promo_text || ''} onCommit={v => set({ promo_text: v })} /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">CTA LABEL</label><input className="input-cream" value={data.promo_cta_label || ''} onChange={e => set({ promo_cta_label: e.target.value })} /></div>
-          <div><label className="eyebrow block mb-1">CTA LINK</label><input className="input-cream" value={data.promo_cta_href || ''} onChange={e => set({ promo_cta_href: e.target.value })} /></div>
+          <div><label className="eyebrow block mb-1">CTA LABEL</label><TextField value={data.promo_cta_label || ''} onCommit={v => set({ promo_cta_label: v })} /></div>
+          <div><label className="eyebrow block mb-1">CTA LINK</label><TextField value={data.promo_cta_href || ''} onCommit={v => set({ promo_cta_href: v })} /></div>
         </div>
       </SectionCard>
     </div>
