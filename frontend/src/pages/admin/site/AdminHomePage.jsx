@@ -484,12 +484,20 @@ const AdminHomePage = () => {
         </div>
         <div className="mt-4 pt-4 border-t border-[color:var(--brand-border)]">
           <p className="eyebrow mb-2">SITE-WIDE</p>
-          <ToggleRow
-            label="Services page (whole site)"
-            hint="Governs the standalone /services page and the ‘Services’ item in the header & footer nav. Turn OFF to hide services entirely site-wide — your section text and services list are preserved for whenever you're ready."
-            checked={data.services_page_active !== false}
-            onChange={v => set({ services_page_active: v })}
-          />
+          <div className="space-y-3">
+            <ToggleRow
+              label="Services page (whole site)"
+              hint="Governs the standalone /services page and the ‘Services’ item in the header & footer nav. Turn OFF to hide services entirely site-wide — your section text and services list are preserved for whenever you're ready."
+              checked={data.services_page_active !== false}
+              onChange={v => set({ services_page_active: v })}
+            />
+            <ToggleRow
+              label="Blog (whole site)"
+              hint="Off by default. Governs the /blog page, individual /blog/:slug posts, and the ‘Blog’ item in the header & footer. Most owners keep this off and let their IG feed be their blog — flip it on anytime; your posts are preserved."
+              checked={data.blog_page_active === true}
+              onChange={v => set({ blog_page_active: v })}
+            />
+          </div>
         </div>
       </SectionCard>
 

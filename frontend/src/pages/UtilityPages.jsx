@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSite } from '@/context/SiteContext';
 
 export const NotFoundPage = () => (
   <div className="container-narrow py-24 text-center" data-testid="notfound-page">
@@ -9,24 +10,98 @@ export const NotFoundPage = () => (
   </div>
 );
 
-export const PrivacyPage = () => (
-  <div className="container-narrow py-14 sm:py-20 max-w-3xl mx-auto" data-testid="privacy-page">
-    <h1 className="font-serif text-4xl">Privacy Policy</h1>
-    <div className="prose max-w-none mt-6 space-y-4 text-[color:var(--brand-text-muted)] leading-relaxed">
-      <p>swell design + media respects your privacy. We collect only the information you voluntarily provide through inquiries and consultations — your name, contact details, event details, and any inspiration you choose to share — in order to design a proposal and communicate with you about your event.</p>
-      <p>We never sell your information. We may use it to reach out about your inquiry, send confirmations, and share seasonal offers if you opt in to our newsletter. You can request removal of your information at any time by emailing us.</p>
-      <p>This policy may be updated periodically. For questions, please contact us.</p>
+/**
+ * renderLegalBody — tiny markdown-lite renderer used by the Terms & Privacy
+ * pages so the owner can format legal copy without writing HTML. Supported:
+ *   - Blank lines separate paragraphs
+ *   - Lines starting with "- " become bullet list items (grouped into one <ul>)
+ *   - **bold** spans inside a line render bold
+ * Anything more complex (tables, links) should be added on request; for
+ * standard event-business legal pages this covers 95% of cases.
+ */
+const renderBoldSpans = (text) => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith('**') && p.endsWith('**') && p.length > 4) {
+      return <strong key={i} className="text-[color:var(--brand-text)] font-medium">{p.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{p}</span>;
+  });
+};
+
+const LegalBody = ({ body }) => {
+  if (!body) return null;
+  const lines = String(body).split(/\r?\n/);
+  const blocks = [];
+  let buffer = [];
+  let bullets = [];
+  const flushParagraph = () => {
+    if (buffer.length) { blocks.push({ type: 'p', lines: buffer.slice() }); buffer = []; }
+  };
+  const flushBullets = () => {
+    if (bullets.length) { blocks.push({ type: 'ul', items: bullets.slice() }); bullets = []; }
+  };
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/,'');
+    if (line.trim() === '') { flushParagraph(); flushBullets(); continue; }
+    if (/^\s*-\s+/.test(line)) {
+      flushParagraph();
+      bullets.push(line.replace(/^\s*-\s+/, ''));
+    } else {
+      flushBullets();
+      buffer.push(line);
+    }
+  }
+  flushParagraph();
+  flushBullets();
+
+  return (
+    <div className="prose max-w-none mt-8 space-y-5 text-[color:var(--brand-text-muted)] leading-relaxed" data-testid="legal-body">
+      {blocks.map((b, i) => {
+        if (b.type === 'ul') {
+          return (
+            <ul key={i} className="list-disc pl-6 space-y-1.5">
+              {b.items.map((it, j) => <li key={j}>{renderBoldSpans(it)}</li>)}
+            </ul>
+          );
+        }
+        return <p key={i}>{b.lines.map((ln, j) => (<span key={j}>{renderBoldSpans(ln)}{j < b.lines.length - 1 ? <br /> : null}</span>))}</p>;
+      })}
     </div>
+  );
+};
+
+const LegalPage = ({ eyebrow, title, body, updated, testId }) => (
+  <div className="container-narrow py-14 sm:py-20 max-w-3xl mx-auto" data-testid={testId}>
+    {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
+    <h1 className="font-serif text-4xl sm:text-5xl">{title}</h1>
+    {updated && <p className="text-xs text-[color:var(--brand-text-muted)] mt-2 italic">{updated}</p>}
+    <LegalBody body={body} />
   </div>
 );
 
-export const TermsPage = () => (
-  <div className="container-narrow py-14 sm:py-20 max-w-3xl mx-auto" data-testid="terms-page">
-    <h1 className="font-serif text-4xl">Terms of Service</h1>
-    <div className="prose max-w-none mt-6 space-y-4 text-[color:var(--brand-text-muted)] leading-relaxed">
-      <p>By submitting an inquiry or booking a consultation, you agree to the following: any proposals and quotes are valid for 14 days; a 50% non-refundable retainer is required to secure your event date; balance is due one week prior to your event; on-site changes and add-ons may be subject to additional fees.</p>
-      <p>Balloon products are decor items and, while high quality, cannot be guaranteed to last indefinitely. Outdoor installations are subject to weather. We will always advise the best plan for your venue and conditions.</p>
-      <p>For custom terms, please refer to your signed proposal.</p>
-    </div>
-  </div>
-);
+export const PrivacyPage = () => {
+  const { site } = useSite();
+  return (
+    <LegalPage
+      testId="privacy-page"
+      eyebrow={site?.privacy_page_eyebrow}
+      title={site?.privacy_page_title || 'Privacy Policy'}
+      updated={site?.privacy_page_updated_at}
+      body={site?.privacy_page_body}
+    />
+  );
+};
+
+export const TermsPage = () => {
+  const { site } = useSite();
+  return (
+    <LegalPage
+      testId="terms-page"
+      eyebrow={site?.terms_page_eyebrow}
+      title={site?.terms_page_title || 'Terms + Conditions'}
+      updated={site?.terms_page_updated_at}
+      body={site?.terms_page_body}
+    />
+  );
+};

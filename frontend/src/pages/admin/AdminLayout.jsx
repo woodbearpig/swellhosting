@@ -45,6 +45,7 @@ const groups = [
       { to: '/admin/footer', label: 'Footer', icon: PanelBottom },
       { to: '/admin/social-contact', label: 'Contact & social', icon: AtSign },
       { to: '/admin/palettes', label: 'Palettes', icon: Palette },
+      { to: '/admin/legal', label: 'Legal pages', icon: FileText },
     ],
   },
   {

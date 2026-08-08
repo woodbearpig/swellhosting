@@ -64,7 +64,9 @@ export const Footer = () => {
               )}
               <li><Link to="/portfolio" className="link-underline">Portfolio</Link></li>
               <li><Link to="/about" className="link-underline">About</Link></li>
-              <li><Link to="/blog" className="link-underline">Blog</Link></li>
+              {site.blog_page_active !== false && (
+                <li><Link to="/blog" className="link-underline">Blog</Link></li>
+              )}
               <li><Link to="/faq" className="link-underline">FAQ</Link></li>
               <li><Link to="/contact" className="link-underline">Contact</Link></li>
             </ul>

@@ -204,6 +204,12 @@ class SiteContent(Base):
     # their configuration.
     services_page_active: bool = True
 
+    # Blog — off by default. Most event stylists don't blog, or use their IG
+    # feed as their "blog". When false: /blog and /blog/:slug redirect to home,
+    # the "Blog" item is hidden from header & footer nav. Owner can flip it on
+    # anytime; her existing blog posts are preserved.
+    blog_page_active: bool = False
+
     # Home Instagram feed (editable labels + post count)
     home_instagram_eyebrow: str = "LATEST FROM INSTAGRAM"
     home_instagram_title: str = "Follow along"
@@ -268,6 +274,31 @@ class SiteContent(Base):
     backdrops_page_designs_eyebrow: str = "COMPLETE LOOKS"
     backdrops_page_designs_title: str = "Designs"
     backdrops_page_designs_subtitle: str = "Fully-styled setups combining florals, balloons, and signage — themed and ready to go."
+
+    # Legal / utility pages — Terms & Privacy. Both pages are fully editable
+    # from the admin: title, an optional short eyebrow line, and a long-form
+    # body. The body preserves line breaks and blank lines as paragraphs and
+    # supports `**bold**` and simple bullet lines starting with `- `. Defaults
+    # match the client's existing Canva Terms + Conditions copy so the page
+    # is meaningful out of the box.
+    terms_page_eyebrow: str = ""
+    terms_page_title: str = "Terms + Conditions"
+    terms_page_body: str = (
+        "By purchasing our balloon garland, you agree to the following terms and conditions:\n\n"
+        "**1. Final Sale:** All sales are final. Once your order is placed, it cannot be canceled or refunded.\n\n"
+        "**2. Responsibility Upon Receipt:** The balloon artist is not responsible for any deflation or damage to the balloon garland once it is in your possession. Please handle the garland with care to ensure its longevity.\n\n"
+        "By completing your purchase, you acknowledge that you have read, understood, and agree to these terms and conditions. Thank you for your understanding and support!"
+    )
+    terms_page_updated_at: str = ""  # e.g. "Updated Oct 2025" — optional display line
+
+    privacy_page_eyebrow: str = ""
+    privacy_page_title: str = "Privacy Policy"
+    privacy_page_body: str = (
+        "swell design + media respects your privacy. We collect only the information you voluntarily provide through inquiries and consultations — your name, contact details, event details, and any inspiration you choose to share — in order to design a proposal and communicate with you about your event.\n\n"
+        "We never sell your information. We may use it to reach out about your inquiry, send confirmations, and share seasonal offers if you opt in to our newsletter. You can request removal of your information at any time by emailing us.\n\n"
+        "This policy may be updated periodically. For questions, please contact us."
+    )
+    privacy_page_updated_at: str = ""
 
     # Contact page visibility toggles
     contact_page_show_header: bool = True

@@ -42,6 +42,7 @@ import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminPalettes from '@/pages/admin/AdminPalettes';
 import AdminInquiryForm from '@/pages/admin/AdminInquiryForm';
 import AdminMedia from '@/pages/admin/AdminMedia';
+import AdminLegalPages from '@/pages/admin/AdminLegalPages';
 import { useSite } from '@/context/SiteContext';
 
 /**
@@ -53,6 +54,20 @@ import { useSite } from '@/context/SiteContext';
 const ServicesGuard = ({ children }) => {
   const { site } = useSite();
   if (site && site.services_page_active === false) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+/**
+ * BlogGuard — same pattern for the /blog and /blog/:slug routes. Off by
+ * default because most owners either don't blog at all or use their IG feed
+ * as their "blog". Flipping `blog_page_active` on brings back the routes,
+ * header nav item, and footer link automatically.
+ */
+const BlogGuard = ({ children }) => {
+  const { site } = useSite();
+  if (site && site.blog_page_active === false) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -80,8 +95,8 @@ function App() {
                   <Route path="/leave-a-review" element={<LeaveReviewPage />} />
                   <Route path="/backdrops" element={<BackdropsPage />} />
                   <Route path="/faq" element={<FAQPage />} />
-                  <Route path="/blog" element={<BlogListPage />} />
-                  <Route path="/blog/:slug" element={<BlogDetailPage />} />
+                  <Route path="/blog" element={<BlogGuard><BlogListPage /></BlogGuard>} />
+                  <Route path="/blog/:slug" element={<BlogGuard><BlogDetailPage /></BlogGuard>} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/inquire" element={<InquiryWizardPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
@@ -117,6 +132,7 @@ function App() {
                   <Route path="site-content" element={<Navigate to="/admin/home" replace />} />
                   <Route path="inquiry-form" element={<AdminInquiryForm />} />
                   <Route path="media" element={<AdminMedia />} />
+                  <Route path="legal" element={<AdminLegalPages />} />
                   <Route path="palettes" element={<AdminPalettes />} />
                   <Route path="integrations" element={<AdminIntegrations />} />
                   <Route path="settings" element={<AdminSettings />} />
