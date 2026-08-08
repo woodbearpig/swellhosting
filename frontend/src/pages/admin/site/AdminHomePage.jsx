@@ -63,7 +63,7 @@ const ColorSwatchField = memo(function ColorSwatchField({ label, hint, value, on
           className="input-cream !h-9 flex-1 font-mono text-sm"
           data-testid={testId ? `${testId}-text` : undefined}
         />
-        {value && (
+        {(value || local) && (
           <button
             type="button"
             onClick={() => { setLocal(''); onChange(''); }}

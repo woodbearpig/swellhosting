@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V8)
+# plan.md — swell design + media (V9)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -20,6 +20,9 @@
   - Reuse images site-wide via a central Media Library (“upload once, use everywhere”)
   - Manage homepage “Recent Work” images from the **Portfolio** (curated gallery items)
   - Show a live **Instagram feed** on the homepage with **admin-editable labels** and **launch-day traffic protection** (server-side cache)
+  - Manage a **Backdrops & Designs** catalog and present it publicly in separate sections
+  - Use **Quick Reply Templates** to respond to inquiries via one-click Gmail compose
+  - Adjust **Hero banner readability** by setting headline/subhead/button colors over the hero image
 - Keep deployment to **AlmaLinux 10 VPS** simple and repeatable via **Docker Compose** + `deploy.sh` (single-command deploy).
 - Maintain strict white‑labeling:
   - No references to any third-party builder brand in UI/content
@@ -29,7 +32,10 @@
   - Keep admin editing pages **fast and focused**
 
 **Updated objective (current milestone)**
-- Ensure the **Admin** is **smooth while scrolling and interacting** (not just fast typing) on production VPS, with **no jank on fresh servers**.
+- Ensure the **Admin** is:
+  - responsive while typing (no keystroke lag)
+  - smooth while scrolling (no compositor jank)
+  - reliable while navigating between admin pages (no “URL changed but content didn’t” symptom)
 
 ---
 
@@ -277,25 +283,24 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 ---
 
-### Phase O (P0) — Admin scroll performance fix (CSS compositor pressure) (IN PROGRESS → READY FOR VPS DEPLOY)
+### Phase O (P0) — Admin scroll performance fix (CSS compositor pressure) (COMPLETED ✅ → READY FOR VPS DEPLOY)
 **Goal:** Remove scroll jank across admin pages on production VPS, including fresh servers with minimal content.
 
 **Root cause (confirmed)**
 - `.card-cream` used:
   - `background: rgba(255,255,255,0.85)` (semi-transparent)
   - `backdrop-filter: blur(2px)`
-- Admin pages render **15–30+** `.card-cream` elements (SectionCards + ToggleRows + badges + steps).
+- Admin pages render **15–30+** `.card-cream` elements.
 - On scroll, browsers must snapshot pixels behind each card, blur, and composite → classic jank.
-- Public site appeared fine because it uses `.card-cream` far more sparingly.
 
-**Fix implemented (code change complete)**
+**Fix implemented**
 - Updated `frontend/src/index.css`:
   - `.card-cream` is now fully opaque (`background: #ffffff`)
   - removed `backdrop-filter`
   - softened shadow slightly to preserve the luxury look
 
 **Rollout instructions (critical)**
-- This CSS change must be included in the VPS build output (production bundle). On Hostinger:
+- Include this CSS change in the VPS build output:
   ```bash
   cd /var/www/swell && ./deploy.sh
   ```
@@ -309,6 +314,50 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 ---
 
+### Phase P (P0) — Backdrops & Designs split + Quick Reply Templates + Hero color controls (COMPLETED ✅)
+**Goal:** Finish the interrupted feature work and add requested customization + reliability improvements.
+
+#### P1 — Backdrops → Backdrops & Designs (COMPLETED ✅)
+- Backdrop model updated to include `kind: 'backdrop' | 'design'`.
+- API supports filtering: `GET /api/backdrops?kind=design`.
+- Admin UI: `/admin/backdrops` includes tabs **All / Backdrops / Designs**.
+- Public site groups content into separate sections.
+
+#### P2 — Quick Reply Templates (COMPLETED ✅)
+- Backend endpoints:
+  - `GET/POST/PUT/DELETE /api/admin/reply-templates`
+  - `POST /api/admin/reply-templates/reorder`
+- Admin Settings:
+  - Added **Quick reply templates** card with CRUD + reorder.
+- Inquiries:
+  - Added `ReplyWithTemplateButton` that opens **Gmail compose** with subject/body filled.
+  - Supports placeholder substitution: `{client_name}`, `{first_name}`, `{event_type}`, `{event_date}`, `{guest_count}`, `{venue}`, `{business_name}`.
+
+#### P3 — Hero banner: font color + button color overrides (COMPLETED ✅)
+- Added 7 SiteContent fields:
+  - `hero_headline_color`, `hero_subhead_color`, `hero_eyebrow_color`
+  - `hero_primary_btn_bg`, `hero_primary_btn_text`
+  - `hero_secondary_btn_bg`, `hero_secondary_btn_text`
+- Admin Home page:
+  - Added **HeroColorsPanel** with `ColorSwatchField` (native picker + hex + Reset).
+- Public Home page:
+  - SplitHero + FullBleedHero apply overrides when set.
+
+#### P4 — Admin navigation reliability (COMPLETED ✅)
+- Implemented defensive fix to prevent stale route rendering:
+  - `key={location.pathname}` on admin content container
+  - scroll-to-top on route change
+
+**Testing**
+- `/app/test_reports/iteration_18.json`
+  - Backend: 17/17 pass
+  - Frontend: all critical flows pass (minor polish applied to Reset visibility)
+
+**Credentials note**
+- Admin password is now: `Testing9!` (was previously documented as `Testing9`).
+
+---
+
 ## 4) Testing & QA
 - After each phase item: quick smoke test in browser.
 - Automated validation included:
@@ -318,13 +367,13 @@ All items were implemented and validated (curl + browser automation screenshots)
   - TipTap blog editor saves and renders correctly
   - Blog gallery layout + tags + featured behavior
   - Admin refactor routes and save flows
-  - **Admin keystroke performance:** `/app/test_reports/iteration_16.json`
+  - Admin performance (keystroke + scroll)
+  - Backdrops/Designs split
+  - Reply templates CRUD + inquiry reply button
+  - Hero color override end-to-end
 
-**New QA focus (after Phase O deploy)**
-- Validate admin scroll smoothness on production VPS.
-- If any remaining jank persists:
-  - audit for other expensive effects: `backdrop-filter`, heavy `box-shadow` on large lists, forced reflow loops
-  - consider turning off Framer Motion animations in admin (or respecting `prefers-reduced-motion`) if needed
+**Latest report**
+- `/app/test_reports/iteration_18.json`
 
 ---
 
@@ -348,15 +397,23 @@ cd /var/www/swell && ./deploy.sh
   - Curate the public Blog gallery with tags and featured tiles.
   - Manage homepage “Recent Work” images via Portfolio featured toggles.
   - Configure homepage Instagram feed text + count, with server-side caching.
+  - Manage **Backdrops & Designs** separately.
+  - Reply to inquiries quickly using **Gmail compose templates**.
+  - Ensure hero readability by adjusting **Hero headline/subhead/button colors**.
   - **Use the admin comfortably**:
     - Typing is responsive (no keystroke lag)
-    - **Scrolling is smooth** across page editors and lists on the VPS.
+    - Scrolling is smooth across page editors and lists on the VPS
+    - Navigation between admin sections updates content immediately and reliably
 - Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
 
 ---
 
 ## 7) Explicitly Deferred / Out of Scope (for now)
-- Social feed / Facebook posts on homepage: user will use a 3rd-party embed tool.
-- CRM Enhancements (notes/tags/pipeline): deferred to next session.
-- Bulk inquiry actions and auto-reply templates: deferred to future session.
+- CRM Enhancements (P1):
+  - Client tags
+  - Lead pipeline status tracking on client profiles
+- Bulk inquiry actions (P2)
+- Twilio SMS Notifications (P3)
+- Stripe/PayPal Integration (P3)
+- Backend refactor of `server.py` into routers (recommended but deferred unless requested)
