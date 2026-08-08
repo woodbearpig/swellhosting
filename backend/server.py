@@ -279,6 +279,112 @@ async def verify_current_password(payload: Dict[str, Any], admin=Depends(require
     return diag
 
 
+@api.get("/admin/auth/admins-audit")
+async def admins_audit(admin=Depends(require_admin)):
+    """Return every admin_users row so we can spot duplicates / orphans.
+    Password hashes are NEVER returned. Also flags collisions on the `id` field."""
+    rows = []
+    seen_ids: Dict[str, int] = {}
+    async for u in db.admin_users.find({}, {"_id": 0, "password_hash": 0}):
+        rows.append(u)
+        seen_ids[u.get("id", "<no-id>")] = seen_ids.get(u.get("id", "<no-id>"), 0) + 1
+    duplicate_ids = {k: v for k, v in seen_ids.items() if v > 1}
+    return {
+        "count": len(rows),
+        "token_sub": admin.get("sub"),
+        "token_email": admin.get("email"),
+        "duplicate_id_values": duplicate_ids,
+        "admins": rows,
+    }
+
+
+@api.post("/admin/auth/consolidate-admins")
+async def consolidate_admins(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Emergency cleanup: keep ONE admin record and delete the rest.
+
+    Body: { keep_email: str, new_password: str (>=8 chars), current_password: str }
+
+    Behavior:
+      1. Verify caller's `current_password` against the caller's stored hash.
+         (This is the same check as change-credentials — proves the caller is
+         authorized and owns a working password.)
+      2. Find the admin row whose `email` matches `keep_email` (case-insensitive).
+         If none exists, keep the caller's own row and rewrite its email.
+      3. Rewrite that row's password_hash from `new_password`.
+      4. Delete all other admin_users rows.
+      5. Issue a fresh JWT bound to the kept row.
+    """
+    keep_email = (payload.get("keep_email") or "").strip().lower()
+    new_password = payload.get("new_password") or ""
+    current_password = payload.get("current_password") or ""
+
+    if not keep_email or "@" not in keep_email:
+        raise HTTPException(status_code=400, detail="A valid keep_email is required")
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="new_password must be at least 8 characters")
+    if not current_password:
+        raise HTTPException(status_code=400, detail="current_password is required to authorize cleanup")
+
+    # 1. Verify caller
+    caller = await db.admin_users.find_one({"id": admin["sub"]}, {"_id": 0})
+    if not caller:
+        raise HTTPException(status_code=404, detail="Caller admin record not found")
+    if not verify_password(current_password, caller["password_hash"]):
+        raise HTTPException(status_code=401, detail="current_password does not match caller's stored hash")
+
+    # 2. Pick the row to keep (prefer match on keep_email, else caller row).
+    keep_row = await db.admin_users.find_one({"email": keep_email}, {"_id": 0})
+    if not keep_row:
+        keep_row = caller
+    keep_id = keep_row["id"]
+
+    # 3. Rewrite kept row.
+    await db.admin_users.update_one(
+        {"id": keep_id},
+        {"$set": {
+            "email": keep_email,
+            "name": keep_row.get("name") or "Admin",
+            "password_hash": hash_password(new_password),
+            "role": "admin",
+        }},
+    )
+
+    # 4. Delete every other admin_users row (also removes any legit duplicates
+    # with the same `id`).
+    delete_result = await db.admin_users.delete_many({"id": {"$ne": keep_id}})
+    # Also collapse duplicates that share the kept id but were different documents
+    # (delete_many with $ne wouldn't catch them). Keep one, delete rest.
+    dupes_with_same_id = []
+    async for u in db.admin_users.find({"id": keep_id}, {"_id": 1}):
+        dupes_with_same_id.append(u["_id"])
+    dup_extra_deleted = 0
+    if len(dupes_with_same_id) > 1:
+        # Keep the first, delete the rest.
+        for _id in dupes_with_same_id[1:]:
+            await db.admin_users.delete_one({"_id": _id})
+            dup_extra_deleted += 1
+
+    # 5. Ensure the kept row's id field is unique going forward — best-effort index.
+    try:
+        await db.admin_users.create_index("id", unique=True)
+    except Exception as e:
+        logger.warning("Could not create unique index on admin_users.id (may already exist): %s", e)
+    try:
+        await db.admin_users.create_index("email", unique=True)
+    except Exception as e:
+        logger.warning("Could not create unique index on admin_users.email (may already exist): %s", e)
+
+    refreshed = await db.admin_users.find_one({"id": keep_id}, {"_id": 0, "password_hash": 0})
+    new_token = create_token(refreshed)
+    return {
+        "ok": True,
+        "deleted_other_admins": delete_result.deleted_count,
+        "deleted_id_duplicates": dup_extra_deleted,
+        "kept": refreshed,
+        "token": new_token,
+    }
+
+
 @api.post("/admin/auth/change-credentials")
 async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admin)):
     """Allow the logged-in admin to change their email/password/name.

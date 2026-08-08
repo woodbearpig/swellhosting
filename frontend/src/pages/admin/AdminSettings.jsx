@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { KeyRound, Save, User as UserIcon, Mail, Eye, EyeOff } from 'lucide-react';
+import { KeyRound, Save, User as UserIcon, Mail, Eye, EyeOff, ShieldAlert, Users, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -237,6 +237,223 @@ const ChangeCredentialsCard = () => {
   );
 };
 
+/**
+ * AdminUsersAuditCard — lists every row in `admin_users`, flags duplicates on `id`,
+ * and offers a one-click cleanup that keeps a single row (chosen by email) with a
+ * fresh password. Also creates unique indexes so this can't happen again.
+ *
+ * Written to solve a specific real-world bug: earlier ADMIN_FORCE_RESET runs with a
+ * changed ADMIN_EMAIL created duplicate admin rows, causing MongoDB's find_one
+ * to arbitrarily return the wrong one for password change while login used the
+ * right one.
+ */
+const AdminUsersAuditCard = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [audit, setAudit] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [keepEmail, setKeepEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/admin/auth/admins-audit');
+      setAudit(data);
+      if (data.admins?.length && !keepEmail) {
+        // Default the "keep_email" to the caller's own email if present, else first row.
+        const mine = data.admins.find(a => a.id === data.token_sub);
+        setKeepEmail(mine?.email || data.admins[0]?.email || user?.email || '');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not load admin users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const consolidate = async () => {
+    if (!keepEmail || !keepEmail.includes('@')) { toast.error('Enter a valid email to keep'); return; }
+    if (!newPassword || newPassword.length < 8) { toast.error('New password must be at least 8 characters'); return; }
+    if (!currentPassword) { toast.error('Enter your current password to authorize cleanup'); return; }
+    if (!window.confirm(`This will KEEP the admin row with email "${keepEmail}", rewrite its password, and DELETE every other admin row. Continue?`)) return;
+
+    setBusy(true);
+    try {
+      const { data } = await api.post('/admin/auth/consolidate-admins', {
+        keep_email: keepEmail,
+        new_password: newPassword,
+        current_password: currentPassword,
+      });
+      if (data.token) localStorage.setItem('swell_admin_token', data.token);
+      toast.success(`Cleaned up. Removed ${data.deleted_other_admins + (data.deleted_id_duplicates || 0)} extra row(s). Logging in again with new credentials…`);
+      setNewPassword('');
+      setCurrentPassword('');
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Consolidation failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const hasDuplicates = audit && (Object.keys(audit.duplicate_id_values || {}).length > 0 || (audit.count > 1));
+
+  return (
+    <div className="card-cream p-6 space-y-4" data-testid="admin-users-audit-card">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-full bg-[color:var(--brand-blush-tint)] flex items-center justify-center shrink-0">
+          <Users className="h-5 w-5 text-[color:var(--brand-coral)]" />
+        </div>
+        <div className="flex-1">
+          <p className="font-serif text-xl">Admin users audit</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)]">
+            Diagnostic view of every admin row in the database. If you're stuck on
+            "current password is incorrect" this will show whether duplicates exist,
+            and offer a one-click cleanup.
+          </p>
+        </div>
+        <button type="button" onClick={load} disabled={loading} className="btn-secondary !h-9 shrink-0" data-testid="admin-users-audit-load">
+          {loading ? 'Loading…' : audit ? 'Refresh' : 'Load'}
+        </button>
+      </div>
+
+      {audit && (
+        <div className="space-y-3">
+          <div className="text-xs text-[color:var(--brand-text-muted)]">
+            Token points to: <code>{audit.token_sub}</code> ({audit.token_email || 'no email in token'})
+          </div>
+
+          {hasDuplicates && (
+            <div className="rounded-xl bg-[color:var(--brand-blush-tint)] p-3 text-sm flex items-start gap-2" data-testid="admin-users-audit-warning">
+              <ShieldAlert className="h-4 w-4 text-[color:var(--brand-coral)] mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Multiple admin rows detected ({audit.count} total)</p>
+                <p className="text-xs mt-0.5">This is why password changes fail — MongoDB may pick a different row than the one you logged in with. Use the cleanup form below to consolidate.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-lg border border-[color:var(--brand-border)]">
+            <table className="w-full text-sm">
+              <thead className="bg-[color:var(--brand-surface-2)] text-xs uppercase tracking-wider text-[color:var(--brand-text-muted)]">
+                <tr>
+                  <th className="text-left px-3 py-2">id</th>
+                  <th className="text-left px-3 py-2">email</th>
+                  <th className="text-left px-3 py-2">name</th>
+                  <th className="text-left px-3 py-2">role</th>
+                  <th className="text-left px-3 py-2">created_at</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--brand-border)]">
+                {audit.admins.map((a, idx) => {
+                  const isCaller = a.id === audit.token_sub;
+                  return (
+                    <tr key={idx} className={isCaller ? 'bg-[color:var(--brand-sage-tint)]/40' : ''} data-testid={`admin-users-audit-row-${idx}`}>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        {a.id || <span className="italic text-[color:var(--brand-text-muted)]">(none)</span>}
+                        {isCaller && <span className="ml-2 badge-soft">this session</span>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {a.email
+                          ? <button type="button" className="link-underline" onClick={() => setKeepEmail(a.email)}>{a.email}</button>
+                          : <span className="italic text-[color:var(--brand-text-muted)]">(empty)</span>}
+                      </td>
+                      <td className="px-3 py-2">{a.name || '—'}</td>
+                      <td className="px-3 py-2 text-xs">{a.role || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-[color:var(--brand-text-muted)]">{a.created_at ? formatDate(a.created_at) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {audit.count > 1 || (audit.admins[0] && !audit.admins[0].email) ? (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setExpanded(v => !v)}
+                className="btn-secondary text-xs !h-9"
+                data-testid="admin-users-audit-cleanup-toggle"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> {expanded ? 'Hide cleanup form' : 'Open cleanup form'}
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-[color:var(--brand-text-muted)] italic">
+              Only one clean admin row. If you still can't change your password, use the ADMIN_FORCE_RESET recovery.
+            </p>
+          )}
+
+          {expanded && (
+            <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-surface-2)]/50" data-testid="admin-users-audit-cleanup-form">
+              <p className="text-sm">
+                Choose the admin email to keep (click any email in the table above to fill this),
+                set a new password, and confirm with the current password of the row you're logged in with.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="eyebrow block mb-1">EMAIL TO KEEP</label>
+                  <input className="input-cream" value={keepEmail} onChange={e => setKeepEmail(e.target.value)} placeholder="admin@your-domain.com" data-testid="admin-users-audit-keep-email" />
+                </div>
+                <div>
+                  <label className="eyebrow block mb-1">NEW PASSWORD (8+ CHARS)</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      className="input-cream pr-11"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      data-testid="admin-users-audit-new-password"
+                    />
+                    <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-[color:var(--brand-text-muted)] hover:text-[color:var(--brand-text)] hover:bg-[color:var(--brand-sage-tint)]/50 transition-colors" aria-label={showPw ? 'Hide' : 'Show'}>
+                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="eyebrow block mb-1">CURRENT PASSWORD (of your logged-in row)</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    className="input-cream pr-11"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    data-testid="admin-users-audit-current-password"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={consolidate}
+                  disabled={busy}
+                  className="btn-primary"
+                  data-testid="admin-users-audit-consolidate"
+                >
+                  <Trash2 className="h-4 w-4" /> {busy ? 'Cleaning up…' : 'Consolidate & set new password'}
+                </button>
+              </div>
+              <p className="text-xs text-[color:var(--brand-text-muted)]">
+                This deletes every admin row except the one matching "email to keep", then rewrites its
+                password to your new value and adds unique indexes on <code>id</code> and <code>email</code>
+                to prevent future duplicates.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AdminSettings = () => {
   const [subs, setSubs] = useState([]);
   useEffect(() => { api.get('/admin/newsletter').then(r => setSubs(r.data)); }, []);
@@ -246,6 +463,8 @@ export const AdminSettings = () => {
       <div><p className="eyebrow">SYSTEM</p><h1 className="font-serif text-3xl sm:text-4xl mt-1">Settings</h1></div>
 
       <ChangeCredentialsCard />
+
+      <AdminUsersAuditCard />
 
       <BookingRulesCard />
 
