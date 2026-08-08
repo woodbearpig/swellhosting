@@ -3,6 +3,7 @@ import '@/App.css';
 
 import PublicLayout from '@/components/PublicLayout';
 import { SiteProvider } from '@/context/SiteContext';
+import MetaManager from '@/components/MetaManager';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { PaletteProvider } from '@/context/PaletteContext';
@@ -90,6 +91,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <SiteProvider>
+          <MetaManager />
           <PaletteProvider>
           <FontProvider>
           <div className="App">

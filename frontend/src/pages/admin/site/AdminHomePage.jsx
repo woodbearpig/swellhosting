@@ -591,6 +591,55 @@ const AdminHomePage = () => {
         </div>
       </SectionCard>
 
+      <SectionCard title="Final call-to-action" subtitle="The soft-pink closing card at the very bottom of the homepage — the last thing every visitor sees before the footer.">
+        <div className="grid grid-cols-1 gap-3">
+          <ToggleRow
+            label="Show heart icon"
+            hint="The little heart above the headline. Turn off for a cleaner look."
+            checked={data.home_final_cta_show_heart !== false}
+            onChange={v => set({ home_final_cta_show_heart: v })}
+          />
+          <div>
+            <label className="eyebrow block mb-1">EYEBROW (optional)</label>
+            <TextField value={data.home_final_cta_eyebrow || ''} onCommit={v => set({ home_final_cta_eyebrow: v })} placeholder="e.g. LET'S CONNECT" />
+          </div>
+          <div>
+            <label className="eyebrow block mb-1">HEADLINE</label>
+            <TextField value={data.home_final_cta_title || ''} onCommit={v => set({ home_final_cta_title: v })} placeholder="Ready to plan something dreamy?" />
+          </div>
+          <div>
+            <label className="eyebrow block mb-1">SUBTITLE</label>
+            <TextArea
+              rows={2}
+              value={data.home_final_cta_subtitle || ''}
+              onCommit={v => set({ home_final_cta_subtitle: v })}
+              placeholder="Take two minutes to share your vision. We'll be in touch within 1–2 business days."
+            />
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines preserved as paragraph breaks. Leave blank to hide.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="eyebrow block mb-1">PRIMARY BUTTON — LABEL</label>
+              <TextField value={data.home_final_cta_primary_label || ''} onCommit={v => set({ home_final_cta_primary_label: v })} placeholder="Start your inquiry" />
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Leave blank to hide the primary button.</p>
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">PRIMARY BUTTON — LINK</label>
+              <TextField value={data.home_final_cta_primary_href || ''} onCommit={v => set({ home_final_cta_primary_href: v })} placeholder="/inquire" />
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">SECONDARY BUTTON — LABEL</label>
+              <TextField value={data.home_final_cta_secondary_label || ''} onCommit={v => set({ home_final_cta_secondary_label: v })} placeholder="See the portfolio (optional)" />
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Leave blank to hide. This fixes the duplicate-button issue where an unused secondary was showing the primary's label.</p>
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">SECONDARY BUTTON — LINK</label>
+              <TextField value={data.home_final_cta_secondary_href || ''} onCommit={v => set({ home_final_cta_secondary_href: v })} placeholder="/portfolio" />
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
       <SectionCard title="Meet the designer" subtitle="The bio block on the homepage with photo + call-to-action buttons.">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-1">

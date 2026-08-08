@@ -1,22 +1,26 @@
 [
   {
-    "content": "Add gallery_categories field to SiteContent model (List of {key,label} objects)",
+    "content": "Add Final CTA editable fields to SiteContent (title/subtitle/heart-icon toggle/primary+secondary labels & hrefs)",
     "status": "completed"
   },
   {
-    "content": "Build Manage Categories inline panel in AdminGallery.jsx (add/rename/remove/reorder)",
+    "content": "Wire HomePage.jsx Final CTA section to read from site with sensible defaults; hide secondary button when label empty (fixes duplicate)",
     "status": "completed"
   },
   {
-    "content": "Refactor AdminGallery.jsx to read categories from useSite() instead of hardcoded const",
+    "content": "Add Final CTA editor panel to AdminHomePage.jsx",
     "status": "completed"
   },
   {
-    "content": "Refactor public GalleryPage.jsx to read categories from useSite()",
+    "content": "Add favicon (generate branded s+m favicon.ico + PNGs) and wire in index.html",
     "status": "completed"
   },
   {
-    "content": "Verify compile, restart backend, screenshot the admin + public flow",
-    "status": "completed"
+    "content": "Add editable Open Graph + Twitter share tags (og:title/description/image, twitter card) — admin fields + injected on load",
+    "status": "in_progress"
+  },
+  {
+    "content": "Compile check + testing_agent verification",
+    "status": "pending"
   }
 ]

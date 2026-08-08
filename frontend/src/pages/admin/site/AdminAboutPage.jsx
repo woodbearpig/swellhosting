@@ -86,6 +86,91 @@ const AdminAboutPage = () => {
           <ToggleRow label="Call-to-action buttons" hint="Start inquiry + See the work." checked={data.about_show_ctas !== false} onChange={v => set({ about_show_ctas: v })} />
         </div>
       </div>
+
+      <div className="card-cream p-6 space-y-4" data-testid="admin-share-meta-card">
+        <div>
+          <p className="font-serif text-xl">Social share preview & browser tab</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1 max-w-2xl">
+            Controls how your site looks when someone posts the link in iMessage, an Instagram DM, Slack, Facebook or Twitter — plus the icon and title in the browser tab. Everything is optional; blank values fall back to sensible defaults using your business name and tagline.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="eyebrow block mb-1">SHARE TITLE</label>
+            <TextField
+              value={data.share_title || ''}
+              onCommit={v => set({ share_title: v })}
+              placeholder={`${data.business_name || 'swell design + media'} — ${data.tagline || 'LA event styling'}`}
+            />
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Shown as the big bold headline on the link preview card. Keep under ~60 chars.</p>
+          </div>
+          <div>
+            <label className="eyebrow block mb-1">TWITTER / X HANDLE (OPTIONAL)</label>
+            <TextField
+              value={data.share_twitter_handle || ''}
+              onCommit={v => set({ share_twitter_handle: v })}
+              placeholder="@swelldesignla"
+            />
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Attributes the preview to your account on Twitter/X shares.</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="eyebrow block mb-1">SHARE DESCRIPTION</label>
+          <TextArea
+            rows={2}
+            value={data.share_description || ''}
+            onCommit={v => set({ share_description: v })}
+            placeholder="1-2 sentences describing what people will see when they click. Falls back to your tagline if blank."
+          />
+        </div>
+
+        <div>
+          <label className="eyebrow block mb-1">SHARE IMAGE (1200×630 RECOMMENDED)</label>
+          {data.share_image_url ? (
+            <div className="mb-2 relative inline-block">
+              <img src={publicUrl(data.share_image_url)} alt="share preview" className="h-32 w-auto rounded-lg border border-[color:var(--brand-border)]" />
+              <button
+                type="button"
+                onClick={() => set({ share_image_url: '' })}
+                className="absolute -top-2 -right-2 h-6 px-2 rounded-full bg-white/95 border border-[color:var(--brand-border)] text-xs hover:bg-red-50 hover:text-red-600"
+                title="Reset to the built-in default share image"
+              >Reset</button>
+            </div>
+          ) : (
+            <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Using the built-in default (cream + "s" mark). Upload a hero shot to replace it.</p>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ share_image_url: r.url }); } }} data-testid="admin-share-image-upload" />
+            <MediaPickerButton testId="media-picker-share" onSelect={url => set({ share_image_url: url })} />
+          </div>
+          <TextField className="mt-2" placeholder="Or paste image URL" value={data.share_image_url || ''} onCommit={v => set({ share_image_url: v })} />
+        </div>
+
+        <div className="border-t border-[color:var(--brand-border)] pt-4">
+          <label className="eyebrow block mb-1">FAVICON (BROWSER TAB ICON)</label>
+          {data.favicon_url ? (
+            <div className="mb-2 flex items-center gap-3">
+              <img src={publicUrl(data.favicon_url)} alt="favicon" className="h-8 w-8 rounded border border-[color:var(--brand-border)] bg-white p-1" />
+              <button
+                type="button"
+                onClick={() => set({ favicon_url: '' })}
+                className="text-xs px-2 py-1 rounded-lg border border-[color:var(--brand-border)] hover:bg-red-50 hover:text-red-600"
+              >Reset to default</button>
+            </div>
+          ) : (
+            <div className="mb-2 flex items-center gap-3">
+              <img src="/apple-touch-icon.png" alt="default favicon" className="h-8 w-8 rounded border border-[color:var(--brand-border)]" />
+              <span className="text-xs text-[color:var(--brand-text-muted)]">Using the built-in default. Upload a square PNG (at least 180×180) to replace it.</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/x-icon" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ favicon_url: r.url }); } }} data-testid="admin-favicon-upload" />
+            <MediaPickerButton testId="media-picker-favicon" onSelect={url => set({ favicon_url: url })} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

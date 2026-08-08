@@ -226,6 +226,30 @@ class SiteContent(Base):
     home_faq_active: bool = True
     home_final_cta_active: bool = True
 
+    # Editable copy for the "Ready to plan something dreamy?" call-to-action
+    # block at the bottom of the homepage. Every string is optional — blank
+    # eyebrow/subtitle simply hide themselves, and a blank secondary label
+    # hides the second button entirely (which fixes the duplicate-button bug
+    # where an unused secondary was rendering with the primary's label).
+    home_final_cta_show_heart: bool = True
+    home_final_cta_eyebrow: str = ""
+    home_final_cta_title: str = "Ready to plan something dreamy?"
+    home_final_cta_subtitle: str = "Take two minutes to share your vision. We'll be in touch within 1–2 business days."
+    home_final_cta_primary_label: str = "Start your inquiry"
+    home_final_cta_primary_href: str = "/inquire"
+    home_final_cta_secondary_label: str = ""     # blank = hide the secondary button
+    home_final_cta_secondary_href: str = "/portfolio"
+
+    # Social / SEO share metadata – governs how the site's URL renders when
+    # pasted into iMessage, Instagram DMs, Slack, Twitter, etc. Blank falls
+    # back to the base <title>/<meta description> so the site still looks
+    # decent out of the box.
+    share_title: str = ""             # <title>-style headline for link previews
+    share_description: str = ""       # 1-2 sentence description
+    share_image_url: str = ""         # 1200×630 recommended
+    share_twitter_handle: str = ""    # optional, e.g. "@swelldesignla"
+    favicon_url: str = ""             # optional PNG/ICO/SVG uploaded via admin; falls back to /favicon.ico
+
     # Services page — governs whether the standalone /services PAGE is enabled
     # site-wide. When false: (1) the "Services" nav item is hidden from header &
     # footer, (2) /services and /services/:slug redirect to the home page.

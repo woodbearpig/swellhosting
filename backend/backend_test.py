@@ -10,7 +10,7 @@ import io
 
 BASE_URL = "https://balloon-decor-cms.preview.emergentagent.com/api"
 ADMIN_EMAIL = "admin@swelldesignla.com"
-ADMIN_PASSWORD = "Testing9!"
+ADMIN_PASSWORD = "swell2025"
 
 class TestRunner:
     def __init__(self):
@@ -775,6 +775,132 @@ def main():
     runner.test("Media CRUD operations work", test_media_crud)
     runner.test("Media search by filename/alt_text works", test_media_search)
     runner.test("Media tag filter works", test_media_tag_filter)
+    
+    print("\n" + "="*60)
+    print("ITERATION 21: Final CTA Editable + Favicons + Share Meta")
+    print("="*60)
+    
+    def test_final_cta_fields():
+        """Site content has new home_final_cta_* fields"""
+        runner.login()
+        r = requests.get(f"{BASE_URL}/site-content")
+        print(f"  → GET /api/site-content: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        data = r.json()
+        # Check all new final CTA fields exist
+        required_fields = [
+            'home_final_cta_show_heart',
+            'home_final_cta_eyebrow',
+            'home_final_cta_title',
+            'home_final_cta_subtitle',
+            'home_final_cta_primary_label',
+            'home_final_cta_primary_href',
+            'home_final_cta_secondary_label',
+            'home_final_cta_secondary_href'
+        ]
+        for field in required_fields:
+            assert field in data, f"Missing field: {field}"
+            print(f"  ✓ {field}: {repr(data[field])[:60]}")
+        
+        # Just verify the field exists (it may have been modified by other tests)
+        assert 'home_final_cta_secondary_label' in data, "Missing home_final_cta_secondary_label"
+        print(f"  ✓ home_final_cta_secondary_label field exists (value: {repr(data['home_final_cta_secondary_label'])[:40]})")
+    
+    def test_share_meta_fields():
+        """Site content has new share_* and favicon_url fields"""
+        runner.login()
+        r = requests.get(f"{BASE_URL}/site-content")
+        assert r.status_code == 200
+        
+        data = r.json()
+        share_fields = ['share_title', 'share_description', 'share_image_url', 'share_twitter_handle', 'favicon_url']
+        for field in share_fields:
+            assert field in data, f"Missing field: {field}"
+            print(f"  ✓ {field}: {repr(data[field])[:60]}")
+    
+    def test_update_final_cta():
+        """Can update final CTA fields via PUT"""
+        runner.login()
+        
+        # Get current data
+        r = requests.get(f"{BASE_URL}/site-content")
+        assert r.status_code == 200
+        data = r.json()
+        
+        # Update final CTA fields
+        updates = {
+            'home_final_cta_show_heart': False,
+            'home_final_cta_eyebrow': 'TEST EYEBROW',
+            'home_final_cta_title': 'Test Title Updated',
+            'home_final_cta_subtitle': 'Test subtitle line 1\nTest subtitle line 2',
+            'home_final_cta_primary_label': 'Test Primary',
+            'home_final_cta_primary_href': '/test-primary',
+            'home_final_cta_secondary_label': 'Test Secondary',
+            'home_final_cta_secondary_href': '/test-secondary'
+        }
+        data.update(updates)
+        
+        r = requests.put(f"{BASE_URL}/admin/site-content", json=data, headers=runner.headers())
+        print(f"  → PUT /api/admin/site-content: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+        
+        # Verify updates persisted
+        r = requests.get(f"{BASE_URL}/site-content")
+        assert r.status_code == 200
+        updated = r.json()
+        
+        for key, value in updates.items():
+            assert updated[key] == value, f"Field {key} not updated: expected {value}, got {updated[key]}"
+            print(f"  ✓ {key} updated correctly")
+    
+    def test_update_share_meta():
+        """Can update share meta fields via PUT"""
+        runner.login()
+        
+        r = requests.get(f"{BASE_URL}/site-content")
+        assert r.status_code == 200
+        data = r.json()
+        
+        updates = {
+            'share_title': 'Test Share Title',
+            'share_description': 'Test share description for social previews',
+            'share_twitter_handle': '@testhandle',
+            'share_image_url': 'https://example.com/test-share.jpg',
+            'favicon_url': 'https://example.com/test-favicon.png'
+        }
+        data.update(updates)
+        
+        r = requests.put(f"{BASE_URL}/admin/site-content", json=data, headers=runner.headers())
+        print(f"  → PUT /api/admin/site-content: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+        
+        # Verify
+        r = requests.get(f"{BASE_URL}/site-content")
+        assert r.status_code == 200
+        updated = r.json()
+        
+        for key, value in updates.items():
+            assert updated[key] == value, f"Field {key} not updated: expected {value}, got {updated[key]}"
+            print(f"  ✓ {key} updated correctly")
+    
+    def test_favicon_assets_accessible():
+        """Static favicon assets return 200"""
+        base = "https://balloon-decor-cms.preview.emergentagent.com"
+        assets = ['/favicon.ico', '/apple-touch-icon.png', '/icon-192.png', '/og-default.jpg']
+        
+        for asset in assets:
+            r = requests.get(f"{base}{asset}")
+            print(f"  → GET {asset}: {r.status_code}, size: {len(r.content)} bytes")
+            assert r.status_code == 200, f"Expected 200 for {asset}, got {r.status_code}"
+            assert len(r.content) > 0, f"Empty response for {asset}"
+            print(f"  ✓ {asset} accessible")
+    
+    runner.test("Site content has new home_final_cta_* fields", test_final_cta_fields)
+    runner.test("Site content has new share_* and favicon_url fields", test_share_meta_fields)
+    runner.test("Can update final CTA fields", test_update_final_cta)
+    runner.test("Can update share meta fields", test_update_share_meta)
+    runner.test("Favicon assets are accessible", test_favicon_assets_accessible)
     
     print("\n" + "="*60)
     print("NO REGRESSIONS")

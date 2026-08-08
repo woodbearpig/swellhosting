@@ -312,21 +312,40 @@ const HomePage = () => {
       )}
 
       {/* CTA */}
-      {site?.home_final_cta_active !== false && (
+      {site?.home_final_cta_active !== false && (() => {
+        const eyebrow = (site?.home_final_cta_eyebrow || '').trim();
+        const title = (site?.home_final_cta_title || '').trim() || 'Ready to plan something dreamy?';
+        const subtitle = (site?.home_final_cta_subtitle || '').trim();
+        const primaryLabel = (site?.home_final_cta_primary_label || '').trim();
+        const primaryHref = site?.home_final_cta_primary_href || '/inquire';
+        const secondaryLabel = (site?.home_final_cta_secondary_label || '').trim();
+        const secondaryHref = site?.home_final_cta_secondary_href || '/portfolio';
+        const showHeart = site?.home_final_cta_show_heart !== false;
+        return (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-final-cta-section">
         <motion.div {...fadeInUp} className="relative overflow-hidden card-cream p-8 sm:p-14 text-center">
           <div className="blob b-rose" style={{ width: 220, height: 220, top: -40, right: -40 }} />
           <div className="blob b-sage" style={{ width: 180, height: 180, bottom: -30, left: -30 }} />
-          <Heart className="h-6 w-6 mx-auto text-[color:var(--brand-rose)]" />
-          <h2 className="font-serif text-3xl sm:text-4xl mt-3">Ready to plan something dreamy?</h2>
-          <p className="text-[color:var(--brand-text-muted)] max-w-lg mx-auto mt-3">Take two minutes to share your vision. We'll be in touch within 1–2 business days.</p>
+          {showHeart && <Heart className="h-6 w-6 mx-auto text-[color:var(--brand-rose)]" />}
+          {eyebrow && <p className="eyebrow mt-3">{eyebrow}</p>}
+          <h2 className="font-serif text-3xl sm:text-4xl mt-3">{title}</h2>
+          {subtitle && <p className="text-[color:var(--brand-text-muted)] max-w-lg mx-auto mt-3 whitespace-pre-line">{subtitle}</p>}
           <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
-            <Link to="/inquire" className="btn-primary" data-testid="home-cta-inquire">Start your inquiry <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/inquire" className="btn-secondary">Start your inquiry</Link>
+            {primaryLabel && (
+              <Link to={primaryHref} className="btn-primary" data-testid="home-cta-inquire">
+                {primaryLabel} <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+            {secondaryLabel && (
+              <Link to={secondaryHref} className="btn-secondary" data-testid="home-cta-secondary">
+                {secondaryLabel}
+              </Link>
+            )}
           </div>
         </motion.div>
       </section>
-      )}
+        );
+      })()}
     </div>
   );
 };
