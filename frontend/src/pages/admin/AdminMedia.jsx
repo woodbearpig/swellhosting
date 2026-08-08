@@ -125,6 +125,7 @@ const AdminMedia = ({ pickerMode = false, onPick = null, onClose = null }) => {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -174,13 +175,13 @@ const AdminMedia = ({ pickerMode = false, onPick = null, onClose = null }) => {
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
-    if (!confirm(`Delete ${ids.length} selected image${ids.length === 1 ? '' : 's'}? This can't be undone.`)) return;
     let ok = 0;
     for (const id of ids) {
       try { await api.delete(`/admin/media/${id}`); ok += 1; }
       catch { /* keep going */ }
     }
     toast.success(`Deleted ${ok} image${ok === 1 ? '' : 's'}.`);
+    setBulkDeleteOpen(false);
     exitSelectMode();
     load();
   };
@@ -317,7 +318,7 @@ const AdminMedia = ({ pickerMode = false, onPick = null, onClose = null }) => {
           <button type="button" className="btn-secondary !h-8 text-xs" onClick={() => setBulkTagOpen(true)} data-testid="media-bulk-tag-open">
             <TagIcon className="h-3.5 w-3.5" /> Tag
           </button>
-          <button type="button" className="!h-8 text-xs inline-flex items-center gap-2 px-3 rounded-lg bg-red-600 text-white hover:bg-red-700" onClick={handleBulkDelete} data-testid="media-bulk-delete">
+          <button type="button" className="!h-8 text-xs inline-flex items-center gap-2 px-3 rounded-lg bg-red-600 text-white hover:bg-red-700" onClick={() => setBulkDeleteOpen(true)} data-testid="media-bulk-delete">
             <Trash2 className="h-3.5 w-3.5" /> Delete
           </button>
         </div>
@@ -325,6 +326,24 @@ const AdminMedia = ({ pickerMode = false, onPick = null, onClose = null }) => {
 
       {editing && <EditAssetModal asset={editing} onClose={() => setEditing(null)} onSave={handleSave} />}
       <BulkTagModal open={bulkTagOpen} count={selectedCount} onClose={() => setBulkTagOpen(false)} onApply={handleBulkTag} />
+      {bulkDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setBulkDeleteOpen(false)} data-testid="media-bulk-delete-modal">
+          <div className="bg-[color:var(--brand-cream)] rounded-3xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <p className="font-serif text-xl">Delete {selectedCount} image{selectedCount === 1 ? '' : 's'}?</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)] mt-2">This can't be undone. Any admin form that references one of these images will show a broken thumbnail until you replace it.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-secondary" onClick={() => setBulkDeleteOpen(false)}>Cancel</button>
+              <button
+                className="!h-9 text-sm inline-flex items-center gap-2 px-3 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                onClick={handleBulkDelete}
+                data-testid="media-bulk-delete-confirm"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete {selectedCount}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pickerMode && (
         <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--brand-border)]">
