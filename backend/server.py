@@ -449,6 +449,106 @@ async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admi
     return {"ok": True, "changed": True, "user": refreshed, "token": new_token}
 
 
+@api.get("/admin/settings/smtp-config")
+async def smtp_config(admin=Depends(require_admin)):
+    """Return the SMTP env config that's currently loaded — NEVER includes the password."""
+    return {
+        "host": os.environ.get("SMTP_HOST", "").strip() or None,
+        "port": os.environ.get("SMTP_PORT", "587").strip() or None,
+        "user": os.environ.get("SMTP_USER", "").strip() or None,
+        "from_email": os.environ.get("SMTP_FROM", "").strip() or None,
+        "from_name": os.environ.get("SMTP_FROM_NAME", "").strip() or None,
+        "business_email": os.environ.get("BUSINESS_EMAIL", "").strip() or None,
+        "password_set": bool(os.environ.get("SMTP_PASS", "").strip()),
+    }
+
+
+@api.post("/admin/settings/test-smtp")
+async def test_smtp(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Send a real test email using the currently-loaded SMTP env config.
+    Captures and returns the actual SMTP error message on failure so the UI
+    can display something actionable."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    to = (payload.get("to") or "").strip()
+    if not to or "@" not in to:
+        raise HTTPException(status_code=400, detail="A valid recipient email is required")
+
+    host = os.environ.get("SMTP_HOST", "").strip()
+    if not host:
+        return {
+            "ok": False,
+            "error": "SMTP_HOST is not set in backend/.env — add your provider's SMTP host (e.g. smtp.hostinger.com) and redeploy.",
+            "stage": "config",
+        }
+    try:
+        port = int(os.environ.get("SMTP_PORT", "587"))
+    except ValueError:
+        return {"ok": False, "error": "SMTP_PORT is not a number", "stage": "config"}
+
+    user = os.environ.get("SMTP_USER", "").strip()
+    password = os.environ.get("SMTP_PASS", "")
+    from_email = os.environ.get("SMTP_FROM", user or "hello@swelldesignla.com").strip()
+    from_name = os.environ.get("SMTP_FROM_NAME", "swell design + media").strip()
+
+    subject = "SMTP test — swell design + media"
+    html = (
+        "<div style=\"font-family:Georgia,serif;max-width:520px;margin:24px auto;padding:24px;"
+        "background:#FBF6EF;border-radius:16px;color:#1F1E1C;\">"
+        "<h2 style=\"margin:0 0 8px 0;font-weight:400;\">SMTP test successful</h2>"
+        f"<p style=\"color:#5E5A55;line-height:1.6;\">This test email was sent from <b>{from_email}</b> "
+        "via your currently-configured SMTP server. Inquiry and consultation confirmation emails will send successfully too.</p>"
+        "<p style=\"color:#6F8F7A;font-style:italic;margin-top:20px;\">— swell design + media</p>"
+        "</div>"
+    )
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{from_name} <{from_email}>"
+    msg["To"] = to
+    msg.attach(MIMEText("SMTP test successful — the site is configured to send email.", "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    stage = "connect"
+    try:
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            server.ehlo()
+            stage = "starttls"
+            try:
+                server.starttls()
+                server.ehlo()
+            except Exception:
+                pass
+            stage = "auth"
+            if user and password:
+                server.login(user, password)
+            stage = "send"
+            server.sendmail(from_email, [to], msg.as_string())
+        logger.info("SMTP test email sent OK to %s via %s:%s as %s", to, host, port, user or from_email)
+        return {"ok": True, "delivered_to": to, "from": from_email, "host": host, "port": port}
+    except smtplib.SMTPAuthenticationError as e:
+        return {
+            "ok": False,
+            "stage": stage,
+            "error": (
+                f"SMTP authentication failed ({e.smtp_code}). Check SMTP_USER and SMTP_PASS in backend/.env. "
+                "For Hostinger, SMTP_USER must be the full mailbox address (e.g. info@swelldesignla.com) and "
+                "SMTP_PASS is the mailbox password set in the Hostinger email panel."
+            ),
+        }
+    except smtplib.SMTPConnectError as e:
+        return {"ok": False, "stage": stage, "error": f"Could not connect to {host}:{port} — {e}"}
+    except smtplib.SMTPException as e:
+        return {"ok": False, "stage": stage, "error": f"SMTP error at stage '{stage}': {e}"}
+    except OSError as e:
+        return {"ok": False, "stage": stage, "error": f"Network error connecting to {host}:{port} — {e}"}
+    except Exception as e:
+        logger.exception("Unexpected SMTP test failure")
+        return {"ok": False, "stage": stage, "error": f"Unexpected error: {e}"}
+
+
 # =========================================================
 # Uploads + Media Library
 # =========================================================

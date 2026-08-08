@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { KeyRound, Save, User as UserIcon, Mail, Eye, EyeOff, ShieldAlert, Users, Trash2 } from 'lucide-react';
+import {
+  KeyRound, Save, User as UserIcon, Mail, Eye, EyeOff,
+  Send, Info, CheckCircle2, XCircle, Copy, ExternalLink,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -47,8 +50,6 @@ const ChangeCredentialsCard = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [verifyResult, setVerifyResult] = useState(null); // { ok, diag }
-  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -56,23 +57,6 @@ const ChangeCredentialsCard = () => {
       setNewName(user.name || '');
     }
   }, [user]);
-
-  const runVerify = async () => {
-    setVerifyResult(null);
-    if (!currentPassword) { toast.error('Type your current password first, then click Test.'); return; }
-    setVerifying(true);
-    try {
-      const { data } = await api.post('/admin/auth/verify-password', { current_password: currentPassword });
-      setVerifyResult(data);
-      if (data.match) toast.success("Current password verified — it's correct.");
-      else if (data.match_after_trim) toast.error('Password matches only after trimming whitespace. Check for accidental leading/trailing spaces.');
-      else toast.error('Password does NOT match the stored hash. See the diagnostic panel below.');
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Verify request failed');
-    } finally {
-      setVerifying(false);
-    }
-  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -88,14 +72,11 @@ const ChangeCredentialsCard = () => {
       if (newPassword) payload.new_password = newPassword;
 
       const { data } = await api.post('/admin/auth/change-credentials', payload);
-      if (data.token) {
-        localStorage.setItem('swell_admin_token', data.token);
-      }
+      if (data.token) localStorage.setItem('swell_admin_token', data.token);
       toast.success(data.changed ? 'Credentials updated. Use these next time you sign in.' : 'No changes to save.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      // Delay a moment so the toast is seen; user record will refresh on next /auth/me call
       setTimeout(() => window.location.reload(), 900);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not update credentials');
@@ -173,62 +154,17 @@ const ChangeCredentialsCard = () => {
 
       <div className="border-t border-[color:var(--brand-border)] pt-4">
         <label className="eyebrow block mb-1">CURRENT PASSWORD (REQUIRED)</label>
-        <div className="flex items-stretch gap-2">
-          <div className="flex-1">
-            <PasswordField
-              value={currentPassword}
-              onChange={e => { setCurrentPassword(e.target.value); setVerifyResult(null); }}
-              placeholder="Verify it's you"
-              autoComplete="current-password"
-              required
-              testId="admin-credentials-current-password"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={runVerify}
-            disabled={verifying || !currentPassword}
-            className="btn-secondary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Check whether this password matches your stored hash — nothing is saved."
-            data-testid="admin-credentials-test-button"
-          >
-            {verifying ? 'Testing…' : 'Test'}
-          </button>
-        </div>
-        {verifyResult && (
-          <div
-            className={`mt-2 p-3 rounded-lg text-xs ${
-              verifyResult.match
-                ? 'bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]'
-                : 'bg-[color:var(--brand-blush-tint)] text-[color:var(--brand-text)]'
-            }`}
-            data-testid="admin-credentials-verify-result"
-          >
-            <p className="font-medium mb-1">
-              {verifyResult.match ? '✓ Password matches.' : '✗ Password does not match.'}
-            </p>
-            <ul className="space-y-0.5 leading-relaxed">
-              <li>Characters received by server: <strong>{verifyResult.received_length}</strong></li>
-              {verifyResult.has_leading_or_trailing_whitespace && (
-                <li className="text-[color:var(--brand-coral)] font-medium">⚠ Contains leading/trailing whitespace ({verifyResult.received_trimmed_length} chars after trim)</li>
-              )}
-              <li>Admin account found: <strong>{verifyResult.admin_found ? 'yes' : 'no'}</strong></li>
-              {verifyResult.stored_email && <li>Stored email: <strong>{verifyResult.stored_email}</strong></li>}
-              {!verifyResult.match && verifyResult.match_after_trim && (
-                <li className="text-[color:var(--brand-coral)] font-medium">→ Matches after trim — a whitespace character is being included.</li>
-              )}
-              {!verifyResult.match && !verifyResult.match_after_trim && verifyResult.admin_found && (
-                <li>→ The characters you typed do not match the hash stored for <strong>{verifyResult.stored_email}</strong>. If you're certain the password is right, the stored hash may have drifted (see recovery tip below).</li>
-              )}
-            </ul>
-          </div>
-        )}
+        <PasswordField
+          value={currentPassword}
+          onChange={e => setCurrentPassword(e.target.value)}
+          placeholder="Verify it's you"
+          autoComplete="current-password"
+          required
+          testId="admin-credentials-current-password"
+        />
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
-        <p className="text-xs text-[color:var(--brand-text-muted)]">
-          Locked out? SSH into your VPS, set <code>ADMIN_FORCE_RESET=1</code> in <code>backend/.env</code>, redeploy — the seed will reset your password from <code>ADMIN_PASSWORD</code>. Remove the flag afterwards.
-        </p>
+      <div className="flex justify-end pt-2">
         <button type="submit" className="btn-primary" disabled={busy} data-testid="admin-credentials-submit">
           <Save className="h-4 w-4" /> {busy ? 'Saving…' : 'Save changes'}
         </button>
@@ -237,219 +173,234 @@ const ChangeCredentialsCard = () => {
   );
 };
 
+/** Small copyable field — mirrors the pattern used on the Integrations page. */
+const CopyRow = ({ label, value }) => (
+  <div>
+    <label className="eyebrow block mb-1">{label}</label>
+    <div className="flex gap-2">
+      <input readOnly className="input-cream flex-1 text-sm font-mono" value={value} />
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={() => { navigator.clipboard.writeText(value); toast.success('Copied'); }}
+        title="Copy to clipboard"
+      >
+        <Copy className="h-4 w-4" />
+      </button>
+    </div>
+  </div>
+);
+
 /**
- * AdminUsersAuditCard — lists every row in `admin_users`, flags duplicates on `id`,
- * and offers a one-click cleanup that keeps a single row (chosen by email) with a
- * fresh password. Also creates unique indexes so this can't happen again.
- *
- * Written to solve a specific real-world bug: earlier ADMIN_FORCE_RESET runs with a
- * changed ADMIN_EMAIL created duplicate admin rows, causing MongoDB's find_one
- * to arbitrarily return the wrong one for password change while login used the
- * right one.
+ * SmtpEmailCard — shows current SMTP config at-a-glance, offers a one-click
+ * test-send, and includes a collapsible "Send as info@ from Gmail" step-by-step
+ * setup guide (client-facing).
  */
-const AdminUsersAuditCard = () => {
+const SmtpEmailCard = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [audit, setAudit] = useState(null);
-  const [expanded, setExpanded] = useState(false);
-  const [keepEmail, setKeepEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [config, setConfig] = useState(null);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [testTo, setTestTo] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [showGmailGuide, setShowGmailGuide] = useState(false);
+  const [showEnvSample, setShowEnvSample] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
+  useEffect(() => {
+    api.get('/admin/settings/smtp-config')
+      .then(r => setConfig(r.data))
+      .catch(() => {})
+      .finally(() => setLoadingConfig(false));
+  }, []);
+
+  useEffect(() => { if (user?.email && !testTo) setTestTo(user.email); }, [user, testTo]);
+
+  const configComplete = useMemo(() => !!(
+    config && config.host && config.port && config.user && config.from_email && config.password_set
+  ), [config]);
+
+  const runTest = async () => {
+    if (!testTo || !testTo.includes('@')) { toast.error('Enter a valid recipient email'); return; }
+    setTesting(true);
+    setTestResult(null);
     try {
-      const { data } = await api.get('/admin/auth/admins-audit');
-      setAudit(data);
-      if (data.admins?.length && !keepEmail) {
-        // Default the "keep_email" to the caller's own email if present, else first row.
-        const mine = data.admins.find(a => a.id === data.token_sub);
-        setKeepEmail(mine?.email || data.admins[0]?.email || user?.email || '');
-      }
+      const { data } = await api.post('/admin/settings/test-smtp', { to: testTo.trim() });
+      setTestResult(data);
+      if (data.ok) toast.success(`Test sent to ${data.delivered_to} — check the inbox.`);
+      else toast.error('Test failed. See details below.');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not load admin users');
+      const detail = err.response?.data?.detail || 'Test request failed';
+      setTestResult({ ok: false, error: detail });
+      toast.error(detail);
     } finally {
-      setLoading(false);
+      setTesting(false);
     }
   };
-
-  const consolidate = async () => {
-    if (!keepEmail || !keepEmail.includes('@')) { toast.error('Enter a valid email to keep'); return; }
-    if (!newPassword || newPassword.length < 8) { toast.error('New password must be at least 8 characters'); return; }
-    if (!currentPassword) { toast.error('Enter your current password to authorize cleanup'); return; }
-    if (!window.confirm(`This will KEEP the admin row with email "${keepEmail}", rewrite its password, and DELETE every other admin row. Continue?`)) return;
-
-    setBusy(true);
-    try {
-      const { data } = await api.post('/admin/auth/consolidate-admins', {
-        keep_email: keepEmail,
-        new_password: newPassword,
-        current_password: currentPassword,
-      });
-      if (data.token) localStorage.setItem('swell_admin_token', data.token);
-      toast.success(`Cleaned up. Removed ${data.deleted_other_admins + (data.deleted_id_duplicates || 0)} extra row(s). Logging in again with new credentials…`);
-      setNewPassword('');
-      setCurrentPassword('');
-      setTimeout(() => window.location.reload(), 1200);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Consolidation failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const hasDuplicates = audit && (Object.keys(audit.duplicate_id_values || {}).length > 0 || (audit.count > 1));
 
   return (
-    <div className="card-cream p-6 space-y-4" data-testid="admin-users-audit-card">
+    <div className="card-cream p-6 space-y-5" data-testid="admin-smtp-card">
       <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-full bg-[color:var(--brand-blush-tint)] flex items-center justify-center shrink-0">
-          <Users className="h-5 w-5 text-[color:var(--brand-coral)]" />
+        <div className="h-10 w-10 rounded-full bg-[color:var(--brand-sage-tint)] flex items-center justify-center shrink-0">
+          <Mail className="h-5 w-5 text-[color:var(--brand-sage-deep)]" />
         </div>
         <div className="flex-1">
-          <p className="font-serif text-xl">Admin users audit</p>
+          <p className="font-serif text-xl">SMTP email</p>
           <p className="text-sm text-[color:var(--brand-text-muted)]">
-            Diagnostic view of every admin row in the database. If you're stuck on
-            "current password is incorrect" this will show whether duplicates exist,
-            and offer a one-click cleanup.
+            The address the website uses to send inquiry confirmations, consultation invites, and new-lead alerts.
           </p>
         </div>
-        <button type="button" onClick={load} disabled={loading} className="btn-secondary !h-9 shrink-0" data-testid="admin-users-audit-load">
-          {loading ? 'Loading…' : audit ? 'Refresh' : 'Load'}
-        </button>
       </div>
 
-      {audit && (
-        <div className="space-y-3">
-          <div className="text-xs text-[color:var(--brand-text-muted)]">
-            Token points to: <code>{audit.token_sub}</code> ({audit.token_email || 'no email in token'})
+      {/* Config summary */}
+      {loadingConfig ? (
+        <div className="text-sm text-[color:var(--brand-text-muted)]">Loading configuration…</div>
+      ) : (
+        <div className="rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-surface-2)]/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            {configComplete ? (
+              <><CheckCircle2 className="h-4 w-4 text-[color:var(--brand-sage-deep)]" /><span className="text-sm font-medium">Configured and ready</span></>
+            ) : (
+              <><XCircle className="h-4 w-4 text-[color:var(--brand-coral)]" /><span className="text-sm font-medium">Not fully configured</span></>
+            )}
           </div>
-
-          {hasDuplicates && (
-            <div className="rounded-xl bg-[color:var(--brand-blush-tint)] p-3 text-sm flex items-start gap-2" data-testid="admin-users-audit-warning">
-              <ShieldAlert className="h-4 w-4 text-[color:var(--brand-coral)] mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium">Multiple admin rows detected ({audit.count} total)</p>
-                <p className="text-xs mt-0.5">This is why password changes fail — MongoDB may pick a different row than the one you logged in with. Use the cleanup form below to consolidate.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="overflow-x-auto rounded-lg border border-[color:var(--brand-border)]">
-            <table className="w-full text-sm">
-              <thead className="bg-[color:var(--brand-surface-2)] text-xs uppercase tracking-wider text-[color:var(--brand-text-muted)]">
-                <tr>
-                  <th className="text-left px-3 py-2">id</th>
-                  <th className="text-left px-3 py-2">email</th>
-                  <th className="text-left px-3 py-2">name</th>
-                  <th className="text-left px-3 py-2">role</th>
-                  <th className="text-left px-3 py-2">created_at</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--brand-border)]">
-                {audit.admins.map((a, idx) => {
-                  const isCaller = a.id === audit.token_sub;
-                  return (
-                    <tr key={idx} className={isCaller ? 'bg-[color:var(--brand-sage-tint)]/40' : ''} data-testid={`admin-users-audit-row-${idx}`}>
-                      <td className="px-3 py-2 font-mono text-xs">
-                        {a.id || <span className="italic text-[color:var(--brand-text-muted)]">(none)</span>}
-                        {isCaller && <span className="ml-2 badge-soft">this session</span>}
-                      </td>
-                      <td className="px-3 py-2">
-                        {a.email
-                          ? <button type="button" className="link-underline" onClick={() => setKeepEmail(a.email)}>{a.email}</button>
-                          : <span className="italic text-[color:var(--brand-text-muted)]">(empty)</span>}
-                      </td>
-                      <td className="px-3 py-2">{a.name || '—'}</td>
-                      <td className="px-3 py-2 text-xs">{a.role || '—'}</td>
-                      <td className="px-3 py-2 text-xs text-[color:var(--brand-text-muted)]">{a.created_at ? formatDate(a.created_at) : '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {audit.count > 1 || (audit.admins[0] && !audit.admins[0].email) ? (
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setExpanded(v => !v)}
-                className="btn-secondary text-xs !h-9"
-                data-testid="admin-users-audit-cleanup-toggle"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> {expanded ? 'Hide cleanup form' : 'Open cleanup form'}
-              </button>
-            </div>
-          ) : (
-            <p className="text-xs text-[color:var(--brand-text-muted)] italic">
-              Only one clean admin row. If you still can't change your password, use the ADMIN_FORCE_RESET recovery.
-            </p>
-          )}
-
-          {expanded && (
-            <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-surface-2)]/50" data-testid="admin-users-audit-cleanup-form">
-              <p className="text-sm">
-                Choose the admin email to keep (click any email in the table above to fill this),
-                set a new password, and confirm with the current password of the row you're logged in with.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="eyebrow block mb-1">EMAIL TO KEEP</label>
-                  <input className="input-cream" value={keepEmail} onChange={e => setKeepEmail(e.target.value)} placeholder="admin@your-domain.com" data-testid="admin-users-audit-keep-email" />
-                </div>
-                <div>
-                  <label className="eyebrow block mb-1">NEW PASSWORD (8+ CHARS)</label>
-                  <div className="relative">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      className="input-cream pr-11"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      autoComplete="new-password"
-                      data-testid="admin-users-audit-new-password"
-                    />
-                    <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-[color:var(--brand-text-muted)] hover:text-[color:var(--brand-text)] hover:bg-[color:var(--brand-sage-tint)]/50 transition-colors" aria-label={showPw ? 'Hide' : 'Show'}>
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="eyebrow block mb-1">CURRENT PASSWORD (of your logged-in row)</label>
-                <div className="relative">
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    className="input-cream pr-11"
-                    value={currentPassword}
-                    onChange={e => setCurrentPassword(e.target.value)}
-                    autoComplete="current-password"
-                    data-testid="admin-users-audit-current-password"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={consolidate}
-                  disabled={busy}
-                  className="btn-primary"
-                  data-testid="admin-users-audit-consolidate"
-                >
-                  <Trash2 className="h-4 w-4" /> {busy ? 'Cleaning up…' : 'Consolidate & set new password'}
-                </button>
-              </div>
-              <p className="text-xs text-[color:var(--brand-text-muted)]">
-                This deletes every admin row except the one matching "email to keep", then rewrites its
-                password to your new value and adds unique indexes on <code>id</code> and <code>email</code>
-                to prevent future duplicates.
-              </p>
-            </div>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+            <div className="flex gap-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">Host</dt><dd className="font-mono text-xs truncate">{config?.host || <span className="italic text-[color:var(--brand-coral)]">(not set)</span>}</dd></div>
+            <div className="flex gap-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">Port</dt><dd className="font-mono text-xs">{config?.port || <span className="italic text-[color:var(--brand-coral)]">(not set)</span>}</dd></div>
+            <div className="flex gap-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">User</dt><dd className="font-mono text-xs truncate">{config?.user || <span className="italic text-[color:var(--brand-coral)]">(not set)</span>}</dd></div>
+            <div className="flex gap-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">Password</dt><dd className="font-mono text-xs">{config?.password_set ? '•••••••• (set)' : <span className="italic text-[color:var(--brand-coral)]">(not set)</span>}</dd></div>
+            <div className="flex gap-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">Sends as</dt><dd className="font-mono text-xs truncate">{config?.from_email || <span className="italic text-[color:var(--brand-coral)]">(not set)</span>}</dd></div>
+            <div className="flex gap-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">From name</dt><dd className="font-mono text-xs truncate">{config?.from_name || '—'}</dd></div>
+            <div className="flex gap-2 sm:col-span-2"><dt className="text-[color:var(--brand-text-muted)] w-24 shrink-0">Alerts to</dt><dd className="font-mono text-xs truncate">{config?.business_email || <span className="italic text-[color:var(--brand-coral)]">(not set — new-inquiry alerts won't be sent)</span>}</dd></div>
+          </dl>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-3">
+            These values live in <code>backend/.env</code> on your VPS. To change them: SSH in, edit the file, then run <code>./deploy.sh</code>.{' '}
+            <button type="button" onClick={() => setShowEnvSample(v => !v)} className="link-underline">
+              {showEnvSample ? 'Hide' : 'Show'} .env template
+            </button>
+          </p>
+          {showEnvSample && (
+            <pre className="bg-[color:var(--brand-cream)] border border-[color:var(--brand-border)] p-3 rounded-lg text-xs mt-3 overflow-auto">{`SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=587
+SMTP_USER=info@swelldesignla.com
+SMTP_PASS=your-mailbox-password
+SMTP_FROM=info@swelldesignla.com
+SMTP_FROM_NAME=swell design + media
+BUSINESS_EMAIL=info@swelldesignla.com`}</pre>
           )}
         </div>
       )}
+
+      {/* Send a test email */}
+      <div className="space-y-2">
+        <label className="eyebrow block">SEND A TEST EMAIL</label>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            className="input-cream flex-1"
+            value={testTo}
+            onChange={e => setTestTo(e.target.value)}
+            placeholder="where-to-send-test@example.com"
+            data-testid="admin-smtp-test-to"
+          />
+          <button
+            type="button"
+            onClick={runTest}
+            disabled={testing || !testTo}
+            className="btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="admin-smtp-test-send"
+          >
+            <Send className="h-4 w-4" /> {testing ? 'Sending…' : 'Send test'}
+          </button>
+        </div>
+        <p className="text-xs text-[color:var(--brand-text-muted)]">
+          Sends a real email to the address above using your SMTP settings. If it arrives, all site emails will work too.
+        </p>
+
+        {testResult && (
+          <div
+            className={`mt-2 p-3 rounded-lg text-sm ${
+              testResult.ok
+                ? 'bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]'
+                : 'bg-[color:var(--brand-blush-tint)] text-[color:var(--brand-text)]'
+            }`}
+            data-testid="admin-smtp-test-result"
+          >
+            {testResult.ok ? (
+              <p><CheckCircle2 className="h-4 w-4 inline -mt-0.5 mr-1" /> Delivered to <strong>{testResult.delivered_to}</strong> from <strong>{testResult.from}</strong> via {testResult.host}:{testResult.port}.</p>
+            ) : (
+              <div>
+                <p className="font-medium mb-1"><XCircle className="h-4 w-4 inline -mt-0.5 mr-1" /> Test failed{testResult.stage ? ` (at stage: ${testResult.stage})` : ''}</p>
+                <p className="text-xs opacity-90 leading-relaxed">{testResult.error}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Gmail "send as info@" guide */}
+      <div className="border-t border-[color:var(--brand-border)] pt-4">
+        <button
+          type="button"
+          onClick={() => setShowGmailGuide(v => !v)}
+          className="link-underline text-sm"
+          data-testid="admin-smtp-gmail-guide-toggle"
+        >
+          <Info className="h-4 w-4 inline mr-1" /> {showGmailGuide ? 'Hide' : 'Show'} step-by-step: reply as info@ from Gmail
+        </button>
+
+        {showGmailGuide && (
+          <div className="mt-3 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-surface-2)]/50 p-4 space-y-3" data-testid="admin-smtp-gmail-guide">
+            <p className="text-sm text-[color:var(--brand-text-muted)]">
+              This lets you compose <em>from</em> <b>info@swelldesignla.com</b> inside your regular Gmail account,
+              so replies to inquiries look professional (and threads stay in one place).
+            </p>
+
+            <div className="space-y-2 text-sm text-[color:var(--brand-text-muted)]">
+              <p className="text-[color:var(--brand-text)] font-medium">One-time setup (≈10 min):</p>
+              <ol className="space-y-2 list-decimal pl-5 leading-relaxed">
+                <li>In Gmail, click the <b>gear icon</b> (top right) → <b>See all settings</b>.</li>
+                <li>Open the <b>Accounts and Import</b> tab.</li>
+                <li>Under <b>"Send mail as"</b>, click <b>Add another email address</b>.</li>
+                <li>
+                  Fill in the popup:
+                  <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                    <li>Name: <b>swell design + media</b></li>
+                    <li>Email address: <b>info@swelldesignla.com</b></li>
+                    <li>Uncheck <b>"Treat as an alias"</b> so replies keep the info@ From line.</li>
+                  </ul>
+                  Click <b>Next Step</b>.
+                </li>
+                <li>
+                  On the next screen enter the SMTP details (copy from below):
+                </li>
+              </ol>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <CopyRow label="SMTP SERVER" value={config?.host || 'smtp.hostinger.com'} />
+              <CopyRow label="PORT" value={String(config?.port || '587')} />
+              <CopyRow label="USERNAME" value={config?.user || 'info@swelldesignla.com'} />
+              <div>
+                <label className="eyebrow block mb-1">PASSWORD</label>
+                <input readOnly className="input-cream text-sm font-mono" value="(the mailbox password you set in Hostinger)" />
+              </div>
+            </div>
+            <p className="text-xs text-[color:var(--brand-text-muted)]">
+              Select <b>Secured connection using TLS</b> (recommended), then click <b>Add Account</b>.
+            </p>
+
+            <div className="space-y-2 text-sm text-[color:var(--brand-text-muted)]">
+              <ol start={6} className="space-y-2 list-decimal pl-5 leading-relaxed">
+                <li>Gmail sends a verification email to <b>info@swelldesignla.com</b>. Because that address forwards to your Gmail, the verification email will land in your Gmail inbox within a minute.</li>
+                <li>Open that email and click the confirmation link (or copy the confirmation code into the popup that's still open).</li>
+                <li>Back in Gmail, when composing or replying, click the <b>From</b> line at the top of the compose window — you'll see the option to send as <b>info@swelldesignla.com</b>.</li>
+                <li>Optional: also in <b>Accounts and Import</b>, set <b>"When replying to a message"</b> to <b>"Reply from the same address the message was sent to"</b> so any reply to an inquiry automatically goes out as info@.</li>
+              </ol>
+              <p className="text-xs">Prefer official docs? <a className="link-underline" href="https://support.google.com/mail/answer/22370" target="_blank" rel="noreferrer">Google's guide <ExternalLink className="inline h-3 w-3" /></a></p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -464,22 +415,9 @@ export const AdminSettings = () => {
 
       <ChangeCredentialsCard />
 
-      <AdminUsersAuditCard />
-
       <BookingRulesCard />
 
-      <div className="card-cream p-6">
-        <p className="font-serif text-xl mb-2">SMTP email</p>
-        <p className="text-sm text-[color:var(--brand-text-muted)]">Confirmation emails are sent from the address configured in your server's environment variables. To finalize email delivery, update these values in your VPS <code>backend/.env</code> file and restart the backend:</p>
-        <pre className="bg-[color:var(--brand-surface-2)] p-4 rounded-lg text-xs mt-3 overflow-auto">SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=hello@swelldesignla.com
-SMTP_FROM_NAME=swell design + media
-BUSINESS_EMAIL=hello@swelldesignla.com</pre>
-        <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Tip: Hostinger users can find their SMTP host and port in their email hosting panel.</p>
-      </div>
+      <SmtpEmailCard />
 
       <div className="card-cream p-6">
         <p className="font-serif text-xl mb-2">Newsletter subscribers ({subs.length})</p>
