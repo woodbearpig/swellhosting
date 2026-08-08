@@ -28,7 +28,7 @@ const groups = [
     items: [
       { to: '/admin/services', label: 'Services', icon: Boxes },
       { to: '/admin/backdrops', label: 'Backdrops & Designs', icon: Frame },
-      { to: '/admin/gallery', label: 'Portfolio', icon: Image },
+      { to: '/admin/portfolio', label: 'Portfolio', icon: Image },
       { to: '/admin/media', label: 'Media library', icon: FolderOpen },
       { to: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
       { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
@@ -113,8 +113,12 @@ const AdminLayout = () => {
           </nav>
         </aside>
 
-        {/* Content — key forces a clean remount on every admin route change */}
-        <main className="flex-1 min-w-0 p-5 sm:p-8 lg:p-10" key={location.pathname}>
+        {/* Content — key uses location.key so it changes on EVERY navigation
+            event (even to the same pathname). This is the strongest possible
+            defense against the "URL updated but content didn't" symptom by
+            forcing the previously-mounted admin page to unmount cleanly on
+            every route change. */}
+        <main className="flex-1 min-w-0 p-5 sm:p-8 lg:p-10" key={location.key || location.pathname}>
           <Outlet />
         </main>
       </div>

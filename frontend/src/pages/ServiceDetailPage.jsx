@@ -109,7 +109,7 @@ const ServiceDetailPage = () => {
         <p className="text-[color:var(--brand-text-muted)] max-w-xl mx-auto mt-3">Share your vision in a quick smart inquiry — we'll get back to you within 1–2 business days.</p>
         <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
           <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
-          <Link to="/gallery" className="btn-secondary">See the gallery</Link>
+          <Link to="/portfolio" className="btn-secondary">See the gallery</Link>
         </div>
       </section>
     </div>

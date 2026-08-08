@@ -61,7 +61,7 @@ class SiteContent(Base):
     hero_primary_cta_label: str = "Start your inquiry"
     hero_primary_cta_href: str = "/inquire"
     hero_secondary_cta_label: str = "View the gallery"
-    hero_secondary_cta_href: str = "/gallery"
+    hero_secondary_cta_href: str = "/portfolio"
     # Small chip badges below the hero CTA buttons ("Fully custom", "On-site install", etc.)
     hero_badges_active: bool = True
     hero_badges: List[str] = Field(default_factory=lambda: ["Fully custom", "On-site install", "LA + surrounding"])
@@ -206,7 +206,7 @@ class SiteContent(Base):
     header_nav_items: List[Dict[str, Any]] = Field(default_factory=lambda: [
         {"id": "nav-services", "label": "Services", "href": "/services", "visible": True, "new_tab": False},
         {"id": "nav-backdrops", "label": "Backdrops", "href": "/backdrops", "visible": True, "new_tab": False},
-        {"id": "nav-gallery", "label": "Gallery", "href": "/gallery", "visible": True, "new_tab": False},
+        {"id": "nav-gallery", "label": "Portfolio", "href": "/portfolio", "visible": True, "new_tab": False},
         {"id": "nav-about", "label": "About", "href": "/about", "visible": True, "new_tab": False},
         {"id": "nav-testimonials", "label": "Testimonials", "href": "/testimonials", "visible": True, "new_tab": False},
         {"id": "nav-blog", "label": "Blog", "href": "/blog", "visible": True, "new_tab": False},

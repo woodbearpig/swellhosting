@@ -58,7 +58,8 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/services" element={<ServicesPage />} />
                   <Route path="/services/:slug" element={<ServiceDetailPage />} />
-                  <Route path="/gallery" element={<GalleryPage />} />
+                  <Route path="/portfolio" element={<GalleryPage />} />
+                  <Route path="/gallery" element={<Navigate to="/portfolio" replace />} />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/testimonials" element={<TestimonialsPage />} />
                   <Route path="/leave-a-review" element={<LeaveReviewPage />} />
@@ -84,7 +85,8 @@ function App() {
                   <Route path="consultations" element={<AdminConsultations />} />
                   <Route path="services" element={<AdminServices />} />
                   <Route path="backdrops" element={<AdminBackdrops />} />
-                  <Route path="gallery" element={<AdminGallery />} />
+                  <Route path="portfolio" element={<AdminGallery />} />
+                  <Route path="gallery" element={<Navigate to="/admin/portfolio" replace />} />
                   <Route path="testimonials" element={<AdminTestimonials />} />
                   <Route path="faqs" element={<AdminFAQs />} />
                   <Route path="blog" element={<AdminBlog />} />

@@ -5,7 +5,7 @@ export const NotFoundPage = () => (
     <p className="font-script text-5xl text-[color:var(--brand-sage-deep)]">oh no</p>
     <h1 className="font-serif text-4xl mt-2">We couldn't find that page.</h1>
     <p className="text-[color:var(--brand-text-muted)] mt-3">The link may be broken, or the page may have moved.</p>
-    <div className="mt-6 flex items-center justify-center gap-3"><Link to="/" className="btn-primary">Back home</Link><Link to="/gallery" className="btn-secondary">Browse the gallery</Link></div>
+    <div className="mt-6 flex items-center justify-center gap-3"><Link to="/" className="btn-primary">Back home</Link><Link to="/portfolio" className="btn-secondary">Browse the gallery</Link></div>
   </div>
 );
 

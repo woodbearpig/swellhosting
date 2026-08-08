@@ -231,6 +231,38 @@ async def _startup():
         except Exception as e:
             logger.warning("Backdrops nav upsert failed: %s", e)
 
+        # Rename any legacy "/gallery" URLs → "/portfolio" (folder path polish). Safe & idempotent.
+        # Updates header_nav_items[].href/label AND hero_secondary_cta_href in-place.
+        try:
+            sc = await db.site_content.find_one(
+                {"id": "site_content_singleton"},
+                {"_id": 0, "header_nav_items": 1, "hero_secondary_cta_href": 1},
+            ) or {}
+            update = {}
+            nav = list(sc.get("header_nav_items") or [])
+            changed = False
+            for it in nav:
+                if not isinstance(it, dict):
+                    continue
+                if it.get("href") == "/gallery":
+                    it["href"] = "/portfolio"
+                    changed = True
+                if it.get("id") == "nav-gallery" and it.get("label") == "Gallery":
+                    it["label"] = "Portfolio"
+                    changed = True
+            if changed:
+                update["header_nav_items"] = nav
+            if sc.get("hero_secondary_cta_href") == "/gallery":
+                update["hero_secondary_cta_href"] = "/portfolio"
+            if update:
+                await db.site_content.update_one(
+                    {"id": "site_content_singleton"},
+                    {"$set": update},
+                )
+                logger.info("Renamed legacy /gallery references to /portfolio")
+        except Exception as e:
+            logger.warning("/gallery -> /portfolio rename failed: %s", e)
+
         # Seed default Reply Templates on first boot (idempotent — only inserts if collection is empty).
         try:
             existing_count = await db.reply_templates.count_documents({})

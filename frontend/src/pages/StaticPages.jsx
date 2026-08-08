@@ -33,7 +33,7 @@ export const AboutPage = () => {
           {showCtas && (
             <div className="mt-6 flex flex-wrap gap-3" data-testid="about-ctas-block">
               <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
-              <Link to="/gallery" className="btn-secondary">See the work</Link>
+              <Link to="/portfolio" className="btn-secondary">See the work</Link>
             </div>
           )}
         </div>

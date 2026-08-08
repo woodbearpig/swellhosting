@@ -60,7 +60,7 @@ export const Footer = () => {
             <p className="eyebrow mb-3">Explore</p>
             <ul className="space-y-2 text-sm">
               <li><Link to="/services" className="link-underline">Services</Link></li>
-              <li><Link to="/gallery" className="link-underline">Gallery</Link></li>
+              <li><Link to="/portfolio" className="link-underline">Gallery</Link></li>
               <li><Link to="/about" className="link-underline">About</Link></li>
               <li><Link to="/blog" className="link-underline">Blog</Link></li>
               <li><Link to="/faq" className="link-underline">FAQ</Link></li>

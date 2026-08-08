@@ -179,7 +179,7 @@ const RecentWorkPreview = memo(function RecentWorkPreview() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-[color:var(--brand-text-muted)]">These 6 images show in the “Recent Work” strip on your homepage. Feature or unfeature portfolio items below — or manage the full portfolio for reordering, titles, and categories.</p>
-        <Link to="/admin/gallery" className="btn-secondary !h-8 text-xs" data-testid="admin-home-portfolio-link">Manage full portfolio <ExternalLink className="h-3.5 w-3.5" /></Link>
+        <Link to="/admin/portfolio" className="btn-secondary !h-8 text-xs" data-testid="admin-home-portfolio-link">Manage full portfolio <ExternalLink className="h-3.5 w-3.5" /></Link>
       </div>
 
       {loading && <p className="text-sm text-[color:var(--brand-text-muted)]">Loading portfolio…</p>}
@@ -218,7 +218,7 @@ const RecentWorkPreview = memo(function RecentWorkPreview() {
                 ))}
               </div>
               {notFeatured.length > 16 && (
-                <p className="text-xs text-[color:var(--brand-text-muted)]">… and {notFeatured.length - 16} more — <Link to="/admin/gallery" className="link-underline">manage all in portfolio</Link>.</p>
+                <p className="text-xs text-[color:var(--brand-text-muted)]">… and {notFeatured.length - 16} more — <Link to="/admin/portfolio" className="link-underline">manage all in portfolio</Link>.</p>
               )}
             </>
           )}
