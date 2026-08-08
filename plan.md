@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V6)
+# plan.md — swell design + media (V7)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -27,6 +27,9 @@
 - Improve perceived UX:
   - Eliminate “flash of full site” when **Coming Soon mode** is enabled
   - Keep admin editing pages **fast and focused** (avoid mega-page lag)
+
+**New/updated objective (current milestone)**
+- Ensure the **Admin Site Content editing experience is fast** (no keystroke lag) while preserving save correctness.
 
 ---
 
@@ -265,7 +268,7 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 **Key architecture**
 - `_shared.jsx` exports `useSiteAdminData()`:
-  - Fetches `/api/site-content` on mount
+  - Reuses `site` from SiteContext (avoids re-fetch on every mount)
   - Edits local snapshot
   - Saves via `PUT /api/admin/site-content`
   - Calls SiteContext `refresh()` after save
@@ -321,7 +324,36 @@ All items were implemented and validated (curl + browser automation screenshots)
   - `iteration_13.json` (initial refactor verification)
   - `iteration_14.json` (CSS overlap fixed; bulk delete flagged due to confirm-dialog)
   - `iteration_15.json` (bulk delete modal fix verified)
-- Final outcome: **100% pass** across all critical and medium tests.
+
+---
+
+### Phase N (P0) — Admin Site Content keystroke lag elimination (COMPLETED ✅)
+**Goal:** Make all Site Content admin pages responsive while typing, without breaking save behavior.
+
+**Problem**
+- Even after splitting the monolithic site-content page, typing into admin text fields was still laggy.
+- Root causes:
+  - `useSiteAdminData` re-fetching or re-seeding causing avoidable renders on mount.
+  - Updating one giant `data` object on every keystroke caused page-wide reconciliation.
+
+**Completed work**
+1. **Introduced locally-controlled inputs** in `frontend/src/pages/admin/site/_shared.jsx`:
+   - `TextField` and `TextArea` maintain local state while typing.
+   - Only commit to global state via `onCommit` (on blur).
+2. **Converted all 7 site-content admin pages** to use `TextField`/`TextArea`:
+   - Home, About, Brand, Header/Nav, Social & Contact, Footer, Coming Soon.
+3. **Hardened save logic** in `_shared.jsx`:
+   - Refactored `save()` to read from a `dataRef` (avoids React anti-pattern: async side-effects inside a `setState` updater).
+
+**Testing**
+- `/app/test_reports/iteration_16.json`
+  - Keystroke responsiveness: **1–41ms per character**
+  - Save-on-blur verified
+  - Data persistence after refresh verified
+  - Toggles and dropdowns verified
+
+**Outcome**
+- Admin content editing is now fast and usable for real client workflows.
 
 ---
 
@@ -334,6 +366,7 @@ All items were implemented and validated (curl + browser automation screenshots)
   - Rich editor saves HTML and public blog detail renders correctly
   - Blog gallery shows correct tile layout, filtering, and featured behavior
   - Admin refactor: new routes + sidebar + save flows + media bulk actions + Instagram caching
+  - **Admin lag fix verification:** iteration 16 confirms performance + persistence
 - Test reports remain in `/app/test_reports/`.
 
 ---
@@ -360,6 +393,7 @@ cd /var/www/swell && ./deploy.sh
   - Curate the public Blog gallery with **tags** and **featured** tiles.
   - Manage the homepage “Recent Work” images via Portfolio featured toggles.
   - Configure homepage Instagram feed text + count, with server-side caching for traffic spikes.
+  - **Edit site content in admin with no keystroke lag** while preserving correct save behavior.
 - Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
 
