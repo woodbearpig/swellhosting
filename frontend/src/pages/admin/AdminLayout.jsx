@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
+import ScrollToTop from '@/components/ScrollToTop';
 
 const groups = [
   {
@@ -61,17 +62,6 @@ const AdminLayout = () => {
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  // Reset scroll and force page re-mount on every admin route change.
-  // Using `key={location.pathname}` on the Outlet wrapper guarantees that
-  // the previously-mounted admin page unmounts (releasing any stale local
-  // state) and the new one mounts fresh — this defends against the rare
-  // "URL updated but content unchanged" symptom reported in Chrome after
-  // editing a field then navigating without saving.
-  useEffect(() => {
-    // Scroll main content region to top on route change (nice UX)
-    try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* noop */ }
-  }, [location.pathname]);
-
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   if (!user) return <Navigate to="/admin/login" replace />;
 
@@ -79,6 +69,7 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-[color:var(--brand-cream)] dark:bg-[#141312] text-[color:var(--brand-text)] dark:text-[#F4EFE8]">
+      <ScrollToTop />
       {/* Mobile top bar */}
       <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-[color:var(--brand-border)] bg-white/90 backdrop-blur">
         <button onClick={() => setOpen(true)} className="h-9 w-9 rounded-full inline-flex items-center justify-center border border-[color:var(--brand-border)]" data-testid="admin-sidebar-toggle"><Menu className="h-4 w-4" /></button>

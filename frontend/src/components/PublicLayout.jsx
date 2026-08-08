@@ -4,6 +4,7 @@ import { Footer } from '@/components/Footer';
 import { Toaster } from 'sonner';
 import { useSite } from '@/context/SiteContext';
 import ComingSoonPage from '@/pages/ComingSoonPage';
+import ScrollToTop from '@/components/ScrollToTop';
 
 /**
  * Neutral cream splash shown before the site content JSON is loaded.
@@ -40,6 +41,7 @@ const PublicLayout = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[color:var(--brand-cream)] dark:bg-[color:#141312] text-[color:var(--brand-text)] dark:text-[color:#F4EFE8]">
+      <ScrollToTop />
       <Header />
       <main className="flex-1">
         <Outlet />
