@@ -10,7 +10,7 @@ import io
 
 BASE_URL = "https://balloon-decor-cms.preview.emergentagent.com/api"
 ADMIN_EMAIL = "admin@swelldesignla.com"
-ADMIN_PASSWORD = "swell2025"
+ADMIN_PASSWORD = "Testing9!"
 
 class TestRunner:
     def __init__(self):
@@ -540,8 +540,217 @@ def main():
         print(f"  ✓ /api/auth/login working")
 
     # =========================================================
+    # NEW FEATURES: Reply Templates, Backdrops kind field, Hero Colors
+    # =========================================================
+    
+    def test_reply_templates_crud():
+        """Reply templates CRUD endpoints work correctly"""
+        runner.login()
+        
+        # GET - list templates (should have 4 seeded)
+        print(f"  → GET /api/admin/reply-templates")
+        r = requests.get(f"{BASE_URL}/admin/reply-templates", headers=runner.headers())
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        templates = r.json()
+        print(f"  → Found {len(templates)} templates")
+        assert len(templates) >= 4, f"Expected at least 4 seeded templates, got {len(templates)}"
+        print(f"  ✓ GET reply-templates works, seed data present")
+        
+        # POST - create new template
+        new_template = {
+            "name": "Test Template",
+            "subject": "Test Subject {first_name}",
+            "body": "Hi {client_name}, this is a test template for {event_type}."
+        }
+        print(f"  → POST /api/admin/reply-templates")
+        r2 = requests.post(f"{BASE_URL}/admin/reply-templates", json=new_template, headers=runner.headers())
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        
+        created = r2.json()
+        assert "id" in created, "Should return id"
+        assert created["name"] == "Test Template", "Name mismatch"
+        template_id = created["id"]
+        print(f"  ✓ POST reply-templates works, created: {template_id}")
+        
+        # PUT - update template
+        update = {"name": "Updated Test Template", "subject": "Updated Subject"}
+        print(f"  → PUT /api/admin/reply-templates/{template_id}")
+        r3 = requests.put(f"{BASE_URL}/admin/reply-templates/{template_id}", json=update, headers=runner.headers())
+        print(f"  → Status: {r3.status_code}")
+        assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
+        
+        updated = r3.json()
+        assert updated["name"] == "Updated Test Template", "Name not updated"
+        print(f"  ✓ PUT reply-templates works")
+        
+        # DELETE - remove template
+        print(f"  → DELETE /api/admin/reply-templates/{template_id}")
+        r4 = requests.delete(f"{BASE_URL}/admin/reply-templates/{template_id}", headers=runner.headers())
+        print(f"  → Status: {r4.status_code}")
+        assert r4.status_code == 200, f"Expected 200, got {r4.status_code}"
+        print(f"  ✓ DELETE reply-templates works")
+        
+        # Verify deleted
+        r5 = requests.get(f"{BASE_URL}/admin/reply-templates", headers=runner.headers())
+        templates = r5.json()
+        assert not any(t["id"] == template_id for t in templates), "Template should be deleted"
+        print(f"  ✓ Template successfully deleted")
+    
+    def test_reply_templates_reorder():
+        """Reply templates reorder endpoint works"""
+        runner.login()
+        
+        # Get current templates
+        r = requests.get(f"{BASE_URL}/admin/reply-templates", headers=runner.headers())
+        templates = r.json()
+        
+        if len(templates) < 2:
+            print(f"  ⚠ Skipping reorder test (need at least 2 templates)")
+            return
+        
+        # Reverse order
+        ids = [t["id"] for t in templates]
+        reversed_ids = list(reversed(ids))
+        
+        print(f"  → POST /api/admin/reply-templates/reorder")
+        r2 = requests.post(f"{BASE_URL}/admin/reply-templates/reorder", 
+                          json={"order": reversed_ids}, headers=runner.headers())
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        print(f"  ✓ Reorder endpoint works")
+    
+    def test_backdrops_kind_field():
+        """Backdrops support kind field (backdrop/design)"""
+        runner.login()
+        
+        # Create backdrop
+        backdrop = {
+            "name": "Test Backdrop",
+            "kind": "backdrop",
+            "active": True
+        }
+        print(f"  → POST /api/admin/backdrops (kind=backdrop)")
+        r = requests.post(f"{BASE_URL}/admin/backdrops", json=backdrop, headers=runner.headers())
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        created_backdrop = r.json()
+        assert created_backdrop["kind"] == "backdrop", "Kind should be 'backdrop'"
+        backdrop_id = created_backdrop["id"]
+        print(f"  ✓ Created backdrop with kind='backdrop': {backdrop_id}")
+        
+        # Create design
+        design = {
+            "name": "Test Design",
+            "kind": "design",
+            "active": True
+        }
+        print(f"  → POST /api/admin/backdrops (kind=design)")
+        r2 = requests.post(f"{BASE_URL}/admin/backdrops", json=design, headers=runner.headers())
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        
+        created_design = r2.json()
+        assert created_design["kind"] == "design", "Kind should be 'design'"
+        design_id = created_design["id"]
+        print(f"  ✓ Created backdrop with kind='design': {design_id}")
+        
+        # Test public filter by kind
+        print(f"  → GET /api/backdrops?kind=design")
+        r3 = requests.get(f"{BASE_URL}/backdrops", params={"kind": "design"})
+        print(f"  → Status: {r3.status_code}")
+        assert r3.status_code == 200, f"Expected 200, got {r3.status_code}"
+        
+        designs = r3.json()
+        print(f"  → Found {len(designs)} designs")
+        assert any(d["id"] == design_id for d in designs), "Should find our test design"
+        assert all(d.get("kind", "backdrop") == "design" for d in designs), "All should be designs"
+        print(f"  ✓ Public filter by kind=design works")
+        
+        # Test filter by kind=backdrop
+        print(f"  → GET /api/backdrops?kind=backdrop")
+        r4 = requests.get(f"{BASE_URL}/backdrops", params={"kind": "backdrop"})
+        backdrops = r4.json()
+        print(f"  → Found {len(backdrops)} backdrops")
+        assert any(b["id"] == backdrop_id for b in backdrops), "Should find our test backdrop"
+        print(f"  ✓ Public filter by kind=backdrop works")
+        
+        # Clean up
+        requests.delete(f"{BASE_URL}/admin/backdrops/{backdrop_id}", headers=runner.headers())
+        requests.delete(f"{BASE_URL}/admin/backdrops/{design_id}", headers=runner.headers())
+        print(f"  ✓ Cleaned up test data")
+    
+    def test_hero_color_fields():
+        """Site content accepts and persists 7 new hero color fields"""
+        runner.login()
+        
+        # Get current site content
+        r = requests.get(f"{BASE_URL}/site-content")
+        site = r.json()
+        
+        # Verify all 7 hero color fields exist and default to empty string
+        color_fields = [
+            "hero_headline_color",
+            "hero_subhead_color",
+            "hero_eyebrow_color",
+            "hero_primary_btn_bg",
+            "hero_primary_btn_text",
+            "hero_secondary_btn_bg",
+            "hero_secondary_btn_text"
+        ]
+        
+        print(f"  → Checking hero color fields in site-content")
+        for field in color_fields:
+            assert field in site, f"Missing field: {field}"
+            print(f"  → {field}: '{site[field]}'")
+        print(f"  ✓ All 7 hero color fields present")
+        
+        # Update with test colors
+        test_colors = {
+            "hero_headline_color": "#FFF3E0",
+            "hero_subhead_color": "#E0F2F1",
+            "hero_eyebrow_color": "#FCE4EC",
+            "hero_primary_btn_bg": "#4CAF50",
+            "hero_primary_btn_text": "#FFFFFF",
+            "hero_secondary_btn_bg": "#FF9800",
+            "hero_secondary_btn_text": "#000000"
+        }
+        
+        print(f"  → PUT /api/admin/site-content with hero colors")
+        r2 = requests.put(f"{BASE_URL}/admin/site-content", json=test_colors, headers=runner.headers())
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        
+        # Verify colors persisted
+        r3 = requests.get(f"{BASE_URL}/site-content")
+        updated_site = r3.json()
+        
+        for field, expected_value in test_colors.items():
+            actual_value = updated_site.get(field)
+            assert actual_value == expected_value, f"{field}: expected {expected_value}, got {actual_value}"
+            print(f"  → {field}: {actual_value} ✓")
+        
+        print(f"  ✓ All hero color fields persisted correctly")
+        
+        # Reset to empty strings
+        reset_colors = {field: "" for field in color_fields}
+        requests.put(f"{BASE_URL}/admin/site-content", json=reset_colors, headers=runner.headers())
+        print(f"  ✓ Reset hero colors to defaults")
+
+    # =========================================================
     # Run all tests
     # =========================================================
+    
+    print("\n" + "="*60)
+    print("NEW FEATURES: Reply Templates, Backdrops Kind, Hero Colors")
+    print("="*60)
+    runner.test("Reply templates CRUD endpoints work", test_reply_templates_crud)
+    runner.test("Reply templates reorder works", test_reply_templates_reorder)
+    runner.test("Backdrops support kind field (backdrop/design)", test_backdrops_kind_field)
+    runner.test("Hero color fields in site-content", test_hero_color_fields)
     
     print("\n" + "="*60)
     print("FEATURE H: Google Calendar Polish")

@@ -1,30 +1,26 @@
 [
   {
-    "content": "Backend: Add `kind` field to Backdrop model + update nav label to 'Backdrops & Designs' + add home_designs_* SiteContent fields",
+    "content": "Run esbuild to detect any compilation errors from interrupted edits",
+    "status": "completed"
+  },
+  {
+    "content": "Fix compile errors in Backdrops/Designs & Reply Template files (added missing ReplyTemplatesCard in AdminSettings)",
+    "status": "completed"
+  },
+  {
+    "content": "Diagnose & fix admin sidebar navigation bug (defensive: key={pathname} on Outlet wrapper + scroll-to-top)",
+    "status": "completed"
+  },
+  {
+    "content": "Add hero text color customization (headline, subhead, buttons) in Admin Home settings",
+    "status": "completed"
+  },
+  {
+    "content": "Take screenshots to visually verify Backdrops/Designs split, Reply Templates, admin nav fix, and hero color controls",
+    "status": "completed"
+  },
+  {
+    "content": "Run testing_agent_v3 for both backend + frontend regression coverage",
     "status": "in_progress"
-  },
-  {
-    "content": "Backend: Add ReplyTemplate model + CRUD endpoints + startup seed of 4 default templates",
-    "status": "pending"
-  },
-  {
-    "content": "Admin UI: Update AdminBackdrops with Kind selector + tabs, rename sidebar to 'Backdrops & Designs'",
-    "status": "pending"
-  },
-  {
-    "content": "Admin UI: Split 'Backdrops picker' inquiry field into two field types (Backdrops picker + Designs picker) with kind filtering",
-    "status": "pending"
-  },
-  {
-    "content": "Admin UI: Add Reply Templates card to Settings + 'Reply with…' dropdown on Inquiry detail page + quick action on Inquiries list",
-    "status": "pending"
-  },
-  {
-    "content": "Public UI: /backdrops page — two clearly labeled sections back-to-back; HomePage split into Backdrops + Designs sections",
-    "status": "pending"
-  },
-  {
-    "content": "Verify with testing agent",
-    "status": "pending"
   }
 ]

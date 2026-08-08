@@ -66,6 +66,17 @@ class SiteContent(Base):
     hero_badges_active: bool = True
     hero_badges: List[str] = Field(default_factory=lambda: ["Fully custom", "On-site install", "LA + surrounding"])
 
+    # Hero text & button color overrides (applies to BOTH layout modes).
+    # Empty string = use theme defaults (Full-bleed defaults to cream, Split uses standard body text color).
+    # These are especially useful in Full-bleed mode where the background photo can clash with default text colors.
+    hero_headline_color: str = ""      # e.g. "#F7EFE1" (cream) or "#111111" (dark)
+    hero_subhead_color: str = ""
+    hero_eyebrow_color: str = ""
+    hero_primary_btn_bg: str = ""      # background of primary CTA button
+    hero_primary_btn_text: str = ""    # text/label color of primary CTA
+    hero_secondary_btn_bg: str = ""    # background of secondary CTA (transparent-ish by default in fullbleed)
+    hero_secondary_btn_text: str = ""  # text/label color of secondary CTA
+
     # About
     about_short: str = "A boutique LA-based studio designing dreamy, custom event installations — from intimate showers to weddings and brand launches."
     about_full: str = "swell design + media is a boutique event styling studio based in Los Angeles. We specialize in custom balloon installations, thoughtful florals, and full-service event decor for weddings, birthdays, baby & bridal showers, corporate gatherings, grand openings, and holiday celebrations. Every design is made just for you — no cookie-cutter kits, no rushing. Just a calm, collaborative process from first inquiry to the moment your guests walk in."

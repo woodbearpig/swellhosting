@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import {
   KeyRound, Save, User as UserIcon, Mail, Eye, EyeOff,
   Send, Info, CheckCircle2, XCircle, Copy, ExternalLink,
+  MessageSquare, Plus, Trash2, X, ArrowUp, ArrowDown, HelpCircle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -405,6 +406,183 @@ BUSINESS_EMAIL=info@swelldesignla.com`}</pre>
   );
 };
 
+/**
+ * ReplyTemplatesCard — CRUD for saved email reply templates that appear in
+ * the "Reply with…" dropdown on every inquiry row and detail page. Supports
+ * simple {placeholder} substitution: {client_name}, {first_name}, {event_type},
+ * {event_date}, {guest_count}, {venue}, {business_name}.
+ */
+const PLACEHOLDER_LIST = [
+  { token: '{first_name}', desc: "The client's first name" },
+  { token: '{client_name}', desc: "The client's full name" },
+  { token: '{event_type}', desc: 'Wedding, birthday, corporate, etc.' },
+  { token: '{event_date}', desc: 'The requested event date' },
+  { token: '{guest_count}', desc: 'Estimated guest count' },
+  { token: '{venue}', desc: 'The venue name' },
+  { token: '{business_name}', desc: 'Your studio name' },
+];
+
+const ReplyTemplatesCard = () => {
+  const [items, setItems] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/admin/reply-templates');
+      setItems(data || []);
+    } catch {
+      toast.error('Failed to load templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!editing?.name?.trim() || !editing?.subject?.trim()) {
+      toast.error('Name and subject are required'); return;
+    }
+    try {
+      if (editing.id) await api.put(`/admin/reply-templates/${editing.id}`, editing);
+      else await api.post('/admin/reply-templates', { ...editing, order: items.length });
+      toast.success('Template saved');
+      setEditing(null);
+      load();
+    } catch { toast.error('Save failed'); }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm('Delete this template? This cannot be undone.')) return;
+    try {
+      await api.delete(`/admin/reply-templates/${id}`);
+      toast.success('Template deleted'); load();
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const move = async (idx, delta) => {
+    const next = [...items];
+    const j = idx + delta;
+    if (j < 0 || j >= next.length) return;
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setItems(next);
+    try { await api.post('/admin/reply-templates/reorder', { order: next.map(t => t.id) }); }
+    catch { toast.error('Reorder failed'); load(); }
+  };
+
+  return (
+    <div className="card-cream p-6" data-testid="admin-reply-templates-card">
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-[color:var(--brand-sage-deep)]" />
+          <p className="font-serif text-xl">Quick reply templates</p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary text-sm"
+          onClick={() => setEditing({ name: '', subject: '', body: '' })}
+          data-testid="admin-reply-template-new"
+        >
+          <Plus className="h-3.5 w-3.5" /> New template
+        </button>
+      </div>
+      <p className="text-sm text-[color:var(--brand-text-muted)] mb-4">
+        Pre-written replies for common inquiry responses. Selecting one from the "Reply with…" dropdown on an inquiry
+        opens Gmail with your email pre-filled — so you can review, personalize, and send from your regular inbox.
+        <button type="button" onClick={() => setShowHelp(s => !s)} className="ml-1 link-underline inline-flex items-center gap-1 text-xs">
+          <HelpCircle className="h-3 w-3" /> {showHelp ? 'Hide placeholders' : 'What placeholders can I use?'}
+        </button>
+      </p>
+
+      {showHelp && (
+        <div className="mb-4 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-surface-2)] p-3">
+          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Type these placeholders anywhere in the subject or body — they'll be swapped for the actual inquiry details when you click "Reply".</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+            {PLACEHOLDER_LIST.map(p => (
+              <div key={p.token} className="flex items-baseline gap-2">
+                <code className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-white border border-[color:var(--brand-border)] whitespace-nowrap">{p.token}</code>
+                <span className="text-[color:var(--brand-text-muted)]">{p.desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-[color:var(--brand-text-muted)] italic py-6 text-center">Loading templates…</p>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[color:var(--brand-border)] p-6 text-center">
+          <MessageSquare className="h-6 w-6 mx-auto text-[color:var(--brand-text-muted)] mb-2" />
+          <p className="text-sm font-medium">No reply templates yet</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Create a few common replies (like "Thanks for reaching out!" or "Here's the proposal") to speed up your inbox.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-[color:var(--brand-border)]">
+          {items.map((t, idx) => (
+            <div key={t.id} className="py-3 flex items-start justify-between gap-3" data-testid={`admin-reply-template-row-${t.id}`}>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm">{t.name}</p>
+                <p className="text-xs text-[color:var(--brand-text-muted)] truncate">{t.subject}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(idx, +1)} disabled={idx === items.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                <button className="btn-secondary text-xs" onClick={() => setEditing(t)} data-testid={`admin-reply-template-edit-${t.id}`}>Edit</button>
+                <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => remove(t.id)} aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editing && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+          <div className="bg-[color:var(--brand-cream)] w-full max-w-2xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="admin-reply-template-editor">
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-serif text-2xl">{editing.id ? 'Edit' : 'New'} reply template</p>
+              <button onClick={() => setEditing(null)} aria-label="Close"><X /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="eyebrow block mb-1">TEMPLATE NAME <span className="text-red-500">*</span></label>
+                <input className="input-cream" placeholder="e.g. Thanks — proposal coming soon" value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} data-testid="admin-reply-template-name" />
+                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Only shown to you in the reply dropdown.</p>
+              </div>
+              <div>
+                <label className="eyebrow block mb-1">EMAIL SUBJECT <span className="text-red-500">*</span></label>
+                <input className="input-cream" placeholder="e.g. Thanks for reaching out about your {event_type}" value={editing.subject || ''} onChange={e => setEditing({ ...editing, subject: e.target.value })} data-testid="admin-reply-template-subject" />
+              </div>
+              <div>
+                <label className="eyebrow block mb-1">EMAIL BODY</label>
+                <textarea
+                  className="input-cream textarea-cream font-mono text-sm"
+                  rows={12}
+                  value={editing.body || ''}
+                  onChange={e => setEditing({ ...editing, body: e.target.value })}
+                  placeholder={`Hi {first_name},\n\nThank you for your interest in swell design + media for your {event_type} on {event_date}! I've reviewed your request and I'd love to chat more.\n\nI'll put together a custom proposal and send it your way within the next 24 hours.\n\nWarmly,\nSam`}
+                  data-testid="admin-reply-template-body"
+                />
+                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">
+                  Use placeholders like <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">{'{first_name}'}</code>{' '}
+                  and <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">{'{event_date}'}</code> — they'll be filled in automatically.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setEditing(null)} className="btn-secondary">Cancel</button>
+              <button onClick={save} className="btn-primary" data-testid="admin-reply-template-save"><Save className="h-4 w-4" /> Save template</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
 export const AdminSettings = () => {
   const [subs, setSubs] = useState([]);
   useEffect(() => { api.get('/admin/newsletter').then(r => setSubs(r.data)); }, []);
@@ -418,6 +596,8 @@ export const AdminSettings = () => {
       <BookingRulesCard />
 
       <SmtpEmailCard />
+
+      <ReplyTemplatesCard />
 
       <div className="card-cream p-6">
         <p className="font-serif text-xl mb-2">Newsletter subscribers ({subs.length})</p>

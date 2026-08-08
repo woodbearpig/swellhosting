@@ -246,7 +246,17 @@ const heroFadeIn = {
   transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
 };
 
-const SplitHero = ({ site }) => (
+const SplitHero = ({ site }) => {
+  const headlineStyle = site?.hero_headline_color ? { color: site.hero_headline_color } : undefined;
+  const subheadStyle = site?.hero_subhead_color ? { color: site.hero_subhead_color } : undefined;
+  const eyebrowStyle = site?.hero_eyebrow_color ? { color: site.hero_eyebrow_color } : undefined;
+  const primaryBtnStyle = (site?.hero_primary_btn_bg || site?.hero_primary_btn_text)
+    ? { backgroundColor: site.hero_primary_btn_bg || undefined, color: site.hero_primary_btn_text || undefined, borderColor: site.hero_primary_btn_bg || undefined }
+    : undefined;
+  const secondaryBtnStyle = (site?.hero_secondary_btn_bg || site?.hero_secondary_btn_text)
+    ? { backgroundColor: site.hero_secondary_btn_bg || undefined, color: site.hero_secondary_btn_text || undefined, borderColor: site.hero_secondary_btn_text || undefined }
+    : undefined;
+  return (
   <section className="relative overflow-hidden" data-testid="home-hero-section">
     <div className="hero-wash absolute inset-0 -z-10" aria-hidden />
     <div className="watercolor-noise absolute inset-0 -z-10 opacity-60" aria-hidden />
@@ -255,18 +265,18 @@ const SplitHero = ({ site }) => (
 
     <div className="container-narrow pt-14 pb-16 sm:pt-20 sm:pb-24 lg:pt-24 lg:pb-32 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
       <motion.div className="lg:col-span-7" {...heroFadeIn}>
-        <div className="eyebrow mb-4">{site?.hero_eyebrow || 'LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING'}</div>
-        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em]">
+        <div className="eyebrow mb-4" style={eyebrowStyle}>{site?.hero_eyebrow || 'LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING'}</div>
+        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em]" style={headlineStyle}>
           {site?.hero_headline || 'Dreamy balloon installations for celebrations that feel like you.'}
         </h1>
-        <p className="mt-5 text-base sm:text-lg text-[color:var(--brand-text-muted)] max-w-xl leading-relaxed">
+        <p className="mt-5 text-base sm:text-lg text-[color:var(--brand-text-muted)] max-w-xl leading-relaxed" style={subheadStyle}>
           {site?.hero_subhead || 'Custom design, thoughtful details, and a calm process — from inquiry to install.'}
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" data-testid="home-hero-primary-cta">
+          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
             {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link to={site?.hero_secondary_cta_href || '/gallery'} className="btn-secondary" data-testid="home-hero-secondary-cta">
+          <Link to={site?.hero_secondary_cta_href || '/gallery'} className="btn-secondary" style={secondaryBtnStyle} data-testid="home-hero-secondary-cta">
             {site?.hero_secondary_cta_label || 'View the gallery'}
           </Link>
         </div>
@@ -289,11 +299,22 @@ const SplitHero = ({ site }) => (
       </motion.div>
     </div>
   </section>
-);
+  );
+};
 
 const FullBleedHero = ({ site }) => {
   const bgUrl = site?.hero_background_image_url || site?.hero_image_url || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
   const overlay = Math.max(0, Math.min(1, site?.hero_overlay_intensity ?? 0.45));
+  const cream = 'var(--brand-cream)';
+  const headlineStyle = { color: site?.hero_headline_color || cream };
+  const subheadStyle = { color: site?.hero_subhead_color || cream };
+  const eyebrowStyle = { color: site?.hero_eyebrow_color || 'inherit', letterSpacing: '0.2em' };
+  const primaryBtnStyle = (site?.hero_primary_btn_bg || site?.hero_primary_btn_text)
+    ? { backgroundColor: site.hero_primary_btn_bg || undefined, color: site.hero_primary_btn_text || undefined, borderColor: site.hero_primary_btn_bg || undefined }
+    : undefined;
+  const secondaryBtnStyle = (site?.hero_secondary_btn_bg || site?.hero_secondary_btn_text)
+    ? { backgroundColor: site.hero_secondary_btn_bg || undefined, color: site.hero_secondary_btn_text || undefined, borderColor: (site.hero_secondary_btn_text || 'rgba(255,255,255,0.6)') }
+    : undefined;
   return (
     <section
       className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] flex items-center justify-center text-center bg-neutral-900"
@@ -315,25 +336,26 @@ const FullBleedHero = ({ site }) => {
       />
       <motion.div {...heroFadeIn} className="relative z-10 container-narrow px-6 py-24 sm:py-32 text-[color:var(--brand-cream)]">
         {site?.hero_eyebrow && (
-          <div className="eyebrow mb-4 opacity-90" style={{ color: 'inherit', letterSpacing: '0.2em' }}>
+          <div className="eyebrow mb-4 opacity-90" style={eyebrowStyle}>
             {site.hero_eyebrow}
           </div>
         )}
-        <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.02em] max-w-4xl mx-auto drop-shadow-md">
+        <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.02em] max-w-4xl mx-auto drop-shadow-md" style={headlineStyle}>
           {site?.hero_headline || 'Where your vision comes to life.'}
         </h1>
         {site?.hero_subhead && (
-          <p className="mt-5 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto opacity-95 drop-shadow-sm">
+          <p className="mt-5 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto opacity-95 drop-shadow-sm" style={subheadStyle}>
             {site.hero_subhead}
           </p>
         )}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" data-testid="home-hero-primary-cta">
+          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
             {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             to={site?.hero_secondary_cta_href || '/gallery'}
             className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
+            style={secondaryBtnStyle}
             data-testid="home-hero-secondary-cta"
           >
             {site?.hero_secondary_cta_label || 'View the gallery'}

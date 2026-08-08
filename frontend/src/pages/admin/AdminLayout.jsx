@@ -1,5 +1,5 @@
-import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { NavLink, Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
@@ -58,7 +58,19 @@ const groups = [
 const AdminLayout = () => {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  // Reset scroll and force page re-mount on every admin route change.
+  // Using `key={location.pathname}` on the Outlet wrapper guarantees that
+  // the previously-mounted admin page unmounts (releasing any stale local
+  // state) and the new one mounts fresh — this defends against the rare
+  // "URL updated but content unchanged" symptom reported in Chrome after
+  // editing a field then navigating without saving.
+  useEffect(() => {
+    // Scroll main content region to top on route change (nice UX)
+    try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch { /* noop */ }
+  }, [location.pathname]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   if (!user) return <Navigate to="/admin/login" replace />;
@@ -88,7 +100,7 @@ const AdminLayout = () => {
                 {g.items.map(item => {
                   const Icon = item.icon;
                   return (
-                    <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isActive ? 'bg-white text-[color:var(--brand-sage-deep)] font-medium shadow-sm' : 'text-[color:var(--brand-text)] hover:bg-white/60'}`} data-testid={`admin-nav-${item.label.toLowerCase().replace(' ', '-')}`}>
+                    <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isActive ? 'bg-white text-[color:var(--brand-sage-deep)] font-medium shadow-sm' : 'text-[color:var(--brand-text)] hover:bg-white/60'}`} data-testid={`admin-nav-${item.label.toLowerCase().replace(/&/g, 'and').replace(/\s+/g, '-')}`}>
                       <Icon className="h-4 w-4" /> {item.label}
                     </NavLink>
                   );
@@ -101,8 +113,8 @@ const AdminLayout = () => {
           </nav>
         </aside>
 
-        {/* Content */}
-        <main className="flex-1 min-w-0 p-5 sm:p-8 lg:p-10">
+        {/* Content — key forces a clean remount on every admin route change */}
+        <main className="flex-1 min-w-0 p-5 sm:p-8 lg:p-10" key={location.pathname}>
           <Outlet />
         </main>
       </div>

@@ -27,6 +27,131 @@ const EyebrowTitleSubtitleRow = memo(function EyebrowTitleSubtitleRow({ prefix, 
   );
 });
 
+/**
+ * ColorSwatchField — hex color input with a live native color picker and
+ * a "Reset" button that clears the override back to the theme default.
+ * Uses local state so typing hex doesn't stutter; commits on blur or change.
+ */
+const ColorSwatchField = memo(function ColorSwatchField({ label, hint, value, onChange, testId }) {
+  const [local, setLocal] = useState(value || '');
+  useEffect(() => { setLocal(value || ''); }, [value]);
+  const isValidHex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(local);
+  const displayColor = isValidHex ? local : (value && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : '#ffffff');
+  return (
+    <div>
+      <label className="eyebrow block mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <label
+          className="relative h-9 w-9 rounded-lg border border-[color:var(--brand-border)] shrink-0 cursor-pointer overflow-hidden"
+          style={{ backgroundColor: value ? displayColor : 'transparent', backgroundImage: value ? 'none' : 'repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 12px 12px' }}
+          title={value ? 'Change color' : 'No color set — using theme default'}
+        >
+          <input
+            type="color"
+            value={displayColor}
+            onChange={e => { setLocal(e.target.value); onChange(e.target.value); }}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            data-testid={testId ? `${testId}-picker` : undefined}
+          />
+        </label>
+        <input
+          type="text"
+          value={local}
+          onChange={e => setLocal(e.target.value)}
+          onBlur={() => { if (local !== (value || '')) onChange(local); }}
+          placeholder="#111111 or leave blank for default"
+          className="input-cream !h-9 flex-1 font-mono text-sm"
+          data-testid={testId ? `${testId}-text` : undefined}
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => { setLocal(''); onChange(''); }}
+            className="text-xs px-2 py-1 rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] shrink-0"
+            title="Clear override (use theme default)"
+            data-testid={testId ? `${testId}-reset` : undefined}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      {hint && <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">{hint}</p>}
+    </div>
+  );
+});
+
+/**
+ * HeroColorsPanel — collapsible group of color pickers for headline, subhead,
+ * eyebrow, and both CTA buttons. Empty values mean "use theme default" — this
+ * is important for owners who don't want to touch these controls.
+ */
+const HeroColorsPanel = memo(function HeroColorsPanel({ data, set }) {
+  const [open, setOpen] = useState(false);
+  const mode = data.hero_layout_mode || 'split';
+  return (
+    <div className="border-t border-[color:var(--brand-border)] pt-4">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between text-left group"
+        data-testid="admin-hero-colors-toggle"
+      >
+        <div>
+          <p className="eyebrow">HERO TEXT &amp; BUTTON COLORS</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
+            {mode === 'full_bleed'
+              ? 'Tune contrast for the photo background — pick a headline color that pops against your hero image.'
+              : 'Optional overrides for the split hero. Leave blank to use the brand theme colors.'}
+          </p>
+        </div>
+        <span className="text-sm text-[color:var(--brand-sage-deep)] group-hover:underline shrink-0 ml-3">{open ? 'Hide' : 'Customize colors'}</span>
+      </button>
+      {open && (
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ColorSwatchField
+              label="HEADLINE COLOR"
+              value={data.hero_headline_color || ''}
+              onChange={v => set({ hero_headline_color: v })}
+              testId="admin-hero-headline-color"
+              hint={mode === 'full_bleed' ? 'Default: cream on the darkened photo.' : 'Default: brand dark text.'}
+            />
+            <ColorSwatchField
+              label="SUBHEAD COLOR"
+              value={data.hero_subhead_color || ''}
+              onChange={v => set({ hero_subhead_color: v })}
+              testId="admin-hero-subhead-color"
+            />
+            <ColorSwatchField
+              label="EYEBROW COLOR"
+              value={data.hero_eyebrow_color || ''}
+              onChange={v => set({ hero_eyebrow_color: v })}
+              testId="admin-hero-eyebrow-color"
+              hint="The small UPPERCASE label above the headline."
+            />
+          </div>
+          <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)]">
+            <p className="eyebrow mb-2">PRIMARY BUTTON</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ColorSwatchField label="BACKGROUND" value={data.hero_primary_btn_bg || ''} onChange={v => set({ hero_primary_btn_bg: v })} testId="admin-hero-primary-btn-bg" />
+              <ColorSwatchField label="TEXT COLOR" value={data.hero_primary_btn_text || ''} onChange={v => set({ hero_primary_btn_text: v })} testId="admin-hero-primary-btn-text" />
+            </div>
+          </div>
+          <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)]">
+            <p className="eyebrow mb-2">SECONDARY BUTTON</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ColorSwatchField label="BACKGROUND" value={data.hero_secondary_btn_bg || ''} onChange={v => set({ hero_secondary_btn_bg: v })} testId="admin-hero-secondary-btn-bg" hint={mode === 'full_bleed' ? 'Default: translucent white overlay.' : undefined} />
+              <ColorSwatchField label="TEXT COLOR" value={data.hero_secondary_btn_text || ''} onChange={v => set({ hero_secondary_btn_text: v })} testId="admin-hero-secondary-btn-text" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+
+
 // Inline "Recent Work" portfolio preview — shows featured gallery items with quick feature/unfeature.
 // memo() prevents re-fetching whenever the parent's `data` object changes.
 const RecentWorkPreview = memo(function RecentWorkPreview() {
@@ -195,6 +320,8 @@ const AdminHomePage = () => {
           <div><label className="eyebrow block mb-1">SECONDARY CTA LABEL</label><TextField value={data.hero_secondary_cta_label || ''} onCommit={v => set({ hero_secondary_cta_label: v })} /></div>
           <div><label className="eyebrow block mb-1">SECONDARY CTA LINK</label><TextField value={data.hero_secondary_cta_href || ''} onCommit={v => set({ hero_secondary_cta_href: v })} /></div>
         </div>
+
+        <HeroColorsPanel data={data} set={set} />
 
         <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
