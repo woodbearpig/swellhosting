@@ -13,10 +13,10 @@
   },
   {
     "content": "Refactor public GalleryPage.jsx to read categories from useSite()",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "Verify compile, restart backend, screenshot the admin + public flow",
-    "status": "pending"
+    "status": "completed"
   }
 ]
