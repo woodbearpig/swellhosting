@@ -159,6 +159,23 @@ class SiteContent(Base):
     home_faq_eyebrow: str = "COMMON QUESTIONS"
     home_faq_title: str = "Good things to know"
 
+    # Value Pillars — a Canva-style narrative section for the homepage.
+    # Left column: a large italic-accent headline + a tagline. The headline
+    # supports **word emphasis** by wrapping words in asterisks: use *word*
+    # for italic-serif accents (matches the client's Canva reference layout).
+    # Right column: a repeatable list of short essays (title + longer body).
+    #
+    # Defaults are inspired by the client's own Canva site copy so she has
+    # meaningful placeholder content the moment she enables the section.
+    home_pillars_active: bool = False
+    home_pillars_eyebrow: str = "OUR PROMISE"
+    home_pillars_headline: str = "We create *long-lasting pieces* that make a difference"
+    home_pillars_tagline: str = "We take pride in our products."
+    home_pillars_items: List[Dict[str, str]] = Field(default_factory=lambda: [
+        {"title": "Sustainable and Durable", "body": "Our designs are able to last for up to 4 weeks if left indoors. It is important to us at swell design + media that you get the most use you can out of our designs."},
+        {"title": "Taking your stress away", "body": "Party planning, designing and decorating can be overwhelming. Let us take the reins for you. By providing us with a few details of what you have in mind, we are able to bring your vision to life."},
+    ])
+
     # Home process timeline (editable list)
     home_process_steps: List[Dict[str, str]] = Field(default_factory=lambda: [
         {"title": "Inquiry", "description": "Tell us about your event via our smart form."},

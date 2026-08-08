@@ -228,6 +228,134 @@ const RecentWorkPreview = memo(function RecentWorkPreview() {
   );
 });
 
+/**
+ * ValuePillarsCard — dedicated editor for the Canva-style "Value pillars"
+ * homepage section. Gives the owner a large multi-line textarea for each
+ * pillar body (this is the main friction point on the generic teaser card,
+ * which only had short subtitle inputs).
+ *
+ * Layout mirrors the public output: eyebrow / big headline / tagline on the
+ * left, an ordered repeatable list of {title, body} on the right. The headline
+ * hint calls out the *asterisk-emphasis* trick so the owner can recreate her
+ * "long-lasting pieces" italic accent without any code knowledge.
+ */
+const ValuePillarsCard = memo(function ValuePillarsCard({ data, set }) {
+  const items = Array.isArray(data.home_pillars_items) ? data.home_pillars_items : [];
+  const active = !!data.home_pillars_active;
+
+  const updateItem = (idx, patch) => {
+    const next = items.map((it, i) => (i === idx ? { ...it, ...patch } : it));
+    set({ home_pillars_items: next });
+  };
+  const addItem = () => set({ home_pillars_items: [...items, { title: 'New pillar', body: '' }] });
+  const removeItem = (idx) => set({ home_pillars_items: items.filter((_, i) => i !== idx) });
+  const swapItems = (a, b) => {
+    if (a < 0 || b < 0 || a >= items.length || b >= items.length) return;
+    const next = [...items];
+    [next[a], next[b]] = [next[b], next[a]];
+    set({ home_pillars_items: next });
+  };
+
+  return (
+    <div className={`card-cream p-6 space-y-5 ${active ? '' : 'opacity-70'}`} data-testid="admin-home-pillars-card">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="font-serif text-xl">Value pillars (narrative section)</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-0.5 max-w-2xl">
+            A magazine-style block for the homepage: one big italic-accent headline on the left, and long-form value blocks on the right.
+            {!active && ' Turn it on above to make this section appear on your homepage.'}
+          </p>
+        </div>
+        {!active && (
+          <span className="text-xs px-2.5 py-1 rounded-full bg-[color:var(--brand-surface-2)] text-[color:var(--brand-text-muted)]">Currently hidden on public site</span>
+        )}
+      </div>
+
+      <div>
+        <label className="eyebrow block mb-1">EYEBROW (small uppercase label above headline)</label>
+        <TextField
+          value={data.home_pillars_eyebrow || ''}
+          onCommit={v => set({ home_pillars_eyebrow: v })}
+          placeholder="e.g. OUR PROMISE"
+          data-testid="admin-home-pillars-eyebrow"
+        />
+      </div>
+
+      <div>
+        <label className="eyebrow block mb-1">HEADLINE (left column)</label>
+        <TextArea
+          rows={3}
+          value={data.home_pillars_headline || ''}
+          onCommit={v => set({ home_pillars_headline: v })}
+          placeholder="e.g. We create *long-lasting pieces* that make a difference"
+          data-testid="admin-home-pillars-headline"
+        />
+        <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">
+          <b>Tip:</b> wrap any words in <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">*asterisks*</code> to render them in italic serif (matches the accent style in your Canva reference).
+        </p>
+      </div>
+
+      <div>
+        <label className="eyebrow block mb-1">TAGLINE (small line under headline — optional)</label>
+        <TextField
+          value={data.home_pillars_tagline || ''}
+          onCommit={v => set({ home_pillars_tagline: v })}
+          placeholder="e.g. We take pride in our products."
+          data-testid="admin-home-pillars-tagline"
+        />
+      </div>
+
+      <div className="border-t border-[color:var(--brand-border)] pt-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <p className="eyebrow">PILLARS (right column)</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Each pillar has a short title and a longer paragraph. Add as many as you like.</p>
+          </div>
+          <button type="button" className="btn-secondary !h-8 text-xs" onClick={addItem} data-testid="admin-home-pillar-add">
+            <Plus className="h-3.5 w-3.5" /> Add pillar
+          </button>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[color:var(--brand-border)] p-6 text-center">
+            <p className="text-sm font-medium">No pillars yet</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Add your first pillar to describe what makes your work special.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {items.map((it, idx) => (
+              <div key={idx} className="card-cream p-4 space-y-3" data-testid={`admin-home-pillar-${idx}`}>
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium shrink-0">{idx + 1}</div>
+                  <TextField
+                    className="!h-9 flex-1 font-serif text-base"
+                    value={it.title || ''}
+                    onCommit={v => updateItem(idx, { title: v })}
+                    placeholder="Pillar title (e.g. Sustainable and Durable)"
+                    data-testid={`admin-home-pillar-title-${idx}`}
+                  />
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swapItems(idx - 1, idx)} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === items.length - 1} onClick={() => swapItems(idx, idx + 1)} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => removeItem(idx)} aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+                <TextArea
+                  rows={5}
+                  value={it.body || ''}
+                  onCommit={v => updateItem(idx, { body: v })}
+                  placeholder="A longer paragraph describing this pillar. Feel free to be descriptive — this section is designed for meaningful copy."
+                  data-testid={`admin-home-pillar-body-${idx}`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+
+
 const AdminHomePage = () => {
   const { data, set, save, saving, dirty } = useSiteAdminData();
   if (!data) return <p>Loading…</p>;
@@ -343,8 +471,9 @@ const AdminHomePage = () => {
 
       <SectionCard title="Section visibility" subtitle="Toggle any full section on or off.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ToggleRow label="Value pillars (narrative)" hint="Big italic-accent headline + long-form value blocks. See section below." checked={!!data.home_pillars_active} onChange={v => set({ home_pillars_active: v })} />
           <ToggleRow label="Services grid" hint="Six services on the home page." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
-          <ToggleRow label="Recent Work preview" hint="Portfolio strip linking to /gallery." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
+          <ToggleRow label="Recent Work preview" hint="Portfolio strip linking to /portfolio." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
           <ToggleRow label="Instagram feed" hint="Live IG posts strip." checked={data.home_instagram_active !== false} onChange={v => set({ home_instagram_active: v })} />
           <ToggleRow label="Process timeline" hint="Numbered step boxes." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
           <ToggleRow label="Testimonials" hint="Client reviews." checked={data.home_testimonials_active !== false} onChange={v => set({ home_testimonials_active: v })} />
@@ -355,7 +484,9 @@ const AdminHomePage = () => {
         </div>
       </SectionCard>
 
-      <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid.">
+      <ValuePillarsCard data={data} set={set} />
+
+      <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid. Turn this off in Section visibility if you're using Value pillars instead.">
         <EyebrowTitleSubtitleRow prefix="home_services" data={data} set={set} />
       </SectionCard>
 

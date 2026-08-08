@@ -78,6 +78,11 @@ const HomePage = () => {
         </motion.section>
       )}
 
+      {/* VALUE PILLARS — Canva-style narrative section (italic accent headline + long-form value blocks) */}
+      {site?.home_pillars_active && (
+        <ValuePillars site={site} />
+      )}
+
       {/* SERVICES */}
       {site?.home_services_active !== false && (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-services-section">
@@ -377,3 +382,86 @@ const HeroBadges = ({ site }) => {
     </div>
   );
 };
+
+/**
+ * ValuePillars — Canva-style narrative section for the homepage.
+ *
+ * Layout: two-column on desktop. LEFT is a large italic-serif headline (with
+ * *asterisk-wrapped* words italicized for accent) + a small tagline underneath.
+ * RIGHT is a repeatable list of value pillars (title + longer body copy). The
+ * long body copy is the key affordance the client asked for — she wants to be
+ * able to write meaningful paragraphs about her craft here.
+ *
+ * The headline supports lightweight markdown: any word wrapped in *single
+ * asterisks* renders in an italic font-serif style — great for the "long-lasting
+ * pieces" phrasing on the client's Canva reference.
+ */
+const renderHeadlineWithItalicAccents = (text) => {
+  if (!text) return null;
+  // Split on *word* patterns while keeping the delimiters
+  const parts = text.split(/(\*[^*]+\*)/g);
+  return parts.map((chunk, i) => {
+    if (chunk.startsWith('*') && chunk.endsWith('*') && chunk.length > 2) {
+      return (
+        <span key={i} className="italic" style={{ fontStyle: 'italic' }}>
+          {chunk.slice(1, -1)}
+        </span>
+      );
+    }
+    return <span key={i}>{chunk}</span>;
+  });
+};
+
+const ValuePillars = ({ site }) => {
+  const items = Array.isArray(site?.home_pillars_items) ? site.home_pillars_items : [];
+  return (
+    <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28" data-testid="home-pillars-section">
+      <div className="container-narrow">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+          <motion.div {...fadeInUp} className="lg:col-span-6">
+            {(site?.home_pillars_eyebrow || '').trim() && (
+              <p className="eyebrow mb-4" data-testid="home-pillars-eyebrow">{site.home_pillars_eyebrow}</p>
+            )}
+            <h2
+              className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.015em]"
+              data-testid="home-pillars-headline"
+            >
+              {renderHeadlineWithItalicAccents(site?.home_pillars_headline || '')}
+            </h2>
+            {(site?.home_pillars_tagline || '').trim() && (
+              <p
+                className="mt-6 text-base sm:text-lg text-[color:var(--brand-text-muted)] max-w-md"
+                data-testid="home-pillars-tagline"
+              >
+                {site.home_pillars_tagline}
+              </p>
+            )}
+          </motion.div>
+
+          <div className="lg:col-span-6 space-y-8 sm:space-y-10" data-testid="home-pillars-items">
+            {items.length === 0 ? (
+              <p className="text-sm text-[color:var(--brand-text-muted)] italic">Add value pillars in the admin.</p>
+            ) : (
+              items.map((it, i) => (
+                <motion.div
+                  key={i}
+                  {...fadeInUp}
+                  transition={{ duration: 0.6, delay: 0.05 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                  data-testid={`home-pillar-item-${i}`}
+                >
+                  <h3 className="font-serif text-2xl sm:text-3xl leading-tight" data-testid={`home-pillar-title-${i}`}>
+                    {it.title}
+                  </h3>
+                  <p className="mt-3 text-base sm:text-[17px] leading-relaxed text-[color:var(--brand-text-muted)] whitespace-pre-line" data-testid={`home-pillar-body-${i}`}>
+                    {it.body}
+                  </p>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
