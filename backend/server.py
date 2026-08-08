@@ -231,6 +231,54 @@ async def me(admin=Depends(require_admin)):
     return user
 
 
+@api.post("/admin/auth/verify-password")
+async def verify_current_password(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Diagnostic endpoint: check whether a given password matches the logged-in admin's
+    stored hash — without changing anything. Returns detailed non-sensitive telemetry
+    (length received, whether the field arrived, whether the user was found) so we can
+    debug 'current password is incorrect' issues from a live browser.
+    """
+    raw = payload.get("current_password")
+    received_type = type(raw).__name__
+    current_password = raw if isinstance(raw, str) else ""
+
+    user = await db.admin_users.find_one({"id": admin["sub"]}, {"_id": 0})
+    diag = {
+        "received_field": raw is not None,
+        "received_type": received_type,
+        "received_length": len(current_password),
+        "received_trimmed_length": len(current_password.strip()),
+        "has_leading_or_trailing_whitespace": current_password != current_password.strip(),
+        "admin_sub": admin.get("sub"),
+        "admin_found": user is not None,
+        "stored_email": user["email"] if user else None,
+    }
+
+    if not user:
+        diag["match"] = False
+        diag["reason"] = "admin_not_found_for_token_sub"
+        logger.warning("verify-password: admin not found for token sub=%s", admin.get("sub"))
+        return diag
+
+    if not current_password:
+        diag["match"] = False
+        diag["reason"] = "empty_password_field"
+        return diag
+
+    match_as_is = verify_password(current_password, user["password_hash"])
+    match_trimmed = verify_password(current_password.strip(), user["password_hash"]) if not match_as_is else True
+    diag["match"] = bool(match_as_is)
+    diag["match_after_trim"] = bool(match_trimmed)
+    if not match_as_is:
+        # No password material logged — only fingerprints.
+        logger.warning(
+            "verify-password: mismatch for admin sub=%s email=%s len=%d trimmed_len=%d ws=%s",
+            admin.get("sub"), user["email"], len(current_password),
+            len(current_password.strip()), current_password != current_password.strip(),
+        )
+    return diag
+
+
 @api.post("/admin/auth/change-credentials")
 async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admin)):
     """Allow the logged-in admin to change their email/password/name.
@@ -246,6 +294,11 @@ async def change_credentials(payload: Dict[str, Any], admin=Depends(require_admi
     if not user:
         raise HTTPException(status_code=404, detail="Admin not found")
     if not verify_password(current_password, user["password_hash"]):
+        # Log a non-sensitive fingerprint so we can debug remote issues later.
+        logger.warning(
+            "change-credentials: current-password mismatch for admin sub=%s email=%s len=%d",
+            admin.get("sub"), user["email"], len(current_password),
+        )
         raise HTTPException(status_code=401, detail="Current password is incorrect")
 
     updates: Dict[str, Any] = {}

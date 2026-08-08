@@ -47,6 +47,8 @@ const ChangeCredentialsCard = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [verifyResult, setVerifyResult] = useState(null); // { ok, diag }
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -54,6 +56,23 @@ const ChangeCredentialsCard = () => {
       setNewName(user.name || '');
     }
   }, [user]);
+
+  const runVerify = async () => {
+    setVerifyResult(null);
+    if (!currentPassword) { toast.error('Type your current password first, then click Test.'); return; }
+    setVerifying(true);
+    try {
+      const { data } = await api.post('/admin/auth/verify-password', { current_password: currentPassword });
+      setVerifyResult(data);
+      if (data.match) toast.success("Current password verified — it's correct.");
+      else if (data.match_after_trim) toast.error('Password matches only after trimming whitespace. Check for accidental leading/trailing spaces.');
+      else toast.error('Password does NOT match the stored hash. See the diagnostic panel below.');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Verify request failed');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -154,14 +173,56 @@ const ChangeCredentialsCard = () => {
 
       <div className="border-t border-[color:var(--brand-border)] pt-4">
         <label className="eyebrow block mb-1">CURRENT PASSWORD (REQUIRED)</label>
-        <PasswordField
-          value={currentPassword}
-          onChange={e => setCurrentPassword(e.target.value)}
-          placeholder="Verify it's you"
-          autoComplete="current-password"
-          required
-          testId="admin-credentials-current-password"
-        />
+        <div className="flex items-stretch gap-2">
+          <div className="flex-1">
+            <PasswordField
+              value={currentPassword}
+              onChange={e => { setCurrentPassword(e.target.value); setVerifyResult(null); }}
+              placeholder="Verify it's you"
+              autoComplete="current-password"
+              required
+              testId="admin-credentials-current-password"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={runVerify}
+            disabled={verifying || !currentPassword}
+            className="btn-secondary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Check whether this password matches your stored hash — nothing is saved."
+            data-testid="admin-credentials-test-button"
+          >
+            {verifying ? 'Testing…' : 'Test'}
+          </button>
+        </div>
+        {verifyResult && (
+          <div
+            className={`mt-2 p-3 rounded-lg text-xs ${
+              verifyResult.match
+                ? 'bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]'
+                : 'bg-[color:var(--brand-blush-tint)] text-[color:var(--brand-text)]'
+            }`}
+            data-testid="admin-credentials-verify-result"
+          >
+            <p className="font-medium mb-1">
+              {verifyResult.match ? '✓ Password matches.' : '✗ Password does not match.'}
+            </p>
+            <ul className="space-y-0.5 leading-relaxed">
+              <li>Characters received by server: <strong>{verifyResult.received_length}</strong></li>
+              {verifyResult.has_leading_or_trailing_whitespace && (
+                <li className="text-[color:var(--brand-coral)] font-medium">⚠ Contains leading/trailing whitespace ({verifyResult.received_trimmed_length} chars after trim)</li>
+              )}
+              <li>Admin account found: <strong>{verifyResult.admin_found ? 'yes' : 'no'}</strong></li>
+              {verifyResult.stored_email && <li>Stored email: <strong>{verifyResult.stored_email}</strong></li>}
+              {!verifyResult.match && verifyResult.match_after_trim && (
+                <li className="text-[color:var(--brand-coral)] font-medium">→ Matches after trim — a whitespace character is being included.</li>
+              )}
+              {!verifyResult.match && !verifyResult.match_after_trim && verifyResult.admin_found && (
+                <li>→ The characters you typed do not match the hash stored for <strong>{verifyResult.stored_email}</strong>. If you're certain the password is right, the stored hash may have drifted (see recovery tip below).</li>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
