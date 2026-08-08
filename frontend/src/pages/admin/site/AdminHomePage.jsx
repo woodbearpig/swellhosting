@@ -472,7 +472,7 @@ const AdminHomePage = () => {
       <SectionCard title="Section visibility" subtitle="Toggle any full section on or off.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ToggleRow label="Value pillars (narrative)" hint="Big italic-accent headline + long-form value blocks. See section below." checked={!!data.home_pillars_active} onChange={v => set({ home_pillars_active: v })} />
-          <ToggleRow label="Services grid" hint="Six services on the home page." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
+          <ToggleRow label="Services grid (home section)" hint="The 6-service grid on the home page only. Toggle it off to hide the ‘What we do (Services teaser)’ block below." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
           <ToggleRow label="Recent Work preview" hint="Portfolio strip linking to /portfolio." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
           <ToggleRow label="Instagram feed" hint="Live IG posts strip." checked={data.home_instagram_active !== false} onChange={v => set({ home_instagram_active: v })} />
           <ToggleRow label="Process timeline" hint="Numbered step boxes." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
@@ -482,13 +482,34 @@ const AdminHomePage = () => {
           <ToggleRow label="FAQ preview" hint="Common questions with link to full FAQ." checked={data.home_faq_active !== false} onChange={v => set({ home_faq_active: v })} />
           <ToggleRow label="Final call-to-action" hint="Closing card near the footer." checked={data.home_final_cta_active !== false} onChange={v => set({ home_final_cta_active: v })} />
         </div>
+        <div className="mt-4 pt-4 border-t border-[color:var(--brand-border)]">
+          <p className="eyebrow mb-2">SITE-WIDE</p>
+          <ToggleRow
+            label="Services page (whole site)"
+            hint="Governs the standalone /services page and the ‘Services’ item in the header & footer nav. Turn OFF to hide services entirely site-wide — your section text and services list are preserved for whenever you're ready."
+            checked={data.services_page_active !== false}
+            onChange={v => set({ services_page_active: v })}
+          />
+        </div>
       </SectionCard>
 
       <ValuePillarsCard data={data} set={set} />
 
-      <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid. Turn this off in Section visibility if you're using Value pillars instead.">
-        <EyebrowTitleSubtitleRow prefix="home_services" data={data} set={set} />
-      </SectionCard>
+      {data.home_services_active !== false ? (
+        <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid on the home page.">
+          <EyebrowTitleSubtitleRow prefix="home_services" data={data} set={set} />
+        </SectionCard>
+      ) : (
+        <div className="card-cream p-6 opacity-60" data-testid="admin-services-teaser-hidden">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-serif text-lg">What we do (Services teaser)</p>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[color:var(--brand-surface-2)] text-[color:var(--brand-text-muted)]">Currently hidden</span>
+          </div>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">
+            The Services grid is turned off in Section visibility above, so this editor is hidden. Turn the toggle back on to edit these fields.
+          </p>
+        </div>
+      )}
 
       <SectionCard title="Recent Work" subtitle="Eyebrow, title, subtitle — plus which portfolio items appear.">
         <EyebrowTitleSubtitleRow prefix="home_gallery" data={data} set={set} />

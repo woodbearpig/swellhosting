@@ -42,6 +42,21 @@ import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminPalettes from '@/pages/admin/AdminPalettes';
 import AdminInquiryForm from '@/pages/admin/AdminInquiryForm';
 import AdminMedia from '@/pages/admin/AdminMedia';
+import { useSite } from '@/context/SiteContext';
+
+/**
+ * ServicesGuard — wraps the /services and /services/:slug routes so that
+ * they redirect to the home page when the owner has disabled the Services
+ * page globally in Admin → Home page → Section visibility. Keeps their config
+ * intact; flipping the toggle back on immediately restores the URLs.
+ */
+const ServicesGuard = ({ children }) => {
+  const { site } = useSite();
+  if (site && site.services_page_active === false) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
 
 function App() {
   return (
@@ -56,8 +71,8 @@ function App() {
                 {/* Public routes */}
                 <Route element={<PublicLayout />}>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/services" element={<ServicesPage />} />
-                  <Route path="/services/:slug" element={<ServiceDetailPage />} />
+                  <Route path="/services" element={<ServicesGuard><ServicesPage /></ServicesGuard>} />
+                  <Route path="/services/:slug" element={<ServicesGuard><ServiceDetailPage /></ServicesGuard>} />
                   <Route path="/portfolio" element={<GalleryPage />} />
                   <Route path="/gallery" element={<Navigate to="/portfolio" replace />} />
                   <Route path="/about" element={<AboutPage />} />

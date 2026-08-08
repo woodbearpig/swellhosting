@@ -195,6 +195,15 @@ class SiteContent(Base):
     home_faq_active: bool = True
     home_final_cta_active: bool = True
 
+    # Services page — governs whether the standalone /services PAGE is enabled
+    # site-wide. When false: (1) the "Services" nav item is hidden from header &
+    # footer, (2) /services and /services/:slug redirect to the home page.
+    # This is separate from `home_services_active` which only controls the
+    # services grid *on the homepage*. Owners can turn the whole services
+    # experience off (e.g. while they figure out their pricing) without losing
+    # their configuration.
+    services_page_active: bool = True
+
     # Home Instagram feed (editable labels + post count)
     home_instagram_eyebrow: str = "LATEST FROM INSTAGRAM"
     home_instagram_title: str = "Follow along"
