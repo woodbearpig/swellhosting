@@ -17,10 +17,10 @@
   },
   {
     "content": "Add editable Open Graph + Twitter share tags (og:title/description/image, twitter card) — admin fields + injected on load",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "Compile check + testing_agent verification",
-    "status": "pending"
+    "status": "completed"
   }
 ]
