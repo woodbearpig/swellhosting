@@ -83,6 +83,14 @@ class SiteContent(Base):
     about_image_url: str = "https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85"
     designer_name: str = "Meet the designer"
     designer_bio: str = "Hi, I'm the heart behind swell design + media. I fell in love with balloons after decorating my daughter's first birthday — and haven't stopped since. I care deeply about the small details that make an event feel unmistakably you."
+    # Optional overrides for the homepage "Meet the designer" section. Any
+    # blank value falls back to a sensible default in the template.
+    designer_eyebrow: str = "MEET THE DESIGNER"
+    designer_image_url: str = ""  # Falls back to about_image_url when empty
+    designer_cta_primary_label: str = "Start your inquiry"
+    designer_cta_primary_href: str = "/inquire"
+    designer_cta_secondary_label: str = "Read the story"
+    designer_cta_secondary_href: str = "/about"
 
     # Promo
     promo_active: bool = True

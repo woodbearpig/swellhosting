@@ -591,6 +591,84 @@ const AdminHomePage = () => {
         </div>
       </SectionCard>
 
+      <SectionCard title="Meet the designer" subtitle="The bio block on the homepage with photo + call-to-action buttons.">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-1">
+            <label className="eyebrow block mb-1">PHOTO</label>
+            <div className="rounded-xl overflow-hidden aspect-[5/6] bg-[color:var(--brand-surface-2)] mb-2 border border-[color:var(--brand-border)]">
+              {(data.designer_image_url || data.about_image_url) ? (
+                <img src={publicUrl(data.designer_image_url || data.about_image_url)} alt="designer preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-[color:var(--brand-text-muted)]">No photo yet</div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="btn-secondary text-xs cursor-pointer">
+                Upload
+                <input type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ designer_image_url: r.url }); } }} />
+              </label>
+              <MediaPickerButton testId="designer-image-picker" onSelect={url => set({ designer_image_url: url })} />
+              {data.designer_image_url && (
+                <button
+                  type="button"
+                  className="text-xs px-2 py-1 rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)]"
+                  onClick={() => set({ designer_image_url: '' })}
+                  title="Clear this photo and fall back to the About page image"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Optional. If left blank, the photo from Admin → About page is used automatically.</p>
+          </div>
+
+          <div className="lg:col-span-2 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="eyebrow block mb-1">EYEBROW</label>
+                <TextField value={data.designer_eyebrow || ''} onCommit={v => set({ designer_eyebrow: v })} placeholder="MEET THE DESIGNER" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="eyebrow block mb-1">NAME / HEADLINE</label>
+                <TextField value={data.designer_name || ''} onCommit={v => set({ designer_name: v })} placeholder="Meet the designer" />
+              </div>
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">BIO</label>
+              <TextArea
+                rows={5}
+                value={data.designer_bio || ''}
+                onCommit={v => set({ designer_bio: v })}
+                placeholder="A short paragraph about you and your craft."
+              />
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines preserved as paragraph breaks.</p>
+            </div>
+            <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)]">
+              <p className="eyebrow mb-2">CALL-TO-ACTION BUTTONS</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs block mb-1 text-[color:var(--brand-text-muted)]">Primary button label</label>
+                  <TextField value={data.designer_cta_primary_label || ''} onCommit={v => set({ designer_cta_primary_label: v })} placeholder="Start your inquiry" />
+                </div>
+                <div>
+                  <label className="text-xs block mb-1 text-[color:var(--brand-text-muted)]">Primary button link</label>
+                  <TextField value={data.designer_cta_primary_href || ''} onCommit={v => set({ designer_cta_primary_href: v })} placeholder="/inquire" />
+                </div>
+                <div>
+                  <label className="text-xs block mb-1 text-[color:var(--brand-text-muted)]">Secondary button label</label>
+                  <TextField value={data.designer_cta_secondary_label || ''} onCommit={v => set({ designer_cta_secondary_label: v })} placeholder="Read the story" />
+                </div>
+                <div>
+                  <label className="text-xs block mb-1 text-[color:var(--brand-text-muted)]">Secondary button link</label>
+                  <TextField value={data.designer_cta_secondary_href || ''} onCommit={v => set({ designer_cta_secondary_href: v })} placeholder="/about" />
+                </div>
+              </div>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Leave a label blank to hide that button.</p>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
       <SectionCard title="Promo banner" subtitle="Optional highlight bar on the homepage.">
         <label className="flex items-center gap-2"><input type="checkbox" checked={!!data.promo_active} onChange={e => set({ promo_active: e.target.checked })} /> Show promo banner on homepage</label>
         <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.promo_title || ''} onCommit={v => set({ promo_title: v })} /></div>

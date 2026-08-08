@@ -187,15 +187,29 @@ const HomePage = () => {
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-designer-section">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <motion.div {...fadeInUp} className="rounded-[2rem] overflow-hidden aspect-[5/6] bg-[color:var(--brand-surface-2)] lift-shadow">
-            <img src={site?.about_image_url || 'https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Meet the designer" className="h-full w-full object-cover" />
+            <img
+              src={publicUrl(site?.designer_image_url || site?.about_image_url) || 'https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'}
+              alt={site?.designer_name || 'Meet the designer'}
+              className="h-full w-full object-cover"
+            />
           </motion.div>
           <motion.div {...fadeInUp}>
-            <div className="eyebrow mb-3">MEET THE DESIGNER</div>
+            {(site?.designer_eyebrow || 'MEET THE DESIGNER').trim() && (
+              <div className="eyebrow mb-3">{site?.designer_eyebrow || 'MEET THE DESIGNER'}</div>
+            )}
             <h2 className="font-serif text-3xl sm:text-4xl leading-[1.1] mb-4">{site?.designer_name || 'Meet the designer'}</h2>
-            <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed">{site?.designer_bio}</p>
+            <p className="text-base sm:text-lg text-[color:var(--brand-text-muted)] leading-relaxed whitespace-pre-line">{site?.designer_bio}</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/about" className="btn-secondary">Read the story</Link>
-              <Link to="/inquire" className="btn-primary"><Calendar className="h-4 w-4" /> Start your inquiry</Link>
+              {(site?.designer_cta_secondary_label || '').trim() && (
+                <Link to={site?.designer_cta_secondary_href || '/about'} className="btn-secondary" data-testid="home-designer-secondary-cta">
+                  {site?.designer_cta_secondary_label}
+                </Link>
+              )}
+              {(site?.designer_cta_primary_label || '').trim() && (
+                <Link to={site?.designer_cta_primary_href || '/inquire'} className="btn-primary" data-testid="home-designer-primary-cta">
+                  <Calendar className="h-4 w-4" /> {site?.designer_cta_primary_label}
+                </Link>
+              )}
             </div>
           </motion.div>
         </div>
