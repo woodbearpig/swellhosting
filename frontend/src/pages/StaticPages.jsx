@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
+import { Star, MessageSquarePlus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { SectionHeader } from '@/components/SectionEyebrow';
 import { useSite } from '@/context/SiteContext';
+import { TestimonialCard } from '@/pages/BackdropsAndReviews';
 
 export const AboutPage = () => {
   const { site } = useSite();
@@ -46,18 +47,19 @@ export const TestimonialsPage = () => {
   useEffect(() => { api.get('/testimonials').then(r => setItems(r.data)); }, []);
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="testimonials-page">
-      <SectionHeader eyebrow="TESTIMONIALS" title="What people are saying" subtitle="A few kind notes from clients we're grateful to have styled for." />
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {items.map((t) => (
-          <motion.figure key={t.id} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="card-cream p-6" data-testid="testimonial-card">
-            <div className="flex items-center gap-1 text-[color:var(--brand-gold)] mb-2">
-              {Array.from({ length: t.rating }).map((_, i) => (<Star key={i} className="h-4 w-4" fill="currentColor" />))}
-            </div>
-            <blockquote className="font-serif text-lg leading-snug italic">“{t.quote}”</blockquote>
-            <figcaption className="mt-4 text-sm"><span className="font-medium">{t.name}</span>{t.event_type && (<span className="text-[color:var(--brand-text-muted)]"> · {t.event_type}</span>)}</figcaption>
-          </motion.figure>
-        ))}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+        <SectionHeader eyebrow="TESTIMONIALS" title="What people are saying" subtitle="A few kind notes from clients we're grateful to have styled for." />
+        <Link to="/leave-a-review" className="btn-primary self-start" data-testid="testimonials-leave-review-cta">
+          <MessageSquarePlus className="h-4 w-4" /> Share your experience
+        </Link>
       </div>
+      {items.length === 0 ? (
+        <p className="text-center text-[color:var(--brand-text-muted)] py-16">No reviews yet — be the first to <Link to="/leave-a-review" className="link-underline">share yours</Link>.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map((t) => <TestimonialCard key={t.id} t={t} />)}
+        </div>
+      )}
     </div>
   );
 };

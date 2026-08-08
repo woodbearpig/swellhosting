@@ -19,6 +19,7 @@ const initialValueFor = (field) => {
     case 'number': return '';
     case 'links_list': return [''];
     case 'file_upload': return [];
+    case 'backdrops': return [];
     default: return '';
   }
 };
@@ -134,6 +135,55 @@ const FileUploadField = ({ field, value, onChange }) => {
   );
 };
 
+const BackdropsPicker = ({ field, value, onChange }) => {
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    let ok = true;
+    (async () => {
+      try {
+        const r = await api.get('/backdrops');
+        if (ok) setItems(r.data || []);
+      } catch { /* empty */ }
+    })();
+    return () => { ok = false; };
+  }, []);
+  const selected = Array.isArray(value) ? value : [];
+  const toggle = (name) => {
+    if (selected.includes(name)) onChange(selected.filter(n => n !== name));
+    else onChange([...selected, name]);
+  };
+  if (items.length === 0) return <p className="text-sm text-[color:var(--brand-text-muted)] italic">No backdrops posted yet — feel free to skip.</p>;
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" data-testid={`field-${field.id}`}>
+      {items.map(b => {
+        const isSelected = selected.includes(b.name);
+        return (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => toggle(b.name)}
+            className={`text-left rounded-xl overflow-hidden border-2 transition-all ${isSelected ? 'border-[color:var(--brand-sage-deep)] ring-2 ring-[color:var(--brand-sage-tint)]' : 'border-transparent hover:border-[color:var(--brand-border)]'}`}
+            data-testid={`backdrop-option-${b.id}`}
+          >
+            <div className="aspect-[3/4] bg-[color:var(--brand-surface-2)] relative">
+              {b.image_url ? (
+                <img src={publicUrl(b.image_url)} alt={b.name} className="w-full h-full object-cover" />
+              ) : null}
+              {isSelected && (
+                <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-[color:var(--brand-sage-deep)] text-white flex items-center justify-center text-xs">✓</div>
+              )}
+            </div>
+            <div className="p-2">
+              <p className="font-serif text-sm leading-tight">{b.name}</p>
+              {b.subtitle && <p className="text-[10px] text-[color:var(--brand-text-muted)] mt-0.5">{b.subtitle}</p>}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 const renderField = (field, value, onChange) => {
   switch (field.type) {
     case 'chips_single':
@@ -183,6 +233,8 @@ const renderField = (field, value, onChange) => {
       return <LinksListField field={field} value={value} onChange={onChange} />;
     case 'file_upload':
       return <FileUploadField field={field} value={value} onChange={onChange} />;
+    case 'backdrops':
+      return <BackdropsPicker field={field} value={value} onChange={onChange} />;
     case 'section_note':
       return null;
     default:

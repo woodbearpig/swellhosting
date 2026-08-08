@@ -1,34 +1,42 @@
 [
   {
-    "content": "Convert AdminAboutPage.jsx to TextField/TextArea",
+    "content": "Backend: Add Backdrop model, extend Testimonial with status/reviewer_email, extend SiteContent with hero mode + backdrop toggles",
     "status": "completed"
   },
   {
-    "content": "Convert AdminBrandPage.jsx to TextField (keep selects as-is)",
+    "content": "Backend: CRUD endpoints for Backdrops + public review submit + admin approve/reject + email alert",
     "status": "completed"
   },
   {
-    "content": "Convert AdminComingSoonPage.jsx to TextField/TextArea",
+    "content": "Backend: Migration to add /backdrops nav item + default site content fields",
     "status": "completed"
   },
   {
-    "content": "Convert AdminFooterPage.jsx to TextField/TextArea",
+    "content": "Admin UI: Testimonials — add photo upload, pending reviews tab with Approve/Reject",
     "status": "completed"
   },
   {
-    "content": "Convert AdminHeaderNavPage.jsx nav-item inputs to TextField",
+    "content": "Admin UI: New AdminBackdrops page (list/add/edit/reorder/media picker)",
     "status": "completed"
   },
   {
-    "content": "Convert AdminSocialContactPage.jsx to TextField",
+    "content": "Admin UI: Home admin — hero layout mode toggle + hero background upload + backdrops section toggles",
     "status": "completed"
   },
   {
-    "content": "Verify esbuild compiles cleanly",
+    "content": "Admin UI: Inquiry form builder — new field type 'backdrops multi-select' populated from Backdrops catalog",
     "status": "completed"
   },
   {
-    "content": "Run frontend testing agent to validate lag fix + save-on-blur",
+    "content": "Public UI: HomePage — full-bleed hero mode, Backdrops featured section",
     "status": "completed"
+  },
+  {
+    "content": "Public UI: New /backdrops page, updated /testimonials with photos + submit CTA, new /leave-a-review page",
+    "status": "completed"
+  },
+  {
+    "content": "Wire routes in App.js, test end-to-end with testing agent",
+    "status": "in_progress"
   }
 ]

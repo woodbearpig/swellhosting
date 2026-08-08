@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 from models import (
     AdminUser, LoginPayload, TokenResponse,
-    SiteContent, Service, GalleryItem, Testimonial, FAQ, BlogPost,
+    SiteContent, Service, GalleryItem, Testimonial, Backdrop, FAQ, BlogPost,
     Inquiry, Client, Consultation, Availability, NewsletterSubscriber,
     CustomPalette,
 )
@@ -198,6 +198,28 @@ async def _startup():
                 logger.info("Renamed legacy 'Journal' nav item to 'Blog'")
         except Exception as e:
             logger.warning("Journal->Blog nav rename failed: %s", e)
+
+        # Ensure a "Backdrops" nav item exists (idempotent) — inserted right after Services if missing.
+        try:
+            sc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "header_nav_items": 1}) or {}
+            nav = list(sc.get("header_nav_items") or [])
+            has_backdrops = any(isinstance(i, dict) and (i.get("id") == "nav-backdrops" or i.get("href") == "/backdrops") for i in nav)
+            if not has_backdrops:
+                new_item = {"id": "nav-backdrops", "label": "Backdrops", "href": "/backdrops", "visible": True, "new_tab": False}
+                # Insert after Services if present, else at the end
+                insert_at = len(nav)
+                for i, it in enumerate(nav):
+                    if isinstance(it, dict) and (it.get("id") == "nav-services" or it.get("href") == "/services"):
+                        insert_at = i + 1
+                        break
+                nav.insert(insert_at, new_item)
+                await db.site_content.update_one(
+                    {"id": "site_content_singleton"},
+                    {"$set": {"header_nav_items": nav}},
+                )
+                logger.info("Added 'Backdrops' nav item (position %d)", insert_at)
+        except Exception as e:
+            logger.warning("Backdrops nav insert failed: %s", e)
 
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
@@ -935,17 +957,115 @@ async def delete_gallery(gid: str, admin=Depends(require_admin)):
 # =========================================================
 # Testimonials
 # =========================================================
+# Never expose these internal fields on public GET responses.
+_TESTIMONIAL_PUBLIC_PROJECTION = {"_id": 0, "reviewer_email": 0}
+
+
 @api.get("/testimonials")
 async def list_testimonials(featured: Optional[bool] = None):
-    query: Dict[str, Any] = {}
+    """Public list. Only 'approved' rows are ever returned to the public API.
+    reviewer_email is hidden."""
+    query: Dict[str, Any] = {"$or": [{"status": "approved"}, {"status": {"$exists": False}}]}
     if featured is not None:
         query["featured"] = featured
-    docs = await db.testimonials.find(query, {"_id": 0}).sort("order", 1).to_list(500)
+    docs = await db.testimonials.find(query, _TESTIMONIAL_PUBLIC_PROJECTION).sort("order", 1).to_list(500)
     return docs
+
+
+@api.post("/testimonials/submit")
+async def submit_testimonial_public(payload: Dict[str, Any]):
+    """PUBLIC endpoint — anyone can submit. Always lands as 'pending' for moderation.
+    Simple honeypot spam prevention: if `website` (or `nickname`) is filled, silently drop."""
+    if (payload.get("website") or payload.get("nickname") or "").strip():
+        # Silent success so bots don't retry — but nothing hits the DB.
+        logger.info("Testimonial submit: honeypot triggered, dropping silently")
+        return {"ok": True, "queued": True}
+
+    name = (payload.get("name") or "").strip()
+    quote = (payload.get("quote") or "").strip()
+    if not name or not quote:
+        raise HTTPException(status_code=400, detail="Name and review text are required")
+    try:
+        rating = int(payload.get("rating") or 5)
+    except (TypeError, ValueError):
+        rating = 5
+    rating = max(1, min(5, rating))
+
+    obj = Testimonial(
+        name=name[:120],
+        event_type=(payload.get("event_type") or "")[:80],
+        quote=quote[:4000],
+        rating=rating,
+        photo_url=(payload.get("photo_url") or "").strip(),
+        reviewer_email=(payload.get("reviewer_email") or "").strip().lower()[:200],
+        featured=False,
+        status="pending",
+    )
+    await db.testimonials.insert_one(to_doc(obj.model_dump()))
+
+    # Fire admin alert email — non-blocking, best-effort.
+    biz_email = os.environ.get("BUSINESS_EMAIL", "").strip()
+    if biz_email:
+        try:
+            star = "\u2605"
+            middot = " \u00b7 "
+            event_part = (middot + obj.event_type) if obj.event_type else ""
+            email_line = (
+                f'<p style="font-size:13px;color:#5E5A55;">Reviewer email (private): '
+                f'<b>{obj.reviewer_email}</b></p>'
+            ) if obj.reviewer_email else ""
+            body = (
+                '<div style="font-family:Georgia,serif;max-width:520px;margin:24px auto;padding:24px;background:#FBF6EF;border-radius:16px;">'
+                '<h2 style="font-weight:400;">New review submitted &mdash; pending approval</h2>'
+                f'<p style="color:#5E5A55;"><b>{obj.name}</b>{event_part}{middot}{rating}{star}</p>'
+                f'<blockquote style="border-left:3px solid #6F8F7A;padding-left:12px;color:#5E5A55;font-style:italic;">{quote[:1000]}</blockquote>'
+                f'{email_line}'
+                '<p style="margin-top:20px;"><a href="#" style="color:#6F8F7A;">Review it in Admin &rarr; Testimonials</a></p>'
+                '</div>'
+            )
+            send_email(to=biz_email, subject=f"New review: {obj.name} ({rating}{star})", html=body,
+                       reply_to=obj.reviewer_email or None)
+        except Exception as e:
+            logger.warning("Failed to send new-review admin alert: %s", e)
+
+    return {"ok": True, "queued": True, "id": obj.id}
+
+
+@api.get("/admin/testimonials")
+async def admin_list_testimonials(status: Optional[str] = None, admin=Depends(require_admin)):
+    """Admin list — sees ALL fields including pending items and reviewer_email."""
+    query: Dict[str, Any] = {}
+    if status:
+        query["status"] = status
+    docs = await db.testimonials.find(query, {"_id": 0}).sort([("status", 1), ("order", 1), ("created_at", -1)]).to_list(1000)
+    return docs
+
+
+@api.get("/admin/testimonials/pending-count")
+async def pending_reviews_count(admin=Depends(require_admin)):
+    n = await db.testimonials.count_documents({"status": "pending"})
+    return {"count": n}
+
+
+@api.post("/admin/testimonials/{tid}/approve")
+async def approve_testimonial(tid: str, admin=Depends(require_admin)):
+    r = await db.testimonials.update_one({"id": tid}, {"$set": {"status": "approved"}})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return await db.testimonials.find_one({"id": tid}, {"_id": 0})
+
+
+@api.post("/admin/testimonials/{tid}/reject")
+async def reject_testimonial(tid: str, admin=Depends(require_admin)):
+    r = await db.testimonials.update_one({"id": tid}, {"$set": {"status": "rejected"}})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return await db.testimonials.find_one({"id": tid}, {"_id": 0})
 
 
 @api.post("/admin/testimonials")
 async def create_testimonial(payload: Dict[str, Any], admin=Depends(require_admin)):
+    payload.setdefault("status", "approved")  # Admin-created rows are approved by default.
     obj = Testimonial(**payload)
     await db.testimonials.insert_one(to_doc(obj.model_dump()))
     return await db.testimonials.find_one({"id": obj.id}, {"_id": 0})
@@ -962,6 +1082,56 @@ async def update_testimonial(tid: str, payload: Dict[str, Any], admin=Depends(re
 @api.delete("/admin/testimonials/{tid}")
 async def delete_testimonial(tid: str, admin=Depends(require_admin)):
     await db.testimonials.delete_one({"id": tid})
+    return {"ok": True}
+
+
+# =========================================================
+# Backdrops
+# =========================================================
+@api.get("/backdrops")
+async def list_backdrops(featured: Optional[bool] = None):
+    """Public list — only active backdrops."""
+    query: Dict[str, Any] = {"$or": [{"active": True}, {"active": {"$exists": False}}]}
+    if featured is not None:
+        query["featured"] = featured
+    docs = await db.backdrops.find(query, {"_id": 0}).sort("order", 1).to_list(500)
+    return docs
+
+
+@api.get("/admin/backdrops")
+async def admin_list_backdrops(admin=Depends(require_admin)):
+    docs = await db.backdrops.find({}, {"_id": 0}).sort("order", 1).to_list(500)
+    return docs
+
+
+@api.post("/admin/backdrops")
+async def create_backdrop(payload: Dict[str, Any], admin=Depends(require_admin)):
+    obj = Backdrop(**payload)
+    await db.backdrops.insert_one(to_doc(obj.model_dump()))
+    return await db.backdrops.find_one({"id": obj.id}, {"_id": 0})
+
+
+@api.put("/admin/backdrops/{bid}")
+async def update_backdrop(bid: str, payload: Dict[str, Any], admin=Depends(require_admin)):
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    r = await db.backdrops.update_one({"id": bid}, {"$set": to_doc(payload)})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return await db.backdrops.find_one({"id": bid}, {"_id": 0})
+
+
+@api.delete("/admin/backdrops/{bid}")
+async def delete_backdrop(bid: str, admin=Depends(require_admin)):
+    await db.backdrops.delete_one({"id": bid})
+    return {"ok": True}
+
+
+@api.post("/admin/backdrops/reorder")
+async def reorder_backdrops(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Body: { order: [id1, id2, ...] } — persists list index as `order` field."""
+    order = payload.get("order") or []
+    for idx, bid in enumerate(order):
+        await db.backdrops.update_one({"id": bid}, {"$set": {"order": idx}})
     return {"ok": True}
 
 

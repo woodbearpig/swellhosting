@@ -19,6 +19,7 @@ const FIELD_TYPES = [
   { value: 'checkbox', label: 'Single checkbox (yes/no)', hasOptions: false },
   { value: 'links_list', label: 'Inspiration links list', hasOptions: false },
   { value: 'file_upload', label: 'Photo upload', hasOptions: false },
+  { value: 'backdrops', label: 'Backdrops picker (multi-select)', hasOptions: false },
   { value: 'section_note', label: 'Help paragraph (no input)', hasOptions: false },
 ];
 

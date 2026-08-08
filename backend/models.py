@@ -52,6 +52,12 @@ class SiteContent(Base):
     hero_headline: str = "Dreamy balloon installations for celebrations that feel like you."
     hero_subhead: str = "Custom design, thoughtful details, and a calm process — from inquiry to install."
     hero_image_url: str = "https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85"
+    # Hero layout: "split" (current: text-left, portrait-right) or "full_bleed" (Canva-style: photo behind headline)
+    hero_layout_mode: str = "split"
+    # Only used in full_bleed mode — the wide background photo. If empty, falls back to hero_image_url.
+    hero_background_image_url: str = ""
+    # Overlay intensity for full_bleed hero: 0.0 (none) to 1.0 (fully black). Default gives cream text good legibility.
+    hero_overlay_intensity: float = 0.45
     hero_primary_cta_label: str = "Start your inquiry"
     hero_primary_cta_href: str = "/inquire"
     hero_secondary_cta_label: str = "View the gallery"
@@ -133,6 +139,9 @@ class SiteContent(Base):
     home_process_subtitle: str = "No overwhelm, no cookie-cutter kits \u2014 just thoughtful design from first inquiry to install."
     home_testimonials_eyebrow: str = "KIND WORDS"
     home_testimonials_title: str = "Loved by families & brands"
+    home_backdrops_eyebrow: str = "BUILDING BLOCKS"
+    home_backdrops_title: str = "Backdrops"
+    home_backdrops_subtitle: str = "The standalone pieces that anchor an install. Mix, match, and add florals or balloons."
     home_faq_eyebrow: str = "COMMON QUESTIONS"
     home_faq_title: str = "Good things to know"
 
@@ -150,6 +159,7 @@ class SiteContent(Base):
     home_instagram_active: bool = True
     home_process_active: bool = True
     home_testimonials_active: bool = True
+    home_backdrops_active: bool = True
     home_designer_active: bool = True
     home_faq_active: bool = True
     home_final_cta_active: bool = True
@@ -181,6 +191,7 @@ class SiteContent(Base):
     # Header navigation items (CMS-driven, ordered)
     header_nav_items: List[Dict[str, Any]] = Field(default_factory=lambda: [
         {"id": "nav-services", "label": "Services", "href": "/services", "visible": True, "new_tab": False},
+        {"id": "nav-backdrops", "label": "Backdrops", "href": "/backdrops", "visible": True, "new_tab": False},
         {"id": "nav-gallery", "label": "Gallery", "href": "/gallery", "visible": True, "new_tab": False},
         {"id": "nav-about", "label": "About", "href": "/about", "visible": True, "new_tab": False},
         {"id": "nav-testimonials", "label": "Testimonials", "href": "/testimonials", "visible": True, "new_tab": False},
@@ -202,6 +213,13 @@ class SiteContent(Base):
     gallery_page_show_header: bool = True
     gallery_page_show_filters: bool = True
     gallery_page_show_grid: bool = True
+
+    # Backdrops page visibility toggles
+    backdrops_page_show_header: bool = True
+    backdrops_page_show_grid: bool = True
+    backdrops_page_eyebrow: str = "BUILDING BLOCKS"
+    backdrops_page_title: str = "Backdrops"
+    backdrops_page_subtitle: str = "Our reusable structures — the anchor of every install. Add florals, balloons, and signage to make each one yours."
 
     # Contact page visibility toggles
     contact_page_show_header: bool = True
@@ -294,8 +312,30 @@ class Testimonial(Base):
     rating: int = 5
     photo_url: str = ""
     featured: bool = False
+    # Moderation status: "approved" (visible on site) | "pending" (in admin queue, not public) | "rejected"
+    # Legacy rows without this field default to "approved" so nothing hides after migration.
+    status: str = "approved"
+    # Optional email captured on public submission — visible ONLY in admin, never returned publicly.
+    reviewer_email: str = ""
     order: int = 0
     created_at: datetime = Field(default_factory=_now)
+
+
+# =========================
+# Backdrop — catalog item (a reusable structure the studio offers, e.g. Trio Rounded Arch, Hoop)
+# =========================
+class Backdrop(Base):
+    id: str = Field(default_factory=_uid)
+    name: str
+    subtitle: str = ""            # short helper text like "(can fit 160 champagne flutes)"
+    description: str = ""         # optional longer description shown on detail card
+    image_url: str = ""
+    price_from: Optional[str] = None
+    featured: bool = False        # show on homepage featured section
+    order: int = 0
+    active: bool = True           # hide from public without deleting
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
 
 
 # =========================

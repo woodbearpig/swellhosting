@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Heart, Calendar, Star } from 'lucide-react';
-import { api } from '@/lib/api';
+import { ArrowRight, Sparkles, Heart, Calendar, Star, MessageSquarePlus } from 'lucide-react';
+import { api, publicUrl } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
 import { SectionHeader } from '@/components/SectionEyebrow';
 import { InstagramFeed } from '@/components/InstagramFeed';
+import { TestimonialCard, BackdropCard } from '@/pages/BackdropsAndReviews';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 14 },
@@ -19,6 +20,7 @@ const HomePage = () => {
   const [services, setServices] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
+  const [backdrops, setBackdrops] = useState([]);
   const [faqs, setFaqs] = useState([]);
 
   const defaultSteps = [
@@ -35,78 +37,30 @@ const HomePage = () => {
   useEffect(() => {
     (async () => {
       try {
-        const [s, g, t, f] = await Promise.all([
+        const [s, g, t, f, b] = await Promise.all([
           api.get('/services'),
           api.get('/gallery', { params: { featured: true } }),
           api.get('/testimonials', { params: { featured: true } }),
           api.get('/faqs'),
+          api.get('/backdrops', { params: { featured: true } }),
         ]);
         setServices(s.data.slice(0, 6));
         setGallery(g.data.slice(0, 6));
         setTestimonials(t.data.slice(0, 3));
         setFaqs(f.data.slice(0, 4));
+        setBackdrops(b.data.slice(0, 6));
       } catch (e) { /* noop */ }
     })();
   }, []);
 
   return (
     <div data-testid="home-page">
-      {/* HERO */}
-      <section className="relative overflow-hidden" data-testid="home-hero-section">
-        <div className="hero-wash absolute inset-0 -z-10" aria-hidden />
-        <div className="watercolor-noise absolute inset-0 -z-10 opacity-60" aria-hidden />
-        <div className="blob b-peach" style={{ width: 220, height: 220, top: -40, left: -60 }} />
-        <div className="blob b-sage" style={{ width: 180, height: 180, bottom: -30, right: 40 }} />
-
-        <div className="container-narrow pt-14 pb-16 sm:pt-20 sm:pb-24 lg:pt-24 lg:pb-32 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          <motion.div className="lg:col-span-7" {...fadeInUp}>
-            <div className="eyebrow mb-4">{site?.hero_eyebrow || 'LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING'}</div>
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em]">
-              {site?.hero_headline || 'Dreamy balloon installations for celebrations that feel like you.'}
-            </h1>
-            <p className="mt-5 text-base sm:text-lg text-[color:var(--brand-text-muted)] max-w-xl leading-relaxed">
-              {site?.hero_subhead || 'Custom design, thoughtful details, and a calm process — from inquiry to install.'}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" data-testid="home-hero-primary-cta">
-                {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link to={site?.hero_secondary_cta_href || '/gallery'} className="btn-secondary" data-testid="home-hero-secondary-cta">
-                {site?.hero_secondary_cta_label || 'View the gallery'}
-              </Link>
-            </div>
-            {site?.hero_badges_active !== false && Array.isArray(site?.hero_badges) && site.hero_badges.length > 0 && (
-              <div className="mt-8 flex flex-wrap items-center gap-2" data-testid="home-hero-badges">
-                {site.hero_badges.map((b, i) => (
-                  <span key={`${b}-${i}`} className="badge-soft">{b}</span>
-                ))}
-              </div>
-            )}
-            {site?.hero_badges_active !== false && !Array.isArray(site?.hero_badges) && (
-              <div className="mt-8 flex flex-wrap items-center gap-2" data-testid="home-hero-badges">
-                <span className="badge-soft">Fully custom</span>
-                <span className="badge-soft">On-site install</span>
-                <span className="badge-soft">LA + surrounding</span>
-              </div>
-            )}
-          </motion.div>
-
-          <motion.div className="lg:col-span-5" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
-            <div className="relative">
-              <div className="rounded-[2rem] overflow-hidden lift-shadow aspect-[4/5] bg-[color:var(--brand-surface-2)]">
-                <img src={site?.hero_image_url || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Editorial event styling by swell design + media" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute -bottom-6 -left-6 card-cream p-4 hidden sm:block">
-                <div className="flex items-center gap-2 text-sm">
-                  <Star className="h-4 w-4 text-[color:var(--brand-gold)]" fill="currentColor" />
-                  <span className="font-medium">5.0</span>
-                  <span className="text-[color:var(--brand-text-muted)]">from every client, always</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* HERO — supports two layout modes: 'split' (default) or 'full_bleed' */}
+      {site?.hero_layout_mode === 'full_bleed' ? (
+        <FullBleedHero site={site} />
+      ) : (
+        <SplitHero site={site} />
+      )}
 
       {/* PROMO */}
       {site?.promo_active && (
@@ -172,6 +126,19 @@ const HomePage = () => {
       {/* INSTAGRAM FEED (only renders if configured) */}
       <InstagramFeed />
 
+      {/* BACKDROPS */}
+      {site?.home_backdrops_active !== false && backdrops.length > 0 && (
+      <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-backdrops-section">
+        <motion.div {...fadeInUp} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+          <SectionHeader eyebrow={site?.home_backdrops_eyebrow || 'BUILDING BLOCKS'} title={site?.home_backdrops_title || 'Backdrops'} subtitle={site?.home_backdrops_subtitle || 'The standalone pieces that anchor an install.'} />
+          <Link to="/backdrops" className="btn-secondary self-start">See all backdrops <ArrowRight className="h-4 w-4" /></Link>
+        </motion.div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="home-backdrops-grid">
+          {backdrops.map(b => <BackdropCard key={b.id} b={b} />)}
+        </div>
+      </section>
+      )}
+
 
       {/* PROCESS */}
       {site?.home_process_active !== false && (
@@ -194,18 +161,19 @@ const HomePage = () => {
       {/* TESTIMONIALS */}
       {site?.home_testimonials_active !== false && (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-testimonials-section">
-        <motion.div {...fadeInUp}><SectionHeader eyebrow={site?.home_testimonials_eyebrow || 'KIND WORDS'} title={site?.home_testimonials_title || 'Loved by families & brands'} /></motion.div>
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-5">
-          {testimonials.map((t) => (
-            <motion.figure key={t.id} {...fadeInUp} className="card-cream p-6" data-testid="home-testimonial-card">
-              <div className="flex items-center gap-1 text-[color:var(--brand-gold)] mb-2">
-                {Array.from({ length: t.rating }).map((_, i) => (<Star key={i} className="h-4 w-4" fill="currentColor" />))}
-              </div>
-              <blockquote className="font-serif text-lg leading-snug italic">“{t.quote}”</blockquote>
-              <figcaption className="mt-4 text-sm"><span className="font-medium">{t.name}</span>{t.event_type && (<span className="text-[color:var(--brand-text-muted)]"> · {t.event_type}</span>)}</figcaption>
-            </motion.figure>
-          ))}
-        </div>
+        <motion.div {...fadeInUp} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+          <SectionHeader eyebrow={site?.home_testimonials_eyebrow || 'KIND WORDS'} title={site?.home_testimonials_title || 'Loved by families & brands'} />
+          <Link to="/leave-a-review" className="btn-secondary self-start" data-testid="home-leave-review-cta">
+            <MessageSquarePlus className="h-4 w-4" /> Leave a review
+          </Link>
+        </motion.div>
+        {testimonials.length === 0 ? (
+          <p className="text-center text-[color:var(--brand-text-muted)] py-8">Reviews will appear here as they come in.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5" data-testid="home-testimonials-grid">
+            {testimonials.map((t) => <TestimonialCard key={t.id} t={t} />)}
+          </div>
+        )}
       </section>
       )}
 
@@ -266,3 +234,124 @@ const HomePage = () => {
 };
 
 export default HomePage;
+
+/* ==============================================================
+ * Hero variants — SplitHero (default: text left, portrait right)
+ * and FullBleedHero (Canva-style: photo behind headline)
+ * ============================================================== */
+
+const heroFadeIn = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+};
+
+const SplitHero = ({ site }) => (
+  <section className="relative overflow-hidden" data-testid="home-hero-section">
+    <div className="hero-wash absolute inset-0 -z-10" aria-hidden />
+    <div className="watercolor-noise absolute inset-0 -z-10 opacity-60" aria-hidden />
+    <div className="blob b-peach" style={{ width: 220, height: 220, top: -40, left: -60 }} />
+    <div className="blob b-sage" style={{ width: 180, height: 180, bottom: -30, right: 40 }} />
+
+    <div className="container-narrow pt-14 pb-16 sm:pt-20 sm:pb-24 lg:pt-24 lg:pb-32 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+      <motion.div className="lg:col-span-7" {...heroFadeIn}>
+        <div className="eyebrow mb-4">{site?.hero_eyebrow || 'LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING'}</div>
+        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em]">
+          {site?.hero_headline || 'Dreamy balloon installations for celebrations that feel like you.'}
+        </h1>
+        <p className="mt-5 text-base sm:text-lg text-[color:var(--brand-text-muted)] max-w-xl leading-relaxed">
+          {site?.hero_subhead || 'Custom design, thoughtful details, and a calm process — from inquiry to install.'}
+        </p>
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" data-testid="home-hero-primary-cta">
+            {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link to={site?.hero_secondary_cta_href || '/gallery'} className="btn-secondary" data-testid="home-hero-secondary-cta">
+            {site?.hero_secondary_cta_label || 'View the gallery'}
+          </Link>
+        </div>
+        <HeroBadges site={site} />
+      </motion.div>
+
+      <motion.div className="lg:col-span-5" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
+        <div className="relative">
+          <div className="rounded-[2rem] overflow-hidden lift-shadow aspect-[4/5] bg-[color:var(--brand-surface-2)]">
+            <img src={publicUrl(site?.hero_image_url) || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Editorial event styling by swell design + media" className="h-full w-full object-cover" />
+          </div>
+          <div className="absolute -bottom-6 -left-6 card-cream p-4 hidden sm:block">
+            <div className="flex items-center gap-2 text-sm">
+              <Star className="h-4 w-4 text-[color:var(--brand-gold)]" fill="currentColor" />
+              <span className="font-medium">5.0</span>
+              <span className="text-[color:var(--brand-text-muted)]">from every client, always</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  </section>
+);
+
+const FullBleedHero = ({ site }) => {
+  const bgUrl = site?.hero_background_image_url || site?.hero_image_url || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
+  const overlay = Math.max(0, Math.min(1, site?.hero_overlay_intensity ?? 0.45));
+  return (
+    <section
+      className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] flex items-center justify-center text-center bg-neutral-900"
+      data-testid="home-hero-section-fullbleed"
+    >
+      <img
+        src={publicUrl(bgUrl)}
+        alt="swell design + media hero"
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="eager"
+      />
+      {/* Overlay: soft dark-to-transparent gradient from the bottom + subtle vignette for legibility */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(to top, rgba(0,0,0,${overlay + 0.15}) 0%, rgba(0,0,0,${overlay * 0.6}) 40%, rgba(0,0,0,${overlay * 0.3}) 70%, rgba(0,0,0,${overlay * 0.4}) 100%)`,
+        }}
+      />
+      <motion.div {...heroFadeIn} className="relative z-10 container-narrow px-6 py-24 sm:py-32 text-[color:var(--brand-cream)]">
+        {site?.hero_eyebrow && (
+          <div className="eyebrow mb-4 opacity-90" style={{ color: 'inherit', letterSpacing: '0.2em' }}>
+            {site.hero_eyebrow}
+          </div>
+        )}
+        <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.02em] max-w-4xl mx-auto drop-shadow-md">
+          {site?.hero_headline || 'Where your vision comes to life.'}
+        </h1>
+        {site?.hero_subhead && (
+          <p className="mt-5 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto opacity-95 drop-shadow-sm">
+            {site.hero_subhead}
+          </p>
+        )}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" data-testid="home-hero-primary-cta">
+            {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            to={site?.hero_secondary_cta_href || '/gallery'}
+            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
+            data-testid="home-hero-secondary-cta"
+          >
+            {site?.hero_secondary_cta_label || 'View the gallery'}
+          </Link>
+        </div>
+      </motion.div>
+    </section>
+  );
+};
+
+const HeroBadges = ({ site }) => {
+  if (site?.hero_badges_active === false) return null;
+  const badges = Array.isArray(site?.hero_badges) && site.hero_badges.length > 0
+    ? site.hero_badges
+    : ['Fully custom', 'On-site install', 'LA + surrounding'];
+  return (
+    <div className="mt-8 flex flex-wrap items-center gap-2" data-testid="home-hero-badges">
+      {badges.map((b, i) => (<span key={`${b}-${i}`} className="badge-soft">{b}</span>))}
+    </div>
+  );
+};

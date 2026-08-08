@@ -15,6 +15,7 @@ import GalleryPage from '@/pages/GalleryPage';
 import ContactPage from '@/pages/ContactPage';
 import InquiryWizardPage from '@/pages/InquiryWizardPage';
 import { AboutPage, TestimonialsPage, FAQPage, BlogListPage, BlogDetailPage } from '@/pages/StaticPages';
+import { BackdropsPage, LeaveReviewPage } from '@/pages/BackdropsAndReviews';
 import { NotFoundPage, PrivacyPage, TermsPage } from '@/pages/UtilityPages';
 
 import AdminLogin from '@/pages/admin/AdminLogin';
@@ -26,6 +27,7 @@ import AdminConsultations from '@/pages/admin/AdminConsultations';
 import AdminServices from '@/pages/admin/AdminServices';
 import AdminGallery from '@/pages/admin/AdminGallery';
 import AdminTestimonials from '@/pages/admin/AdminTestimonials';
+import AdminBackdrops from '@/pages/admin/AdminBackdrops';
 import AdminFAQs from '@/pages/admin/AdminFAQs';
 import AdminBlog from '@/pages/admin/AdminBlog';
 import AdminHomePage from '@/pages/admin/site/AdminHomePage';
@@ -59,6 +61,8 @@ function App() {
                   <Route path="/gallery" element={<GalleryPage />} />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/testimonials" element={<TestimonialsPage />} />
+                  <Route path="/leave-a-review" element={<LeaveReviewPage />} />
+                  <Route path="/backdrops" element={<BackdropsPage />} />
                   <Route path="/faq" element={<FAQPage />} />
                   <Route path="/blog" element={<BlogListPage />} />
                   <Route path="/blog/:slug" element={<BlogDetailPage />} />
@@ -79,6 +83,7 @@ function App() {
                   <Route path="clients/:id" element={<AdminClientDetail />} />
                   <Route path="consultations" element={<AdminConsultations />} />
                   <Route path="services" element={<AdminServices />} />
+                  <Route path="backdrops" element={<AdminBackdrops />} />
                   <Route path="gallery" element={<AdminGallery />} />
                   <Route path="testimonials" element={<AdminTestimonials />} />
                   <Route path="faqs" element={<AdminFAQs />} />

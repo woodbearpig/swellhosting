@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
@@ -27,6 +27,7 @@ const groups = [
     label: 'Content',
     items: [
       { to: '/admin/services', label: 'Services', icon: Boxes },
+      { to: '/admin/backdrops', label: 'Backdrops', icon: Frame },
       { to: '/admin/gallery', label: 'Portfolio', icon: Image },
       { to: '/admin/media', label: 'Media library', icon: FolderOpen },
       { to: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },

@@ -122,13 +122,37 @@ const AdminHomePage = () => {
       />
 
       <SectionCard title="Hero" subtitle="The big top banner — headline, subhead, buttons, and image.">
+        <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-surface-2)]/40" data-testid="admin-hero-layout-mode">
+          <p className="eyebrow">LAYOUT STYLE</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className={`card-cream p-3 cursor-pointer transition-colors ${(data.hero_layout_mode || 'split') === 'split' ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`}>
+              <div className="flex items-start gap-3">
+                <input type="radio" name="hero_layout_mode" value="split" checked={(data.hero_layout_mode || 'split') === 'split'} onChange={() => set({ hero_layout_mode: 'split' })} className="mt-1" data-testid="admin-hero-mode-split" />
+                <div>
+                  <p className="font-medium">Split hero (default)</p>
+                  <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Headline & buttons on the left, portrait photo on the right — the current style.</p>
+                </div>
+              </div>
+            </label>
+            <label className={`card-cream p-3 cursor-pointer transition-colors ${data.hero_layout_mode === 'full_bleed' ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`}>
+              <div className="flex items-start gap-3">
+                <input type="radio" name="hero_layout_mode" value="full_bleed" checked={data.hero_layout_mode === 'full_bleed'} onChange={() => set({ hero_layout_mode: 'full_bleed' })} className="mt-1" data-testid="admin-hero-mode-fullbleed" />
+                <div>
+                  <p className="font-medium">Full-width background</p>
+                  <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Photo fills the top of the page; centered cream headline overlaid with a soft dark gradient for legibility.</p>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.hero_eyebrow || ''} onCommit={v => set({ hero_eyebrow: v })} /></div>
         </div>
         <div><label className="eyebrow block mb-1">HEADLINE</label><TextArea rows={2} value={data.hero_headline || ''} onCommit={v => set({ hero_headline: v })} /></div>
         <div><label className="eyebrow block mb-1">SUBHEAD</label><TextArea rows={3} value={data.hero_subhead || ''} onCommit={v => set({ hero_subhead: v })} /></div>
         <div>
-          <label className="eyebrow block mb-1">HERO IMAGE</label>
+          <label className="eyebrow block mb-1">HERO IMAGE {(data.hero_layout_mode || 'split') === 'split' ? '(portrait, shown on the right)' : '(fallback if no background image is set)'}</label>
           {data.hero_image_url && <img src={publicUrl(data.hero_image_url)} alt="hero" className="h-32 w-auto rounded-lg mb-2" />}
           <div className="flex items-center gap-2 flex-wrap">
             <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ hero_image_url: r.url }); } }} />
@@ -136,6 +160,35 @@ const AdminHomePage = () => {
           </div>
           <TextField className="mt-2" value={data.hero_image_url || ''} onCommit={v => set({ hero_image_url: v })} />
         </div>
+
+        {data.hero_layout_mode === 'full_bleed' && (
+          <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-sage-tint)]/30" data-testid="admin-hero-fullbleed-controls">
+            <p className="eyebrow">FULL-WIDTH BACKGROUND</p>
+            <div>
+              <label className="eyebrow block mb-1">BACKGROUND IMAGE (wide landscape works best)</label>
+              {data.hero_background_image_url && <img src={publicUrl(data.hero_background_image_url)} alt="background" className="h-32 w-auto rounded-lg mb-2" />}
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ hero_background_image_url: r.url }); } }} />
+                <MediaPickerButton testId="media-picker-hero-bg" onSelect={url => set({ hero_background_image_url: url })} />
+                {data.hero_background_image_url && <button type="button" onClick={() => set({ hero_background_image_url: '' })} className="text-red-600 text-xs">Remove</button>}
+              </div>
+              <TextField className="mt-2" value={data.hero_background_image_url || ''} onCommit={v => set({ hero_background_image_url: v })} placeholder="Or paste an image URL" />
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">OVERLAY DARKENING ({Math.round((data.hero_overlay_intensity ?? 0.45) * 100)}%)</label>
+              <input
+                type="range"
+                min="0" max="0.8" step="0.05"
+                value={data.hero_overlay_intensity ?? 0.45}
+                onChange={e => set({ hero_overlay_intensity: parseFloat(e.target.value) })}
+                className="w-full accent-[color:var(--brand-sage-deep)]"
+                data-testid="admin-hero-overlay"
+              />
+              <p className="text-xs text-[color:var(--brand-text-muted)]">Softens the photo so the cream headline stays legible. 45% is a good default.</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="eyebrow block mb-1">PRIMARY CTA LABEL</label><TextField value={data.hero_primary_cta_label || ''} onCommit={v => set({ hero_primary_cta_label: v })} /></div>
           <div><label className="eyebrow block mb-1">PRIMARY CTA LINK</label><TextField value={data.hero_primary_cta_href || ''} onCommit={v => set({ hero_primary_cta_href: v })} /></div>
@@ -168,6 +221,7 @@ const AdminHomePage = () => {
           <ToggleRow label="Instagram feed" hint="Live IG posts strip." checked={data.home_instagram_active !== false} onChange={v => set({ home_instagram_active: v })} />
           <ToggleRow label="Process timeline" hint="Numbered step boxes." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
           <ToggleRow label="Testimonials" hint="Client reviews." checked={data.home_testimonials_active !== false} onChange={v => set({ home_testimonials_active: v })} />
+          <ToggleRow label="Backdrops" hint="Featured backdrops section linking to /backdrops." checked={data.home_backdrops_active !== false} onChange={v => set({ home_backdrops_active: v })} />
           <ToggleRow label="Meet the designer" hint="Bio + photo block." checked={data.home_designer_active !== false} onChange={v => set({ home_designer_active: v })} />
           <ToggleRow label="FAQ preview" hint="Common questions with link to full FAQ." checked={data.home_faq_active !== false} onChange={v => set({ home_faq_active: v })} />
           <ToggleRow label="Final call-to-action" hint="Closing card near the footer." checked={data.home_final_cta_active !== false} onChange={v => set({ home_final_cta_active: v })} />
@@ -229,6 +283,12 @@ const AdminHomePage = () => {
           <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.home_testimonials_eyebrow || ''} onCommit={v => set({ home_testimonials_eyebrow: v })} /></div>
           <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.home_testimonials_title || ''} onCommit={v => set({ home_testimonials_title: v })} /></div>
         </div>
+        <p className="text-xs text-[color:var(--brand-text-muted)]">Only <strong>featured</strong> reviews with status <em>Approved</em> appear here. Manage in <Link to="/admin/testimonials" className="link-underline">Content → Testimonials</Link>.</p>
+      </SectionCard>
+
+      <SectionCard title="Backdrops heading" subtitle="A catalog strip on the homepage — only shows if there are featured backdrops.">
+        <EyebrowTitleSubtitleRow prefix="home_backdrops" data={data} set={set} />
+        <p className="text-xs text-[color:var(--brand-text-muted)]">Add & feature backdrops in <Link to="/admin/backdrops" className="link-underline">Content → Backdrops</Link>. Only ones marked <em>Featured</em> appear on the homepage.</p>
       </SectionCard>
 
       <SectionCard title="FAQ heading">
