@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, X, Upload, CheckSquare, Square, Tag, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, X, Upload, CheckSquare, Square, Tag, ChevronDown, ChevronUp, GripVertical, Settings2, Save } from 'lucide-react';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
+import { useSite } from '@/context/SiteContext';
 
-const CATEGORIES = ['weddings', 'birthdays', 'corporate', 'showers', 'holidays', 'grand-openings', 'other'];
-const prettyCategory = (c) => (c || '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+const prettyLabel = (s) => (s || '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+// Kept for backwards compatibility on legacy items whose category doesn't
+// appear in the current admin list — we still want the badge to read nicely.
+const prettyCategory = (c) => prettyLabel(c);
+
+/** Turn a human label into a stable, url-safe slug key. */
+const slugify = (label) =>
+  (label || '')
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
 
 /**
  * BulkUploadDialog — opens when the owner clicks "Bulk upload". Lets her pick
@@ -14,8 +27,9 @@ const prettyCategory = (c) => (c || '').replace(/-/g, ' ').replace(/\b\w/g, l =>
  * silently defaulted to "weddings" — a real papercut for a photographer
  * uploading dozens of shots for a birthday or corporate event.
  */
-const BulkUploadDialog = ({ onClose, onComplete }) => {
-  const [category, setCategory] = useState('weddings');
+const BulkUploadDialog = ({ onClose, onComplete, categories }) => {
+  const firstKey = categories[0]?.key || '';
+  const [category, setCategory] = useState(firstKey);
   const [featured, setFeatured] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
@@ -77,7 +91,8 @@ const BulkUploadDialog = ({ onClose, onComplete }) => {
               disabled={uploading}
               data-testid="admin-gallery-bulk-upload-category"
             >
-              {CATEGORIES.map(c => <option key={c} value={c}>{prettyCategory(c)}</option>)}
+              {categories.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              {categories.length === 0 && <option value="">No categories — add one first</option>}
             </select>
           </div>
           <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -131,14 +146,32 @@ const BulkUploadDialog = ({ onClose, onComplete }) => {
 };
 
 export const AdminGallery = () => {
+  const { site, refresh: refreshSite } = useSite();
+  const categories = useMemo(() => (site?.gallery_categories || []), [site]);
+  const categoryKeys = useMemo(() => categories.map(c => c.key), [categories]);
+  const labelForKey = (key) => categories.find(c => c.key === key)?.label || prettyLabel(key || 'Uncategorized');
+
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [tab, setTab] = useState('all'); // 'all' | one of CATEGORIES
+  const [tab, setTab] = useState('all'); // 'all' | 'uncategorized' | one of categoryKeys
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
   const bulkMenuRef = useRef(null);
+
+  // Local editable copy of the categories list – only committed to the
+  // backend when the owner clicks "Save changes" in the Manage panel.
+  const [manageOpen, setManageOpen] = useState(false);
+  const [draft, setDraft] = useState(null);            // null = clean, matches site
+  const [savingCats, setSavingCats] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState('');
+  useEffect(() => {
+    // Sync the draft with the latest site data whenever it changes AND we're
+    // not mid-edit (draft === null). This keeps two admin tabs in sync.
+    if (draft === null && categories) return;
+  }, [categories, draft]);
+  const workingCats = draft || categories;
 
   const load = async () => {
     try {
@@ -155,7 +188,7 @@ export const AdminGallery = () => {
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
-  const openNew = () => setEditing({ image_url: '', title: '', category: tab === 'all' ? 'weddings' : tab, featured: false, order: 0, tags: [] });
+  const openNew = () => setEditing({ image_url: '', title: '', category: tab === 'all' || tab === 'uncategorized' ? (categoryKeys[0] || '') : tab, featured: false, order: 0, tags: [] });
 
   const save = async () => {
     if (!editing.image_url) { toast.error('Image required'); return; }
@@ -172,15 +205,22 @@ export const AdminGallery = () => {
     load(); toast.success('Deleted');
   };
 
-  const filtered = useMemo(() => (
-    tab === 'all' ? items : items.filter(g => (g.category || 'other') === tab)
-  ), [items, tab]);
+  const filtered = useMemo(() => {
+    if (tab === 'all') return items;
+    if (tab === 'uncategorized') return items.filter(g => !categoryKeys.includes(g.category || ''));
+    return items.filter(g => (g.category || '') === tab);
+  }, [items, tab, categoryKeys]);
 
   const counts = useMemo(() => {
-    const c = { all: items.length };
-    for (const cat of CATEGORIES) c[cat] = items.filter(g => (g.category || 'other') === cat).length;
+    const c = { all: items.length, uncategorized: 0 };
+    for (const cat of categoryKeys) c[cat] = 0;
+    for (const g of items) {
+      const key = g.category || '';
+      if (categoryKeys.includes(key)) c[key] = (c[key] || 0) + 1;
+      else c.uncategorized += 1;
+    }
     return c;
-  }, [items]);
+  }, [items, categoryKeys]);
 
   // -------- Selection helpers --------
   const enterSelect = () => { setSelectMode(true); setSelected(new Set()); };
@@ -223,7 +263,7 @@ export const AdminGallery = () => {
     if (!ids.length) return;
     try {
       await api.post('/admin/gallery/bulk-update', { ids, patch: { category } });
-      toast.success(`Moved ${ids.length} photo${ids.length === 1 ? '' : 's'} to ${prettyCategory(category)}`);
+      toast.success(`Moved ${ids.length} photo${ids.length === 1 ? '' : 's'} to ${labelForKey(category)}`);
       setBulkMenuOpen(false);
       exitSelect();
       load();
@@ -241,7 +281,76 @@ export const AdminGallery = () => {
     } catch { toast.error('Bulk update failed'); }
   };
 
-  const tabs = [{ id: 'all', label: 'All' }, ...CATEGORIES.map(c => ({ id: c, label: prettyCategory(c) }))];
+  const tabs = useMemo(() => {
+    const base = [{ id: 'all', label: 'All' }, ...categories.map(c => ({ id: c.key, label: c.label }))];
+    if (counts.uncategorized > 0) base.push({ id: 'uncategorized', label: 'Uncategorized' });
+    return base;
+  }, [categories, counts.uncategorized]);
+
+  // -------- Manage categories helpers --------
+  const startEditCats = () => { setDraft(categories.map(c => ({ ...c }))); setManageOpen(true); };
+  const cancelEditCats = () => { setDraft(null); setNewCatLabel(''); setManageOpen(false); };
+  const catsDirty = useMemo(() => {
+    if (!draft) return false;
+    if (draft.length !== categories.length) return true;
+    return draft.some((c, i) => c.key !== categories[i]?.key || c.label !== categories[i]?.label);
+  }, [draft, categories]);
+
+  const updateCatLabel = (idx, label) => {
+    setDraft(d => d.map((c, i) => i === idx ? { ...c, label } : c));
+  };
+  const removeCat = (idx) => {
+    const cat = workingCats[idx];
+    const used = items.filter(g => (g.category || '') === cat.key).length;
+    const msg = used > 0
+      ? `Remove "${cat.label}"? ${used} photo${used === 1 ? '' : 's'} currently in this category will become "Uncategorized" (they won't be deleted — you can re-tag them from the Portfolio grid).`
+      : `Remove "${cat.label}"?`;
+    if (!window.confirm(msg)) return;
+    setDraft(prev => (prev || categories.map(c => ({ ...c }))).filter((_, i) => i !== idx));
+  };
+  const moveCat = (idx, dir) => {
+    setDraft(prev => {
+      const list = [...(prev || categories.map(c => ({ ...c })))];
+      const j = idx + dir;
+      if (j < 0 || j >= list.length) return list;
+      [list[idx], list[j]] = [list[j], list[idx]];
+      return list;
+    });
+  };
+  const addCat = () => {
+    const label = newCatLabel.trim();
+    if (!label) return;
+    const base = slugify(label);
+    if (!base) { toast.error('Please use letters or numbers in the name'); return; }
+    let key = base;
+    let n = 2;
+    const existingKeys = (draft || categories).map(c => c.key);
+    while (existingKeys.includes(key)) { key = `${base}-${n++}`; }
+    setDraft(prev => [...(prev || categories.map(c => ({ ...c }))), { key, label }]);
+    setNewCatLabel('');
+  };
+  const saveCats = async () => {
+    if (!draft) return;
+    // Trim labels + drop rows with empty labels
+    const cleaned = draft
+      .map(c => ({ key: c.key, label: (c.label || '').trim() }))
+      .filter(c => c.key && c.label);
+    if (cleaned.length === 0) {
+      if (!window.confirm('Save with zero categories? The filter row will be hidden on the public portfolio page.')) return;
+    }
+    setSavingCats(true);
+    try {
+      await api.put('/admin/site-content', { gallery_categories: cleaned });
+      await refreshSite();
+      setDraft(null);
+      setNewCatLabel('');
+      toast.success('Categories updated');
+    } catch {
+      toast.error('Could not save categories');
+    } finally {
+      setSavingCats(false);
+    }
+  };
 
   return (
     <div className="space-y-6" data-testid="admin-gallery-page">
@@ -256,6 +365,15 @@ export const AdminGallery = () => {
         <div className="flex flex-wrap items-center gap-2">
           {!selectMode ? (
             <>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => (manageOpen ? cancelEditCats() : startEditCats())}
+                data-testid="admin-gallery-manage-categories"
+                title="Add, rename, remove or reorder the category filter bubbles"
+              >
+                <Settings2 className="h-4 w-4" /> {manageOpen ? 'Close' : 'Manage categories'}
+              </button>
               <button
                 type="button"
                 className="btn-secondary"
@@ -283,6 +401,112 @@ export const AdminGallery = () => {
           )}
         </div>
       </div>
+
+      {/* Manage categories panel */}
+      {manageOpen && (
+        <div className="card-cream p-4 sm:p-5 space-y-3" data-testid="admin-gallery-manage-categories-panel">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-serif text-xl">Category bubbles</p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5 max-w-lg">
+                These are the filter chips on the public <code>/portfolio</code> page and the dropdown when adding a photo. Rename, remove, reorder or add new ones. Nothing is deleted from your photos — items in a removed category simply become <em>Uncategorized</em> until you re-tag them.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {catsDirty && (
+                <button type="button" className="btn-secondary text-sm !h-9" onClick={cancelEditCats}>
+                  Discard
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-primary text-sm !h-9"
+                onClick={saveCats}
+                disabled={!catsDirty || savingCats}
+                data-testid="admin-gallery-categories-save"
+              >
+                <Save className="h-4 w-4" /> {savingCats ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2" data-testid="admin-gallery-categories-list">
+            {workingCats.length === 0 && (
+              <p className="text-sm text-[color:var(--brand-text-muted)] italic px-2">No categories yet — add your first one below.</p>
+            )}
+            {workingCats.map((c, idx) => {
+              const used = items.filter(g => (g.category || '') === c.key).length;
+              return (
+                <div
+                  key={c.key}
+                  className="flex items-center gap-2 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-2"
+                  data-testid={`admin-gallery-category-row-${c.key}`}
+                >
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                      onClick={() => moveCat(idx, -1)}
+                      disabled={idx === 0}
+                      aria-label="Move up"
+                    ><ChevronUp className="h-3.5 w-3.5" /></button>
+                    <button
+                      type="button"
+                      className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30"
+                      onClick={() => moveCat(idx, +1)}
+                      disabled={idx === workingCats.length - 1}
+                      aria-label="Move down"
+                    ><ChevronDown className="h-3.5 w-3.5" /></button>
+                  </div>
+                  <GripVertical className="h-4 w-4 text-[color:var(--brand-text-muted)] hidden sm:block" />
+                  <input
+                    className="input-cream !h-9 flex-1 min-w-[140px]"
+                    value={c.label || ''}
+                    onChange={e => updateCatLabel(idx, e.target.value)}
+                    placeholder="Category name"
+                    data-testid={`admin-gallery-category-label-${c.key}`}
+                  />
+                  <span className="text-[11px] px-2 py-1 rounded-full bg-[color:var(--brand-surface-2)] text-[color:var(--brand-text-muted)] whitespace-nowrap" title={`${used} photo${used === 1 ? '' : 's'} in this category`}>
+                    {used} photo{used === 1 ? '' : 's'}
+                  </span>
+                  <button
+                    type="button"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                    onClick={() => removeCat(idx)}
+                    aria-label={`Remove ${c.label}`}
+                    data-testid={`admin-gallery-category-remove-${c.key}`}
+                  ><Trash2 className="h-4 w-4" /></button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            <input
+              className="input-cream !h-9 flex-1 min-w-[180px] max-w-xs"
+              placeholder="Add a new category (e.g. Anniversaries)"
+              value={newCatLabel}
+              onChange={e => setNewCatLabel(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCat(); } }}
+              data-testid="admin-gallery-new-category-input"
+            />
+            <button
+              type="button"
+              className="btn-secondary text-sm !h-9"
+              onClick={addCat}
+              disabled={!newCatLabel.trim()}
+              data-testid="admin-gallery-new-category-add"
+            >
+              <Plus className="h-4 w-4" /> Add category
+            </button>
+            {catsDirty && (
+              <span className="text-xs text-[color:var(--brand-text-muted)]">
+                Unsaved changes — click <b>Save changes</b> to publish.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Category tabs */}
       <div className="flex items-center gap-1 border-b border-[color:var(--brand-border)] overflow-x-auto">
@@ -333,18 +557,21 @@ export const AdminGallery = () => {
               </button>
               {bulkMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 z-30 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] shadow-lg overflow-hidden" role="menu" data-testid="admin-gallery-bulk-category-menu">
-                  {CATEGORIES.map(c => (
+                  {categories.map(c => (
                     <button
-                      key={c}
+                      key={c.key}
                       type="button"
                       role="menuitem"
-                      onClick={() => bulkChangeCategory(c)}
+                      onClick={() => bulkChangeCategory(c.key)}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-[color:var(--brand-sage-tint)] border-b border-[color:var(--brand-border)] last:border-b-0"
-                      data-testid={`admin-gallery-bulk-category-${c}`}
+                      data-testid={`admin-gallery-bulk-category-${c.key}`}
                     >
-                      {prettyCategory(c)}
+                      {c.label}
                     </button>
                   ))}
+                  {categories.length === 0 && (
+                    <p className="px-3 py-3 text-xs text-[color:var(--brand-text-muted)]">No categories — add one first.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -383,7 +610,7 @@ export const AdminGallery = () => {
       {filtered.length === 0 ? (
         <div className="card-cream p-10 text-center">
           <p className="font-serif text-lg">Nothing here yet.</p>
-          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">{tab === 'all' ? 'Add your first photo above.' : `No photos tagged “${prettyCategory(tab)}” yet.`}</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">{tab === 'all' ? 'Add your first photo above.' : `No photos in “${tab === 'uncategorized' ? 'Uncategorized' : labelForKey(tab)}” yet.`}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -414,7 +641,7 @@ export const AdminGallery = () => {
                 <div className="p-3">
                   <p className="font-medium text-sm truncate">{g.title || 'Untitled'}</p>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="badge-soft">{prettyCategory(g.category)}</span>
+                    <span className="badge-soft">{labelForKey(g.category)}</span>
                     {!selectMode && (
                       <div className="flex items-center gap-2">
                         <button onClick={() => setEditing(g)} className="text-sm link-underline">Edit</button>
@@ -432,6 +659,7 @@ export const AdminGallery = () => {
 
       {showBulkUpload && (
         <BulkUploadDialog
+          categories={categories}
           onClose={() => setShowBulkUpload(false)}
           onComplete={load}
         />
@@ -457,8 +685,12 @@ export const AdminGallery = () => {
               <div><label className="eyebrow block mb-1">TITLE</label><input className="input-cream" value={editing.title || ''} onChange={e => setEditing({ ...editing, title: e.target.value })} /></div>
               <div>
                 <label className="eyebrow block mb-1">CATEGORY</label>
-                <select className="input-cream" value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{prettyCategory(c)}</option>)}
+                <select className="input-cream" value={editing.category || ''} onChange={e => setEditing({ ...editing, category: e.target.value })}>
+                  {!categoryKeys.includes(editing.category || '') && (editing.category || '') !== '' && (
+                    <option value={editing.category}>{prettyLabel(editing.category)} (removed)</option>
+                  )}
+                  {categories.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                  {categories.length === 0 && <option value="">— No categories yet —</option>}
                 </select>
               </div>
               <div className="flex items-center gap-2"><input id="gal-featured" type="checkbox" checked={!!editing.featured} onChange={e => setEditing({ ...editing, featured: e.target.checked })} /><label htmlFor="gal-featured" className="text-sm">Featured (shows on home page)</label></div>

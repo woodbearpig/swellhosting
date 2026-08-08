@@ -107,8 +107,7 @@ class SiteContent(Base):
     designer_image_aspect: str = "portrait"  # 'portrait' | 'landscape' | 'wide' | 'square' | 'auto' | 'fill'
     designer_image_fit: str = "cover"        # 'cover' | 'contain'
     # Layout mode – see about_image_layout above for semantics.
-    designer_image_layout: str = "side"      # 'side' | 'stacked' | 'sticky'
-    designer_cta_primary_label: str = "Start your inquiry"
+    designer_image_layout: str = "side"      # 'side' | 'stacked' | 'sticky'    designer_cta_primary_label: str = "Start your inquiry"
     designer_cta_primary_href: str = "/inquire"
     designer_cta_secondary_label: str = "Read the story"
     designer_cta_secondary_href: str = "/about"
@@ -296,6 +295,23 @@ class SiteContent(Base):
     gallery_page_show_header: bool = True
     gallery_page_show_filters: bool = True
     gallery_page_show_grid: bool = True
+
+    # Editable list of portfolio category filter "bubbles" shown on the public
+    # /portfolio page AND used as the category dropdown when the owner uploads
+    # or edits a photo in Admin → Portfolio. Each entry is {key, label}:
+    #   - `key`   – stable, url-safe slug stored on each GalleryItem.category
+    #   - `label` – human display name shown on the filter chip
+    # Fully manageable from Admin → Portfolio → "Manage categories". Order in
+    # this list controls the chip order on the public page.
+    gallery_categories: List[Dict[str, str]] = Field(default_factory=lambda: [
+        {"key": "weddings",       "label": "Weddings"},
+        {"key": "birthdays",      "label": "Birthdays"},
+        {"key": "corporate",      "label": "Corporate"},
+        {"key": "showers",        "label": "Showers"},
+        {"key": "holidays",       "label": "Holidays"},
+        {"key": "grand-openings", "label": "Grand openings"},
+        {"key": "other",          "label": "Other"},
+    ])
 
     # Backdrops page visibility toggles + editable copy for both the top
     # "Backdrops" section header AND the (optional) "Designs" section header

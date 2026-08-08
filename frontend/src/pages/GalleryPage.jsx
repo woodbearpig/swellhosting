@@ -5,16 +5,6 @@ import { api } from '@/lib/api';
 import { SectionHeader } from '@/components/SectionEyebrow';
 import { useSite } from '@/context/SiteContext';
 
-const CATEGORIES = [
-  { key: 'all', label: 'All' },
-  { key: 'weddings', label: 'Weddings' },
-  { key: 'birthdays', label: 'Birthdays' },
-  { key: 'corporate', label: 'Corporate' },
-  { key: 'showers', label: 'Showers' },
-  { key: 'holidays', label: 'Holidays' },
-  { key: 'grand-openings', label: 'Grand openings' },
-];
-
 const GalleryPage = () => {
   const [items, setItems] = useState([]);
   const [cat, setCat] = useState('all');
@@ -23,6 +13,14 @@ const GalleryPage = () => {
   const showHeader = site?.gallery_page_show_header !== false;
   const showFilters = site?.gallery_page_show_filters !== false;
   const showGrid = site?.gallery_page_show_grid !== false;
+
+  // Categories are fully admin-managed via Admin → Portfolio → Manage
+  // categories. We always prepend an "All" chip so visitors can see every
+  // photo at once.
+  const categories = useMemo(() => {
+    const dynamic = (site?.gallery_categories || []).map(c => ({ key: c.key, label: c.label }));
+    return [{ key: 'all', label: 'All' }, ...dynamic];
+  }, [site?.gallery_categories]);
 
   useEffect(() => { api.get('/gallery').then(r => setItems(r.data)); }, []);
 
@@ -50,9 +48,9 @@ const GalleryPage = () => {
         <SectionHeader eyebrow="GALLERY" title="A closer look at our work" subtitle="Filter by event type to explore recent installations." />
       )}
 
-      {showFilters && (
+      {showFilters && categories.length > 1 && (
       <div className="mt-8 flex flex-wrap gap-2" data-testid="gallery-category-tabs">
-        {CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <button
             key={c.key}
             onClick={() => setCat(c.key)}

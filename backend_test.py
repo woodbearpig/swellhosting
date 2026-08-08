@@ -404,16 +404,128 @@ class TestRunner:
             )
         )
     
+    def test_gallery_categories(self):
+        """Test gallery category management feature"""
+        self.log("\n=== GALLERY CATEGORY MANAGEMENT ===")
+        
+        # 1. GET site-content - verify gallery_categories field exists
+        success, body = self.test(
+            "GET /api/site-content includes gallery_categories",
+            "GET",
+            "/site-content",
+            200,
+            headers={},
+            check_fn=lambda b: "gallery_categories" in b and isinstance(b.get("gallery_categories"), list)
+        )
+        
+        if not success or not body:
+            self.log("Cannot proceed with gallery category tests - site-content failed", "ERROR")
+            return
+        
+        original_categories = body.get("gallery_categories", [])
+        self.log(f"Found {len(original_categories)} existing categories")
+        
+        # 2. Add a new category
+        new_categories = original_categories.copy()
+        new_categories.append({"key": "test-anniversaries", "label": "Test Anniversaries"})
+        
+        success, body = self.test(
+            "PUT /api/admin/site-content (add new category)",
+            "PUT",
+            "/admin/site-content",
+            200,
+            data={"gallery_categories": new_categories},
+            check_fn=lambda b: len(b.get("gallery_categories", [])) == len(new_categories)
+        )
+        
+        # 3. Rename a category
+        if len(new_categories) > 0:
+            new_categories[0] = {"key": new_categories[0]["key"], "label": "Renamed Category"}
+            success, body = self.test(
+                "PUT /api/admin/site-content (rename category)",
+                "PUT",
+                "/admin/site-content",
+                200,
+                data={"gallery_categories": new_categories},
+                check_fn=lambda b: b.get("gallery_categories", [])[0].get("label") == "Renamed Category"
+            )
+        
+        # 4. Remove the test category
+        new_categories = [c for c in new_categories if c["key"] != "test-anniversaries"]
+        success, body = self.test(
+            "PUT /api/admin/site-content (remove category)",
+            "PUT",
+            "/admin/site-content",
+            200,
+            data={"gallery_categories": new_categories},
+            check_fn=lambda b: not any(c.get("key") == "test-anniversaries" for c in b.get("gallery_categories", []))
+        )
+        
+        # 5. Test empty categories edge case
+        success, body = self.test(
+            "PUT /api/admin/site-content (empty categories)",
+            "PUT",
+            "/admin/site-content",
+            200,
+            data={"gallery_categories": []},
+            check_fn=lambda b: b.get("gallery_categories") == []
+        )
+        
+        # 6. Restore original categories
+        self.test(
+            "Restore original categories",
+            "PUT",
+            "/admin/site-content",
+            200,
+            data={"gallery_categories": original_categories}
+        )
+        
+        # 7. Test gallery photo with category
+        if len(original_categories) > 0:
+            test_category = original_categories[0]["key"]
+            success, body = self.test(
+                "POST /api/admin/gallery (create photo with category)",
+                "POST",
+                "/admin/gallery",
+                200,
+                data={
+                    "image_url": "https://images.unsplash.com/photo-1649615644622-6d83f48e69c5",
+                    "title": "Test Photo for Category",
+                    "category": test_category,
+                    "featured": False
+                },
+                check_fn=lambda b: "id" in b and b.get("category") == test_category
+            )
+            
+            photo_id = body.get("id") if body else None
+            
+            # 8. Test bulk category change
+            if photo_id and len(original_categories) > 1:
+                new_category = original_categories[1]["key"]
+                success, body = self.test(
+                    "POST /api/admin/gallery/bulk-update (change category)",
+                    "POST",
+                    "/admin/gallery/bulk-update",
+                    200,
+                    data={"ids": [photo_id], "patch": {"category": new_category}},
+                    check_fn=lambda b: b.get("ok") == True
+                )
+            
+            # Cleanup
+            if photo_id:
+                self.test("Cleanup: Delete test photo", "DELETE", f"/admin/gallery/{photo_id}", 200)
+    
     def run_all(self):
         """Run all tests"""
         self.log("=" * 60)
-        self.log("BACKEND API TEST SUITE - Backdrops, Testimonials, Hero")
+        self.log("BACKEND API TEST SUITE - Gallery Categories, Backdrops, Testimonials, Hero")
         self.log("=" * 60)
         
         if not self.login():
             self.log("Login failed - aborting tests", "ERROR")
             return False
         
+        self.test_gallery_categories()
         self.test_testimonials()
         self.test_backdrops()
         self.test_hero_layout()
