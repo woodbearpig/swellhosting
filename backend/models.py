@@ -81,6 +81,10 @@ class SiteContent(Base):
     about_short: str = "A boutique LA-based studio designing dreamy, custom event installations — from intimate showers to weddings and brand launches."
     about_full: str = "swell design + media is a boutique event styling studio based in Los Angeles. We specialize in custom balloon installations, thoughtful florals, and full-service event decor for weddings, birthdays, baby & bridal showers, corporate gatherings, grand openings, and holiday celebrations. Every design is made just for you — no cookie-cutter kits, no rushing. Just a calm, collaborative process from first inquiry to the moment your guests walk in."
     about_image_url: str = "https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85"
+    # Same ratio + fit knobs as the Meet-the-Designer photo, applied to the
+    # About page hero image. Defaults kept safe for the current image.
+    about_image_aspect: str = "portrait"  # 'portrait'|'landscape'|'wide'|'square'|'auto'|'fill'
+    about_image_fit: str = "cover"        # 'cover' | 'contain'
     designer_name: str = "Meet the designer"
     designer_bio: str = "Hi, I'm the heart behind swell design + media. I fell in love with balloons after decorating my daughter's first birthday — and haven't stopped since. I care deeply about the small details that make an event feel unmistakably you."
     # Optional overrides for the homepage "Meet the designer" section. Any
@@ -93,7 +97,7 @@ class SiteContent(Base):
     # Wide diptych images (like the client's silver-balloons + portrait combo)
     # look best with aspect="wide" + fit="cover", or aspect="auto" + fit="contain"
     # to preserve the whole composition.
-    designer_image_aspect: str = "portrait"  # 'portrait' | 'landscape' | 'wide' | 'square' | 'auto'
+    designer_image_aspect: str = "portrait"  # 'portrait' | 'landscape' | 'wide' | 'square' | 'auto' | 'fill'
     designer_image_fit: str = "cover"        # 'cover' | 'contain'
     designer_cta_primary_label: str = "Start your inquiry"
     designer_cta_primary_href: str = "/inquire"

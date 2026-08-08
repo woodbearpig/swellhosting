@@ -634,6 +634,7 @@ const AdminHomePage = () => {
                   <option value="wide">Wide (2:1)</option>
                   <option value="square">Square (1:1)</option>
                   <option value="auto">Auto (use image's own)</option>
+                  <option value="fill">Fill (match text height)</option>
                 </select>
               </div>
               <div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, MessageSquarePlus } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, publicUrl } from '@/lib/api';
 import { SectionHeader } from '@/components/SectionEyebrow';
 import { useSite } from '@/context/SiteContext';
 import { TestimonialCard } from '@/pages/BackdropsAndReviews';
@@ -12,13 +12,30 @@ export const AboutPage = () => {
   const showImage = site?.about_show_image !== false;
   const showDesigner = site?.about_show_designer !== false;
   const showCtas = site?.about_show_ctas !== false;
+  const aspect = site?.about_image_aspect || 'portrait';
+  const aspectClass = {
+    portrait: 'aspect-[4/5]',
+    landscape: 'aspect-[4/3]',
+    wide: 'aspect-[2/1]',
+    square: 'aspect-square',
+    auto: '',
+    fill: '',
+  }[aspect] || 'aspect-[4/5]';
+  const useFill = aspect === 'fill';
+  const fitClass = (site?.about_image_fit === 'contain') ? 'object-contain' : 'object-cover';
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="about-page">
       <SectionHeader eyebrow="ABOUT" title="About swell design + media" subtitle="A boutique LA-based studio dedicated to thoughtful, custom event styling." />
-      <div className={`mt-10 grid grid-cols-1 gap-10 items-center ${showImage ? 'lg:grid-cols-2' : ''}`}>
+      <div className={`mt-10 grid grid-cols-1 gap-10 ${showImage ? 'lg:grid-cols-2' : ''} ${useFill ? 'lg:items-stretch items-center' : 'items-center'}`}>
         {showImage && (
-        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-[2rem] overflow-hidden aspect-[4/5] bg-[color:var(--brand-surface-2)] lift-shadow" data-testid="about-image-block">
-          <img src={site?.about_image_url} alt="About swell design + media" className="h-full w-full object-cover" />
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className={`rounded-[2rem] overflow-hidden bg-[color:var(--brand-surface-2)] lift-shadow ${aspectClass} ${useFill ? 'lg:h-full lg:aspect-auto min-h-[420px]' : ''}`}
+          data-testid="about-image-block"
+        >
+          <img src={publicUrl(site?.about_image_url)} alt="About swell design + media" className={`h-full w-full ${fitClass}`} />
         </motion.div>
         )}
         <div>

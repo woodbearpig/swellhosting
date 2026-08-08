@@ -27,6 +27,39 @@ const AdminAboutPage = () => {
             <MediaPickerButton testId="media-picker-about" onSelect={url => set({ about_image_url: url })} />
           </div>
           <TextField className="mt-2" placeholder="Or paste URL" value={data.about_image_url || ''} onCommit={v => set({ about_image_url: v })} />
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
+            <div>
+              <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Ratio</label>
+              <select
+                className="input-cream !h-9 text-sm"
+                value={data.about_image_aspect || 'portrait'}
+                onChange={e => set({ about_image_aspect: e.target.value })}
+                data-testid="admin-about-image-aspect"
+              >
+                <option value="portrait">Portrait (4:5)</option>
+                <option value="landscape">Landscape (4:3)</option>
+                <option value="wide">Wide (2:1)</option>
+                <option value="square">Square (1:1)</option>
+                <option value="auto">Auto (use image's own)</option>
+                <option value="fill">Fill (match text height)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Fit</label>
+              <select
+                className="input-cream !h-9 text-sm"
+                value={data.about_image_fit || 'cover'}
+                onChange={e => set({ about_image_fit: e.target.value })}
+                data-testid="admin-about-image-fit"
+              >
+                <option value="cover">Fill (crops to frame)</option>
+                <option value="contain">Fit (show whole photo)</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-[11px] text-[color:var(--brand-text-muted)] mt-2 leading-snug max-w-xl">
+            <b>For wide diptych photos:</b> use <em>Wide (2:1)</em> + <em>Fill</em>, or <em>Fill (match text height)</em> + <em>Fill</em> to expand the photo to match the paragraph height on the right.
+          </p>
         </div>
         <div><label className="eyebrow block mb-1">DESIGNER NAME</label><TextField value={data.designer_name || ''} onCommit={v => set({ designer_name: v })} /></div>
         <div><label className="eyebrow block mb-1">DESIGNER BIO</label><TextArea rows={4} value={data.designer_bio || ''} onCommit={v => set({ designer_bio: v })} /></div>
