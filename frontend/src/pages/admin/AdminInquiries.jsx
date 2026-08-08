@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Trash2, Download } from 'lucide-react';
 import { api, publicUrl } from '@/lib/api';
 import { formatDate, eventTypeLabel, statusLabel } from '@/lib/utils';
+import { ReplyWithTemplateButton } from '@/components/admin/ReplyWithTemplateButton';
 
 const STATUSES = ['new', 'needs_follow_up', 'consult_scheduled', 'proposal_sent', 'booked', 'archived', 'lost'];
 
@@ -80,13 +81,19 @@ export const AdminInquiriesList = () => {
         </div>
         {items.length === 0 && <p className="px-4 py-10 text-center text-[color:var(--brand-text-muted)]">No inquiries yet.</p>}
         {items.map(i => (
-          <Link key={i.id} to={`/admin/inquiries/${i.id}`} className="grid grid-cols-12 px-4 py-3 border-b border-[color:var(--brand-border)] hover:bg-[color:var(--brand-surface-2)] items-center" data-testid={`admin-inquiry-row-${i.id}`}>
-            <div className="col-span-4"><p className="font-medium">{i.client_name || 'Anonymous'}</p><p className="text-xs text-[color:var(--brand-text-muted)]">{i.client_email}</p></div>
-            <div className="col-span-2 text-sm">{eventTypeLabel(i.event_type) || '—'}</div>
-            <div className="col-span-2 text-sm text-[color:var(--brand-text-muted)]">{formatDate(i.created_at)}</div>
-            <div className="col-span-2"><span className="badge-soft">{statusLabel(i.status)}</span></div>
-            <div className="col-span-2 text-right text-sm text-[color:var(--brand-sage-deep)]">Open →</div>
-          </Link>
+          <div key={i.id} className="grid grid-cols-12 px-4 py-3 border-b border-[color:var(--brand-border)] hover:bg-[color:var(--brand-surface-2)] items-center" data-testid={`admin-inquiry-row-${i.id}`}>
+            <Link to={`/admin/inquiries/${i.id}`} className="col-span-4 min-w-0">
+              <p className="font-medium truncate">{i.client_name || 'Anonymous'}</p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] truncate">{i.client_email}</p>
+            </Link>
+            <Link to={`/admin/inquiries/${i.id}`} className="col-span-2 text-sm">{eventTypeLabel(i.event_type) || '—'}</Link>
+            <Link to={`/admin/inquiries/${i.id}`} className="col-span-2 text-sm text-[color:var(--brand-text-muted)]">{formatDate(i.created_at)}</Link>
+            <Link to={`/admin/inquiries/${i.id}`} className="col-span-2"><span className="badge-soft">{statusLabel(i.status)}</span></Link>
+            <div className="col-span-2 text-right flex items-center justify-end gap-2">
+              <ReplyWithTemplateButton inquiry={i} size="sm" testId={`reply-with-template-row-${i.id}`} />
+              <Link to={`/admin/inquiries/${i.id}`} className="text-sm text-[color:var(--brand-sage-deep)] hover:underline">Open →</Link>
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -125,7 +132,10 @@ export const AdminInquiryDetail = () => {
     <div className="space-y-6" data-testid="admin-inquiry-detail">
       <div className="flex items-center justify-between">
         <Link to="/admin/inquiries" className="inline-flex items-center gap-2 text-sm link-underline"><ArrowLeft className="h-4 w-4" /> Back to inquiries</Link>
-        <button onClick={remove} className="btn-secondary text-red-600" data-testid="admin-inquiry-delete"><Trash2 className="h-4 w-4" /> Delete</button>
+        <div className="flex items-center gap-2">
+          <ReplyWithTemplateButton inquiry={i} testId="admin-inquiry-detail-reply" />
+          <button onClick={remove} className="btn-secondary text-red-600" data-testid="admin-inquiry-delete"><Trash2 className="h-4 w-4" /> Delete</button>
+        </div>
       </div>
       <div>
         <p className="eyebrow">INQUIRY · {formatDate(i.created_at)}</p>

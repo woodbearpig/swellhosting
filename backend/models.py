@@ -142,6 +142,9 @@ class SiteContent(Base):
     home_backdrops_eyebrow: str = "BUILDING BLOCKS"
     home_backdrops_title: str = "Backdrops"
     home_backdrops_subtitle: str = "The standalone pieces that anchor an install. Mix, match, and add florals or balloons."
+    home_designs_eyebrow: str = "COMPLETE LOOKS"
+    home_designs_title: str = "Designs"
+    home_designs_subtitle: str = "Ready-to-book themed setups \u2014 palette, florals, balloons, and accents chosen together."
     home_faq_eyebrow: str = "COMMON QUESTIONS"
     home_faq_title: str = "Good things to know"
 
@@ -332,8 +335,26 @@ class Backdrop(Base):
     image_url: str = ""
     price_from: Optional[str] = None
     featured: bool = False        # show on homepage featured section
+    # Kind: 'backdrop' (physical structure) or 'design' (themed setup / complete look).
+    # Both share the same schema; the frontend groups them in separate sections.
+    kind: str = "backdrop"
     order: int = 0
     active: bool = True           # hide from public without deleting
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+# =========================
+# Reply template — pre-written email bodies for inquiries.
+# Templates support placeholders: {client_name}, {first_name}, {event_type},
+# {event_date}, {guest_count}, {venue}, {business_name}
+# =========================
+class ReplyTemplate(Base):
+    id: str = Field(default_factory=_uid)
+    name: str                     # short label shown in the "Reply with..." dropdown
+    subject: str                  # email subject line (supports placeholders)
+    body: str                     # email body — plain text with newlines; placeholders substituted client-side
+    order: int = 0
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 

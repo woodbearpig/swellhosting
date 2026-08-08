@@ -27,7 +27,7 @@ const groups = [
     label: 'Content',
     items: [
       { to: '/admin/services', label: 'Services', icon: Boxes },
-      { to: '/admin/backdrops', label: 'Backdrops', icon: Frame },
+      { to: '/admin/backdrops', label: 'Backdrops & Designs', icon: Frame },
       { to: '/admin/gallery', label: 'Portfolio', icon: Image },
       { to: '/admin/media', label: 'Media library', icon: FolderOpen },
       { to: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },

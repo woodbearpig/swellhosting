@@ -1,42 +1,30 @@
 [
   {
-    "content": "Backend: Add Backdrop model, extend Testimonial with status/reviewer_email, extend SiteContent with hero mode + backdrop toggles",
-    "status": "completed"
+    "content": "Backend: Add `kind` field to Backdrop model + update nav label to 'Backdrops & Designs' + add home_designs_* SiteContent fields",
+    "status": "in_progress"
   },
   {
-    "content": "Backend: CRUD endpoints for Backdrops + public review submit + admin approve/reject + email alert",
-    "status": "completed"
+    "content": "Backend: Add ReplyTemplate model + CRUD endpoints + startup seed of 4 default templates",
+    "status": "pending"
   },
   {
-    "content": "Backend: Migration to add /backdrops nav item + default site content fields",
-    "status": "completed"
+    "content": "Admin UI: Update AdminBackdrops with Kind selector + tabs, rename sidebar to 'Backdrops & Designs'",
+    "status": "pending"
   },
   {
-    "content": "Admin UI: Testimonials — add photo upload, pending reviews tab with Approve/Reject",
-    "status": "completed"
+    "content": "Admin UI: Split 'Backdrops picker' inquiry field into two field types (Backdrops picker + Designs picker) with kind filtering",
+    "status": "pending"
   },
   {
-    "content": "Admin UI: New AdminBackdrops page (list/add/edit/reorder/media picker)",
-    "status": "completed"
+    "content": "Admin UI: Add Reply Templates card to Settings + 'Reply with…' dropdown on Inquiry detail page + quick action on Inquiries list",
+    "status": "pending"
   },
   {
-    "content": "Admin UI: Home admin — hero layout mode toggle + hero background upload + backdrops section toggles",
-    "status": "completed"
+    "content": "Public UI: /backdrops page — two clearly labeled sections back-to-back; HomePage split into Backdrops + Designs sections",
+    "status": "pending"
   },
   {
-    "content": "Admin UI: Inquiry form builder — new field type 'backdrops multi-select' populated from Backdrops catalog",
-    "status": "completed"
-  },
-  {
-    "content": "Public UI: HomePage — full-bleed hero mode, Backdrops featured section",
-    "status": "completed"
-  },
-  {
-    "content": "Public UI: New /backdrops page, updated /testimonials with photos + submit CTA, new /leave-a-review page",
-    "status": "completed"
-  },
-  {
-    "content": "Wire routes in App.js, test end-to-end with testing agent",
-    "status": "completed"
+    "content": "Verify with testing agent",
+    "status": "pending"
   }
 ]

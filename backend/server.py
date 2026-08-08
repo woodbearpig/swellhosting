@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 from models import (
     AdminUser, LoginPayload, TokenResponse,
-    SiteContent, Service, GalleryItem, Testimonial, Backdrop, FAQ, BlogPost,
+    SiteContent, Service, GalleryItem, Testimonial, Backdrop, ReplyTemplate, FAQ, BlogPost,
     Inquiry, Client, Consultation, Availability, NewsletterSubscriber,
     CustomPalette,
 )
@@ -199,27 +199,104 @@ async def _startup():
         except Exception as e:
             logger.warning("Journal->Blog nav rename failed: %s", e)
 
-        # Ensure a "Backdrops" nav item exists (idempotent) — inserted right after Services if missing.
+        # Ensure a "Backdrops & Designs" nav item exists (idempotent) — inserted right after Services if missing.
+        # If a legacy "Backdrops" item exists, rename its label in place.
         try:
             sc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "header_nav_items": 1}) or {}
             nav = list(sc.get("header_nav_items") or [])
-            has_backdrops = any(isinstance(i, dict) and (i.get("id") == "nav-backdrops" or i.get("href") == "/backdrops") for i in nav)
-            if not has_backdrops:
-                new_item = {"id": "nav-backdrops", "label": "Backdrops", "href": "/backdrops", "visible": True, "new_tab": False}
-                # Insert after Services if present, else at the end
+            changed = False
+            has_bd = False
+            for it in nav:
+                if isinstance(it, dict) and (it.get("id") == "nav-backdrops" or it.get("href") == "/backdrops"):
+                    has_bd = True
+                    if it.get("label") != "Backdrops & Designs":
+                        it["label"] = "Backdrops & Designs"
+                        changed = True
+                    break
+            if not has_bd:
+                new_item = {"id": "nav-backdrops", "label": "Backdrops & Designs", "href": "/backdrops", "visible": True, "new_tab": False}
                 insert_at = len(nav)
                 for i, it in enumerate(nav):
                     if isinstance(it, dict) and (it.get("id") == "nav-services" or it.get("href") == "/services"):
                         insert_at = i + 1
                         break
                 nav.insert(insert_at, new_item)
+                changed = True
+            if changed:
                 await db.site_content.update_one(
                     {"id": "site_content_singleton"},
                     {"$set": {"header_nav_items": nav}},
                 )
-                logger.info("Added 'Backdrops' nav item (position %d)", insert_at)
+                logger.info("Nav 'Backdrops & Designs' upserted")
         except Exception as e:
-            logger.warning("Backdrops nav insert failed: %s", e)
+            logger.warning("Backdrops nav upsert failed: %s", e)
+
+        # Seed default Reply Templates on first boot (idempotent — only inserts if collection is empty).
+        try:
+            existing_count = await db.reply_templates.count_documents({})
+            if existing_count == 0:
+                default_templates = [
+                    {
+                        "name": "Thanks for your inquiry",
+                        "subject": "Thanks for reaching out, {first_name}!",
+                        "body": (
+                            "Hi {first_name},\n\n"
+                            "Thanks so much for reaching out to {business_name} about your {event_type}! "
+                            "I've received your inquiry and I'm excited to learn more about what you're envisioning.\n\n"
+                            "I'll review your details and get back to you within one business day with next steps "
+                            "and any follow-up questions. In the meantime, feel free to send along any inspiration photos "
+                            "or Pinterest boards \u2014 they really help me get a feel for your style.\n\n"
+                            "Chatting soon,\nJordan\n{business_name}"
+                        ),
+                    },
+                    {
+                        "name": "Consultation invite",
+                        "subject": "Let's chat about your {event_type} \u2014 book a consult?",
+                        "body": (
+                            "Hi {first_name},\n\n"
+                            "Thanks again for your inquiry! I'd love to hop on a quick 20-minute call to talk through "
+                            "your vision for {event_date} at {venue}, walk through what a design might look like, "
+                            "and answer any questions you have.\n\n"
+                            "You can grab a time that works for you here: [insert your booking link]\n\n"
+                            "If none of those times work, just reply with a few windows and we'll figure it out.\n\n"
+                            "Looking forward to it,\nJordan\n{business_name}"
+                        ),
+                    },
+                    {
+                        "name": "Proposal follow-up",
+                        "subject": "Following up on your proposal \u2014 any questions?",
+                        "body": (
+                            "Hi {first_name},\n\n"
+                            "Just wanted to circle back on the proposal I sent for your {event_type}. "
+                            "Have you had a chance to look it over? Happy to answer any questions or tweak "
+                            "anything that isn't quite right \u2014 just let me know.\n\n"
+                            "If you're ready to move forward, I'll send the contract and 50% retainer invoice to "
+                            "lock in your {event_date} date.\n\n"
+                            "Talk soon,\nJordan\n{business_name}"
+                        ),
+                    },
+                    {
+                        "name": "Not a fit but thank you",
+                        "subject": "About your {event_type} inquiry",
+                        "body": (
+                            "Hi {first_name},\n\n"
+                            "Thank you so much for thinking of {business_name} for your {event_type}! "
+                            "After reviewing your details, I don't think we're the right fit for this particular "
+                            "event \u2014 whether it's the timing, scope, or budget \u2014 but I appreciate you "
+                            "reaching out and I'd love to be considered for a future celebration.\n\n"
+                            "Wishing you the very best,\nJordan\n{business_name}"
+                        ),
+                    },
+                ]
+                await db.reply_templates.insert_many([
+                    {**t, "id": str(uuid.uuid4()), "order": i,
+                     "created_at": datetime.now(timezone.utc).isoformat(),
+                     "updated_at": datetime.now(timezone.utc).isoformat()}
+                    for i, t in enumerate(default_templates)
+                ])
+                logger.info("Seeded %d default reply templates", len(default_templates))
+        except Exception as e:
+            logger.warning("Reply-template seed failed: %s", e)
 
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
@@ -1089,11 +1166,17 @@ async def delete_testimonial(tid: str, admin=Depends(require_admin)):
 # Backdrops
 # =========================================================
 @api.get("/backdrops")
-async def list_backdrops(featured: Optional[bool] = None):
-    """Public list — only active backdrops."""
+async def list_backdrops(featured: Optional[bool] = None, kind: Optional[str] = None):
+    """Public list \u2014 only active items. Optional filter by kind ('backdrop' or 'design')."""
     query: Dict[str, Any] = {"$or": [{"active": True}, {"active": {"$exists": False}}]}
     if featured is not None:
         query["featured"] = featured
+    if kind:
+        # Handle legacy rows missing the field: treat as 'backdrop' by default.
+        if kind == "backdrop":
+            query["$and"] = [{"$or": [{"kind": "backdrop"}, {"kind": {"$exists": False}}]}]
+        else:
+            query["kind"] = kind
     docs = await db.backdrops.find(query, {"_id": 0}).sort("order", 1).to_list(500)
     return docs
 
@@ -1132,6 +1215,45 @@ async def reorder_backdrops(payload: Dict[str, Any], admin=Depends(require_admin
     order = payload.get("order") or []
     for idx, bid in enumerate(order):
         await db.backdrops.update_one({"id": bid}, {"$set": {"order": idx}})
+    return {"ok": True}
+
+
+# =========================================================
+# Reply templates — pre-written email bodies for inquiries.
+# =========================================================
+@api.get("/admin/reply-templates")
+async def list_reply_templates(admin=Depends(require_admin)):
+    docs = await db.reply_templates.find({}, {"_id": 0}).sort("order", 1).to_list(500)
+    return docs
+
+
+@api.post("/admin/reply-templates")
+async def create_reply_template(payload: Dict[str, Any], admin=Depends(require_admin)):
+    obj = ReplyTemplate(**payload)
+    await db.reply_templates.insert_one(to_doc(obj.model_dump()))
+    return await db.reply_templates.find_one({"id": obj.id}, {"_id": 0})
+
+
+@api.put("/admin/reply-templates/{tid}")
+async def update_reply_template(tid: str, payload: Dict[str, Any], admin=Depends(require_admin)):
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    r = await db.reply_templates.update_one({"id": tid}, {"$set": to_doc(payload)})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return await db.reply_templates.find_one({"id": tid}, {"_id": 0})
+
+
+@api.delete("/admin/reply-templates/{tid}")
+async def delete_reply_template(tid: str, admin=Depends(require_admin)):
+    await db.reply_templates.delete_one({"id": tid})
+    return {"ok": True}
+
+
+@api.post("/admin/reply-templates/reorder")
+async def reorder_reply_templates(payload: Dict[str, Any], admin=Depends(require_admin)):
+    order = payload.get("order") or []
+    for idx, tid in enumerate(order):
+        await db.reply_templates.update_one({"id": tid}, {"$set": {"order": idx}})
     return {"ok": True}
 
 

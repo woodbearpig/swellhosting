@@ -7,6 +7,7 @@ import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 export const AdminBackdrops = () => {
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [tab, setTab] = useState('all'); // 'all' | 'backdrop' | 'design'
 
   const load = async () => {
     try {
@@ -24,7 +25,7 @@ export const AdminBackdrops = () => {
       toast.success('Saved'); setEditing(null); load();
     } catch { toast.error('Save failed'); }
   };
-  const remove = async (id) => { if (!window.confirm('Delete this backdrop?')) return; await api.delete(`/admin/backdrops/${id}`); toast.success('Deleted'); load(); };
+  const remove = async (id) => { if (!window.confirm('Delete this item?')) return; await api.delete(`/admin/backdrops/${id}`); toast.success('Deleted'); load(); };
 
   const move = async (idx, delta) => {
     const next = [...items];
@@ -36,33 +37,71 @@ export const AdminBackdrops = () => {
     catch { toast.error('Reorder failed'); load(); }
   };
 
+  const kindOf = (b) => b.kind || 'backdrop';
+  const filtered = tab === 'all' ? items : items.filter(b => kindOf(b) === tab);
+  const counts = {
+    all: items.length,
+    backdrop: items.filter(b => kindOf(b) === 'backdrop').length,
+    design: items.filter(b => kindOf(b) === 'design').length,
+  };
+  const tabs = [
+    { id: 'all', label: 'All' },
+    { id: 'backdrop', label: 'Backdrops' },
+    { id: 'design', label: 'Designs' },
+  ];
+
   return (
     <div className="space-y-6" data-testid="admin-backdrops-page">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <p className="eyebrow">CONTENT</p>
-          <h1 className="font-serif text-3xl sm:text-4xl mt-1">Backdrops</h1>
-          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">Your catalog of reusable structures. Featured ones show on the homepage; all appear on <code>/backdrops</code>.</p>
+          <h1 className="font-serif text-3xl sm:text-4xl mt-1">Backdrops &amp; Designs</h1>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">
+            <b>Backdrops</b> are reusable structures (e.g. Trio Rounded Arch, Hoop).
+            <b> Designs</b> are complete themed setups (palette + florals + balloons together).
+            Both share the same form; the public site groups them into separate sections.
+          </p>
         </div>
-        <button className="btn-primary" onClick={() => setEditing({ name: '', subtitle: '', description: '', image_url: '', price_from: '', featured: false, active: true })} data-testid="admin-backdrops-new"><Plus className="h-4 w-4" /> New backdrop</button>
+        <button className="btn-primary" onClick={() => setEditing({ name: '', subtitle: '', description: '', image_url: '', price_from: '', featured: false, active: true, kind: tab === 'design' ? 'design' : 'backdrop' })} data-testid="admin-backdrops-new"><Plus className="h-4 w-4" /> New {tab === 'design' ? 'design' : tab === 'backdrop' ? 'backdrop' : 'item'}</button>
       </div>
 
-      {items.length === 0 ? (
+      <div className="flex items-center gap-1 border-b border-[color:var(--brand-border)]">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2 text-sm transition-colors ${
+              tab === t.id
+                ? 'text-[color:var(--brand-text)] font-medium border-b-2 border-[color:var(--brand-sage-deep)] -mb-px'
+                : 'text-[color:var(--brand-text-muted)] hover:text-[color:var(--brand-text)]'
+            }`}
+            data-testid={`admin-backdrops-tab-${t.id}`}
+          >
+            {t.label}
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-[color:var(--brand-surface-2)]">{counts[t.id]}</span>
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="card-cream p-8 text-center">
           <Frame className="h-8 w-8 mx-auto text-[color:var(--brand-text-muted)] mb-2" />
-          <p className="font-serif text-lg">No backdrops yet.</p>
-          <p className="text-sm text-[color:var(--brand-text-muted)]">Add your first backdrop — e.g. “Trio Rounded Arch”, “Celebration Station”, “Hoop”.</p>
+          <p className="font-serif text-lg">Nothing here yet.</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)]">{tab === 'design' ? 'Add your first design — a complete themed look.' : tab === 'backdrop' ? 'Add your first backdrop — e.g. "Trio Rounded Arch".' : 'Add backdrops or designs with the button above.'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((b, idx) => (
+          {filtered.map((b, idx) => (
             <div key={b.id} className="card-cream overflow-hidden" data-testid={`admin-backdrop-card-${b.id}`}>
-              <div className="aspect-[3/4] bg-[color:var(--brand-surface-2)]">
+              <div className="aspect-[3/4] bg-[color:var(--brand-surface-2)] relative">
                 {b.image_url ? (
                   <img src={publicUrl(b.image_url)} alt={b.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[color:var(--brand-text-muted)]"><Frame className="h-10 w-10" /></div>
                 )}
+                <span className={`absolute top-2 left-2 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${kindOf(b) === 'design' ? 'bg-[color:var(--brand-blush-tint)] text-[color:var(--brand-coral)]' : 'bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]'}`}>
+                  {kindOf(b)}
+                </span>
               </div>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -78,8 +117,8 @@ export const AdminBackdrops = () => {
                 <div className="mt-3 flex items-center gap-1">
                   <button onClick={() => setEditing(b)} className="link-underline text-sm">Edit</button>
                   <div className="ml-auto flex gap-1">
-                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
-                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(idx, +1)} disabled={idx === items.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(items.indexOf(b), -1)} disabled={items.indexOf(b) === 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                    <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" onClick={() => move(items.indexOf(b), +1)} disabled={items.indexOf(b) === items.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
                     <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => remove(b.id)} aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
