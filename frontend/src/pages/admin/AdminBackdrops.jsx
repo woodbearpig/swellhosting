@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, X, Frame, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, X, Frame, Sparkles, ArrowUp, ArrowDown, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { api, publicUrl, uploadFile } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
 
@@ -8,6 +8,21 @@ export const AdminBackdrops = () => {
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
   const [tab, setTab] = useState('all'); // 'all' | 'backdrop' | 'design'
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const newMenuRef = useRef(null);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target)) setNewMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const startNew = (kind) => {
+    setNewMenuOpen(false);
+    setEditing({ name: '', subtitle: '', description: '', image_url: '', price_from: '', featured: false, active: true, kind });
+  };
 
   const load = async () => {
     try {
@@ -62,7 +77,56 @@ export const AdminBackdrops = () => {
             Both share the same form; the public site groups them into separate sections.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setEditing({ name: '', subtitle: '', description: '', image_url: '', price_from: '', featured: false, active: true, kind: tab === 'design' ? 'design' : 'backdrop' })} data-testid="admin-backdrops-new"><Plus className="h-4 w-4" /> New {tab === 'design' ? 'design' : tab === 'backdrop' ? 'backdrop' : 'item'}</button>
+        <div className="relative" ref={newMenuRef}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setNewMenuOpen(o => !o)}
+            data-testid="admin-backdrops-new"
+            aria-haspopup="menu"
+            aria-expanded={newMenuOpen}
+          >
+            <Plus className="h-4 w-4" /> New… <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+          {newMenuOpen && (
+            <div
+              className="absolute right-0 top-full mt-2 w-64 z-50 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] shadow-lg overflow-hidden"
+              role="menu"
+              data-testid="admin-backdrops-new-menu"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => startNew('backdrop')}
+                className="w-full text-left px-3 py-3 hover:bg-[color:var(--brand-sage-tint)] border-b border-[color:var(--brand-border)] transition-colors"
+                data-testid="admin-backdrops-new-backdrop"
+              >
+                <div className="flex items-center gap-2">
+                  <Frame className="h-4 w-4 text-[color:var(--brand-sage-deep)]" />
+                  <div>
+                    <p className="font-medium text-sm">New backdrop</p>
+                    <p className="text-xs text-[color:var(--brand-text-muted)]">A reusable structure (arch, hoop…)</p>
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => startNew('design')}
+                className="w-full text-left px-3 py-3 hover:bg-[color:var(--brand-blush-tint)] transition-colors"
+                data-testid="admin-backdrops-new-design"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[color:var(--brand-coral)]" />
+                  <div>
+                    <p className="font-medium text-sm">New design</p>
+                    <p className="text-xs text-[color:var(--brand-text-muted)]">A complete themed setup</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-1 border-b border-[color:var(--brand-border)]">
@@ -135,17 +199,47 @@ export const AdminBackdrops = () => {
 
 const BackdropEditor = ({ value, setValue, onSave, onClose }) => {
   const setImage = (url) => setValue({ ...value, image_url: url });
+  const kind = value.kind || 'backdrop';
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-[color:var(--brand-cream)] w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="admin-backdrop-editor">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif text-2xl">{value.id ? 'Edit' : 'New'} backdrop</h2>
-          <button onClick={onClose}><X /></button>
+          <h2 className="font-serif text-2xl">{value.id ? 'Edit' : 'New'} {kind}</h2>
+          <button onClick={onClose} aria-label="Close"><X /></button>
         </div>
         <div className="space-y-3">
           <div>
+            <label className="eyebrow block mb-1">TYPE</label>
+            <div className="grid grid-cols-2 gap-2" data-testid="admin-backdrop-kind-toggle">
+              <button
+                type="button"
+                onClick={() => setValue({ ...value, kind: 'backdrop' })}
+                className={`flex items-center gap-2 p-3 rounded-lg border text-left transition-colors ${kind === 'backdrop' ? 'border-[color:var(--brand-sage-deep)] bg-[color:var(--brand-sage-tint)]/40 ring-2 ring-[color:var(--brand-sage-deep)]' : 'border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)]/20'}`}
+                data-testid="admin-backdrop-kind-backdrop"
+              >
+                <Frame className="h-4 w-4 text-[color:var(--brand-sage-deep)] shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Backdrop</p>
+                  <p className="text-[11px] text-[color:var(--brand-text-muted)]">Reusable structure</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setValue({ ...value, kind: 'design' })}
+                className={`flex items-center gap-2 p-3 rounded-lg border text-left transition-colors ${kind === 'design' ? 'border-[color:var(--brand-coral)] bg-[color:var(--brand-blush-tint)]/50 ring-2 ring-[color:var(--brand-coral)]' : 'border-[color:var(--brand-border)] hover:bg-[color:var(--brand-blush-tint)]/20'}`}
+                data-testid="admin-backdrop-kind-design"
+              >
+                <Sparkles className="h-4 w-4 text-[color:var(--brand-coral)] shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Design</p>
+                  <p className="text-[11px] text-[color:var(--brand-text-muted)]">Complete themed setup</p>
+                </div>
+              </button>
+            </div>
+          </div>
+          <div>
             <label className="eyebrow block mb-1">NAME</label>
-            <input className="input-cream" placeholder="e.g. Trio Rounded Arch" value={value.name || ''} onChange={e => setValue({ ...value, name: e.target.value })} data-testid="admin-backdrop-name" />
+            <input className="input-cream" placeholder={kind === 'design' ? 'e.g. Boho Pampas Dream' : 'e.g. Trio Rounded Arch'} value={value.name || ''} onChange={e => setValue({ ...value, name: e.target.value })} data-testid="admin-backdrop-name" />
           </div>
           <div>
             <label className="eyebrow block mb-1">SUBTITLE / SHORT NOTE (optional)</label>
