@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V7)
+# plan.md — swell design + media (V8)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -13,7 +13,7 @@
   - Customize typography (headline/body/script fonts)
   - Customize header navigation (internal + external links)
   - Customize the inquiry wizard steps/fields (bubble-chip options)
-  - Add **simple conditional display rules** to inquiry fields (show field X only if a previous field equals value)
+  - Add **simple conditional display rules** to inquiry fields (show field if previous field equals value)
   - Export inquiries as CSV
   - Author **Blog** posts with rich text + image embeds
   - Present an **Instagram-style Blog gallery** (image-first grid with filtering)
@@ -26,10 +26,10 @@
   - Automatically purge any non-owned hosted asset URLs from SiteContent
 - Improve perceived UX:
   - Eliminate “flash of full site” when **Coming Soon mode** is enabled
-  - Keep admin editing pages **fast and focused** (avoid mega-page lag)
+  - Keep admin editing pages **fast and focused**
 
-**New/updated objective (current milestone)**
-- Ensure the **Admin Site Content editing experience is fast** (no keystroke lag) while preserving save correctness.
+**Updated objective (current milestone)**
+- Ensure the **Admin** is **smooth while scrolling and interacting** (not just fast typing) on production VPS, with **no jank on fresh servers**.
 
 ---
 
@@ -181,7 +181,7 @@
   - `PATCH /api/admin/media/{id}`
   - `DELETE /api/admin/media/{id}`
 - Admin page `/admin/media` with upload, grid, tags, delete.
-- Reusable picker UI (“Insert from library”) integrated into all existing admin image fields (see Phase K3).
+- Reusable picker UI (“Insert from library”) integrated into all existing admin image fields.
 
 ---
 
@@ -190,10 +190,9 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 #### K1 — Admin Integrations: downloadable OAuth PDF guide (P0) (COMPLETED ✅)
 - Produced the client-facing guide PDF:
-  - `/app/deploy/Google_Calendar_Setup_Guide.pdf` (12-page, client-ready)
-- Added a download link in `/admin/integrations` (Google Calendar section):
+  - `/app/deploy/Google_Calendar_Setup_Guide.pdf` (client-ready)
+- Added a download link in `/admin/integrations`:
   - Label: **“OAuth setup guide for client (PDF)”**
-  - Served from: `frontend/public/docs/oauth-setup-guide.pdf`
 
 #### K2 — Inquiry CSV Export (P1) (COMPLETED ✅)
 - Added **Export CSV** button to `/admin/inquiries`.
@@ -233,127 +232,80 @@ All items were implemented and validated (curl + browser automation screenshots)
 ---
 
 ### Phase M (P0/P1) — Admin performance refactor + Portfolio clarity + Instagram polish + Media bulk actions (COMPLETED ✅)
-**Goal:** Eliminate laggy mega “Site content” page, make homepage media sources clearer, and improve Media Library operations for real-world use.
+**Goal:** Eliminate laggy mega “Site content” page, make homepage media sources clearer, and improve Media Library operations.
 
 #### M1 — Bug fix: input icon overlap (COMPLETED ✅)
-**Issue**
-- Icons overlapped text in:
-  - `/admin/settings` (Display Name + Email)
-  - `/admin/media` (Search input)
-
-**Root cause**
-- `.input-cream` CSS specificity overrode Tailwind padding utilities (e.g., `pl-9`).
-
-**Fix**
-- Updated `frontend/src/index.css`:
-  - Switched selector to `:where(.input-cream)` so specificity drops to 0 and Tailwind utilities win.
+- Updated `frontend/src/index.css` to use `:where(.input-cream)` so Tailwind padding utilities win.
 
 #### M2 — Major refactor: split the monolithic Site Content editor (COMPLETED ✅)
-**Why**
-- The old `AdminSiteContent.jsx` (753 lines, 13 tabs) mounted all tabs at once and re-rendered on every keystroke → laggy UX.
-
-**Completed work**
-- Deleted:
-  - `frontend/src/pages/admin/AdminSiteContent.jsx`
-- Created focused admin pages under:
-  - `frontend/src/pages/admin/site/`
-  - `_shared.jsx` (shared hook + atoms)
-  - `AdminHomePage.jsx`
-  - `AdminBrandPage.jsx`
-  - `AdminAboutPage.jsx`
-  - `AdminHeaderNavPage.jsx`
-  - `AdminFooterPage.jsx`
-  - `AdminSocialContactPage.jsx`
-  - `AdminComingSoonPage.jsx`
-
-**Key architecture**
-- `_shared.jsx` exports `useSiteAdminData()`:
-  - Reuses `site` from SiteContext (avoids re-fetch on every mount)
-  - Edits local snapshot
-  - Saves via `PUT /api/admin/site-content`
-  - Calls SiteContext `refresh()` after save
+- Replaced `AdminSiteContent.jsx` with focused pages under `frontend/src/pages/admin/site/`.
 
 #### M3 — Admin routing + sidebar IA refresh (COMPLETED ✅)
-- Updated routes in `frontend/src/App.js`:
-  - New pages: `/admin/home`, `/admin/brand`, `/admin/about`, `/admin/nav`, `/admin/footer`, `/admin/social-contact`, `/admin/coming-soon`
-  - Back-compat: `/admin/site-content` now redirects → `/admin/home`
-- Updated `AdminLayout.jsx` sidebar with grouped sections:
-  - **Pages** / **Content** / **Site chrome** / **System**
+- Added `/admin/home`, `/admin/brand`, `/admin/about`, `/admin/nav`, `/admin/footer`, `/admin/social-contact`, `/admin/coming-soon`.
+- Back-compat: `/admin/site-content` redirects → `/admin/home`.
 
 #### M4 — Inline “Recent Work” portfolio preview on Home admin (COMPLETED ✅)
-- New inline preview inside `/admin/home` → Recent Work:
-  - Fetches from `/api/gallery`
-  - Shows current featured items (up to 6)
-  - Shows non-featured thumbnails to promote
-  - Click-to-promote / click-to-remove toggles `featured` via `PUT /api/admin/gallery/{id}`
-  - “Manage full portfolio” deep-link to `/admin/gallery`
+- Inline featured/unfeatured toggles for portfolio items.
 
 #### M5 — Gallery → Portfolio rename (COMPLETED ✅)
-- Admin sidebar and admin page heading now say **Portfolio**.
-- Routes remain unchanged for compatibility:
-  - `/admin/gallery` and `/gallery` still exist.
+- UI wording updated; routes remain for compatibility.
 
 #### M6 — Instagram feed: fully editable + launch-day cache (COMPLETED ✅)
-**Admin editability**
-- Added SiteContent fields (backend `models.py`):
-  - `home_instagram_active`
-  - `home_instagram_eyebrow`
-  - `home_instagram_title`
-  - `home_instagram_subtitle`
-  - `home_instagram_count`
-- `/admin/home` includes inputs for eyebrow/title/subtitle/count + hide toggle.
-- Public component `InstagramFeed.jsx` now:
-  - Reads labels + post count from SiteContent
-  - Uses `site.instagram_url` to derive the button label `@handle` (no hardcoding)
-
-**Traffic protection**
-- Backend `GET /api/instagram/feed` now uses an in-process 5-minute cache (`_IG_CACHE`).
-- If Meta request fails, serves stale cache (or empty list if none).
+- SiteContent-driven labels + server-side cache for Meta API requests.
 
 #### M7 — Media Library bulk actions (COMPLETED ✅)
-- Added **Select mode** to `/admin/media`:
-  - Per-tile checkbox indicator
-  - Select all / clear
-  - Floating bulk action bar when 1+ selected
-- Added bulk operations:
-  - **Bulk tag modal** (Add vs Replace modes)
-  - **Bulk delete** via **in-app confirm modal** (no `window.confirm`) for reliability and testability
+- Select mode + bulk tagging + bulk delete confirmation modal.
 
 #### M8 — Testing (COMPLETED ✅)
-- Testing agent iterations:
-  - `iteration_13.json` (initial refactor verification)
-  - `iteration_14.json` (CSS overlap fixed; bulk delete flagged due to confirm-dialog)
-  - `iteration_15.json` (bulk delete modal fix verified)
+- `/app/test_reports/iteration_13.json` to `iteration_15.json`.
 
 ---
 
-### Phase N (P0) — Admin Site Content keystroke lag elimination (COMPLETED ✅)
-**Goal:** Make all Site Content admin pages responsive while typing, without breaking save behavior.
-
-**Problem**
-- Even after splitting the monolithic site-content page, typing into admin text fields was still laggy.
-- Root causes:
-  - `useSiteAdminData` re-fetching or re-seeding causing avoidable renders on mount.
-  - Updating one giant `data` object on every keystroke caused page-wide reconciliation.
+### Phase N (P0) — Admin input keystroke lag elimination (COMPLETED ✅, but not sufficient alone)
+**Goal:** Make admin Site Content pages responsive while typing, without breaking save behavior.
 
 **Completed work**
-1. **Introduced locally-controlled inputs** in `frontend/src/pages/admin/site/_shared.jsx`:
-   - `TextField` and `TextArea` maintain local state while typing.
-   - Only commit to global state via `onCommit` (on blur).
-2. **Converted all 7 site-content admin pages** to use `TextField`/`TextArea`:
-   - Home, About, Brand, Header/Nav, Social & Contact, Footer, Coming Soon.
-3. **Hardened save logic** in `_shared.jsx`:
-   - Refactored `save()` to read from a `dataRef` (avoids React anti-pattern: async side-effects inside a `setState` updater).
+- Added local-state `TextField`/`TextArea` that commit on blur.
+- Converted all 7 site-content pages to use these components.
+- Refactored `save()` in `_shared.jsx` to use a ref (`dataRef`) for correctness.
 
 **Testing**
-- `/app/test_reports/iteration_16.json`
-  - Keystroke responsiveness: **1–41ms per character**
-  - Save-on-blur verified
-  - Data persistence after refresh verified
-  - Toggles and dropdowns verified
+- `/app/test_reports/iteration_16.json` verified no keystroke lag + saving + persistence.
 
-**Outcome**
-- Admin content editing is now fast and usable for real client workflows.
+**Note (new info)**
+- User still reported lag on production VPS, especially **scroll jank**. This indicated a paint/compositing bottleneck rather than state-churn.
+
+---
+
+### Phase O (P0) — Admin scroll performance fix (CSS compositor pressure) (IN PROGRESS → READY FOR VPS DEPLOY)
+**Goal:** Remove scroll jank across admin pages on production VPS, including fresh servers with minimal content.
+
+**Root cause (confirmed)**
+- `.card-cream` used:
+  - `background: rgba(255,255,255,0.85)` (semi-transparent)
+  - `backdrop-filter: blur(2px)`
+- Admin pages render **15–30+** `.card-cream` elements (SectionCards + ToggleRows + badges + steps).
+- On scroll, browsers must snapshot pixels behind each card, blur, and composite → classic jank.
+- Public site appeared fine because it uses `.card-cream` far more sparingly.
+
+**Fix implemented (code change complete)**
+- Updated `frontend/src/index.css`:
+  - `.card-cream` is now fully opaque (`background: #ffffff`)
+  - removed `backdrop-filter`
+  - softened shadow slightly to preserve the luxury look
+
+**Rollout instructions (critical)**
+- This CSS change must be included in the VPS build output (production bundle). On Hostinger:
+  ```bash
+  cd /var/www/swell && ./deploy.sh
+  ```
+
+**Verification checklist (on VPS)**
+- Open admin and test smoothness:
+  - `/admin/home` scroll up/down quickly
+  - `/admin/inquiries` scroll list
+  - `/admin/media` scroll grid
+- Confirm there is **no input lag** + **no scroll stutter**.
 
 ---
 
@@ -361,13 +313,18 @@ All items were implemented and validated (curl + browser automation screenshots)
 - After each phase item: quick smoke test in browser.
 - Automated validation included:
   - Auth guard on CSV export
-  - Media picker shows assets, inserts URLs into fields, and respects filters
-  - Conditional logic persists and hides fields + required validation honors visibility
-  - Rich editor saves HTML and public blog detail renders correctly
-  - Blog gallery shows correct tile layout, filtering, and featured behavior
-  - Admin refactor: new routes + sidebar + save flows + media bulk actions + Instagram caching
-  - **Admin lag fix verification:** iteration 16 confirms performance + persistence
-- Test reports remain in `/app/test_reports/`.
+  - Media picker works across all image fields
+  - Conditional logic persists and required validation honors visibility
+  - TipTap blog editor saves and renders correctly
+  - Blog gallery layout + tags + featured behavior
+  - Admin refactor routes and save flows
+  - **Admin keystroke performance:** `/app/test_reports/iteration_16.json`
+
+**New QA focus (after Phase O deploy)**
+- Validate admin scroll smoothness on production VPS.
+- If any remaining jank persists:
+  - audit for other expensive effects: `backdrop-filter`, heavy `box-shadow` on large lists, forced reflow loops
+  - consider turning off Framer Motion animations in admin (or respecting `prefers-reduced-motion`) if needed
 
 ---
 
@@ -383,24 +340,23 @@ cd /var/www/swell && ./deploy.sh
 - Owner can:
   - Connect Google Calendar with a single click and block busy times.
   - Run the inquiry wizard with a final optional phone-consult booking step.
-  - Send confirmation emails including a calendar invite (.ics) when a consult is scheduled.
   - Upload media once and reuse anywhere via a media library + picker.
-  - Bulk-manage media assets (tagging + deletion) without one-by-one cleanup.
-  - Download a client-friendly OAuth PDF guide from `/admin/integrations`.
+  - Bulk-manage media assets.
   - Export inquiries to CSV.
-  - Configure **simple conditional logic** in the inquiry form builder.
-  - Create **Blog** posts with rich text and embedded images.
-  - Curate the public Blog gallery with **tags** and **featured** tiles.
-  - Manage the homepage “Recent Work” images via Portfolio featured toggles.
-  - Configure homepage Instagram feed text + count, with server-side caching for traffic spikes.
-  - **Edit site content in admin with no keystroke lag** while preserving correct save behavior.
+  - Configure conditional logic in the inquiry form builder.
+  - Create Blog posts with rich text and embedded images.
+  - Curate the public Blog gallery with tags and featured tiles.
+  - Manage homepage “Recent Work” images via Portfolio featured toggles.
+  - Configure homepage Instagram feed text + count, with server-side caching.
+  - **Use the admin comfortably**:
+    - Typing is responsive (no keystroke lag)
+    - **Scrolling is smooth** across page editors and lists on the VPS.
 - Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
 
 ---
 
 ## 7) Explicitly Deferred / Out of Scope (for now)
-- Social feed / Facebook posts on homepage: user will use a paid specialist embed service (e.g., Juicer.io).
-- CRM Enhancements (notes/tags/pipeline): deferred to the next session (primary next milestone).
-- Blog post drag-reorder and featured-tile autoplay: deferred to future session.
+- Social feed / Facebook posts on homepage: user will use a 3rd-party embed tool.
+- CRM Enhancements (notes/tags/pipeline): deferred to next session.
 - Bulk inquiry actions and auto-reply templates: deferred to future session.
