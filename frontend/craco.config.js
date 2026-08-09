@@ -108,19 +108,62 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
-  // Add health check endpoints if enabled
+  // ---------------------------------------------------------------------
+  // Social-scraper middleware.
+  // Serve the current `public/index.html` DIRECTLY FROM DISK when a social
+  // scraper bot (Facebook, Twitter/X, iMessage, WhatsApp, Google Messages,
+  // Slack, LinkedIn, Discord, Telegram, Pinterest, etc.) requests the root.
+  // Real user browsers still receive the CRA-transformed SPA (MetaManager
+  // updates their tab title/favicon after hydrate). The backend rewrites
+  // public/index.html after every admin save with the current OG tags, so
+  // scrapers ALWAYS see the freshest share preview from a single source of
+  // truth.
+  //
+  // We hook into `onBeforeSetupMiddleware` (v4-style) because craco's
+  // makeDevServerV5Compatible wraps it into setupMiddlewares — this way
+  // we're guaranteed to be invoked before webpack's own handlers.
+  // ---------------------------------------------------------------------
+  const fs = require("fs");
+  const path2 = require("path");
+  const SCRAPER_UA = /facebookexternalhit|twitterbot|slackbot|linkedinbot|discordbot|whatsapp|telegrambot|pinterest|redditbot|embedly|quora link preview|showyoubot|outbrain|iframely|skypeuripreview|nuzzel|bitrix|google[a-z\-]*bot|bingbot|duckduckbot|yandex|applebot|vkshare|w3c_validator|msnbot|semrushbot|ia_archiver|petalbot|bytespider|imess?age|googletext/i;
+  const publicIndexPath = path2.resolve(__dirname, "public", "index.html");
+
+  const originalOnBefore = devServerConfig.onBeforeSetupMiddleware;
+  devServerConfig.onBeforeSetupMiddleware = (devServer) => {
+    if (originalOnBefore) {
+      try { originalOnBefore(devServer); } catch (_) { /* ignore */ }
+    }
+    // devServer.app is the underlying Express app in wds v4/v5.
+    if (devServer && devServer.app && typeof devServer.app.use === "function") {
+      devServer.app.use((req, res, next) => {
+        try {
+          const ua = req.headers["user-agent"] || "";
+          const p = (req.path || req.url || "/").split("?")[0];
+          const isBot = SCRAPER_UA.test(ua);
+          const isRootLike = p === "/" || /^\/(about|portfolio|backdrops|services|contact|inquire|testimonials|blog|faq)\/?$/i.test(p);
+          if (isBot && isRootLike && fs.existsSync(publicIndexPath)) {
+            const html = fs.readFileSync(publicIndexPath, "utf8");
+            res.setHeader("Content-Type", "text/html; charset=utf-8");
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            res.setHeader("X-Rendered-By", "swell-social-scraper");
+            res.end(html);
+            return;
+          }
+        } catch (e) {
+          console.warn("[swell-scraper-mw] error", e && e.message);
+        }
+        next();
+      });
+      console.log("[swell-scraper-mw] express middleware installed for social scrapers");
+    }
+  };
+
+  // Add health check endpoints if enabled (preserved from original wiring).
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
-
     devServerConfig.setupMiddlewares = (middlewares, devServer) => {
-      // Call original setup if exists
-      if (originalSetupMiddlewares) {
-        middlewares = originalSetupMiddlewares(middlewares, devServer);
-      }
-
-      // Setup health endpoints
+      if (originalSetupMiddlewares) middlewares = originalSetupMiddlewares(middlewares, devServer);
       setupHealthEndpoints(devServer, healthPluginInstance);
-
       return middlewares;
     };
   }

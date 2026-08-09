@@ -1,26 +1,26 @@
 [
   {
-    "content": "Add Final CTA editable fields to SiteContent (title/subtitle/heart-icon toggle/primary+secondary labels & hrefs)",
+    "content": "Create index.template.html with placeholder tokens for share title/description/image/favicon",
     "status": "completed"
   },
   {
-    "content": "Wire HomePage.jsx Final CTA section to read from site with sensible defaults; hide secondary button when label empty (fixes duplicate)",
+    "content": "Build render_public_index() in backend/server.py that fills template from current SiteContent + writes to public/index.html",
     "status": "completed"
   },
   {
-    "content": "Add Final CTA editor panel to AdminHomePage.jsx",
+    "content": "Call render_public_index() on startup and after PUT /admin/site-content",
     "status": "completed"
   },
   {
-    "content": "Add favicon (generate branded s+m favicon.ico + PNGs) and wire in index.html",
+    "content": "Add cache-buster hash to og:image and favicon URLs so scrapers refresh",
     "status": "completed"
   },
   {
-    "content": "Add editable Open Graph + Twitter share tags (og:title/description/image, twitter card) — admin fields + injected on load",
+    "content": "Add craco dev-server middleware so scraper user-agents get the fresh public/index.html from disk (bypasses CRA's cached HTML)",
     "status": "completed"
   },
   {
-    "content": "Compile check + testing_agent verification",
+    "content": "Verify by curling with facebookexternalhit UA and confirming new tags show up; explain iMessage cache reset to user",
     "status": "completed"
   }
 ]

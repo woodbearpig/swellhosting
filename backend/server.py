@@ -96,6 +96,139 @@ def slugify(text: str) -> str:
 
 
 # =========================================================
+# Public HTML renderer (SEO / social share tags)
+# ---------------------------------------------------------
+# Social scrapers (iMessage, Google Messages, WhatsApp, Slack, Facebook,
+# Twitter/X, LinkedIn, etc.) fetch the raw HTML and read <meta> tags without
+# running JavaScript. So the client-side MetaManager is invisible to them.
+# We solve this by rebuilding /app/frontend/public/index.html from a template
+# at server startup AND after every admin save, injecting the current
+# SiteContent share_* + favicon_url + business_name/tagline values as
+# STATIC tags. Any admin-uploaded balloon logo or share image ends up baked
+# into the HTML that scrapers see.
+#
+# The URL fields are converted to ABSOLUTE URLs (required by OG spec — most
+# scrapers reject relative paths) using SITE_PUBLIC_URL (fall back to
+# REACT_APP_BACKEND_URL from frontend/.env, then a safe default). A short
+# hash of the values is appended as ?v=<hash> so message apps that
+# aggressively cache the preview refetch when the admin makes changes.
+# =========================================================
+import hashlib
+import html as _html_lib
+
+_FRONTEND_PUBLIC_DIR = ROOT_DIR.parent / "frontend" / "public"
+_HTML_TEMPLATE_PATH = _FRONTEND_PUBLIC_DIR / "index.template.html"
+_HTML_OUT_PATH = _FRONTEND_PUBLIC_DIR / "index.html"
+
+
+def _public_base_url() -> str:
+    """Absolute base URL under which the site is served to the public."""
+    url = (os.environ.get("SITE_PUBLIC_URL") or "").strip().rstrip("/")
+    if url:
+        return url
+    # Fall back to REACT_APP_BACKEND_URL from frontend/.env (single-domain
+    # deployment via Kubernetes ingress that routes /api/* to backend).
+    fe_env = ROOT_DIR.parent / "frontend" / ".env"
+    if fe_env.exists():
+        try:
+            for line in fe_env.read_text().splitlines():
+                if line.startswith("REACT_APP_BACKEND_URL="):
+                    return line.split("=", 1)[1].strip().strip('"').rstrip("/")
+        except Exception:
+            pass
+    return "https://swelldesignla.com"  # ultimate safe default
+
+
+def _abs_url(path_or_url: str, base: str) -> str:
+    """Turn a relative /api/uploads/... path into an absolute URL. Leave
+    already-absolute URLs untouched."""
+    if not path_or_url:
+        return ""
+    p = path_or_url.strip()
+    if p.startswith("http://") or p.startswith("https://"):
+        return p
+    if not p.startswith("/"):
+        p = "/" + p
+    return base + p
+
+
+async def render_public_index() -> bool:
+    """Regenerate /app/frontend/public/index.html from the template using the
+    current SiteContent. Returns True on success. Safe to call any time.
+
+    IMPORTANT: The template MUST exist – we ship it under version control.
+    We never overwrite the template, only the rendered index.html output."""
+    try:
+        if not _HTML_TEMPLATE_PATH.exists():
+            logger.warning("[render_public_index] template missing at %s", _HTML_TEMPLATE_PATH)
+            return False
+        tpl = _HTML_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+        doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+        base = _public_base_url()
+
+        brand = (doc.get("business_name") or "swell design + media").strip()
+        tagline = (doc.get("tagline") or "").strip()
+        share_title = (doc.get("share_title") or "").strip() or (f"{brand} — {tagline}" if tagline else brand)
+        share_desc = (doc.get("share_description") or "").strip() or tagline or f"{brand} — custom event styling."
+
+        # Resolve image URLs to absolute + attach cache-buster so message
+        # apps refetch after admin edits (they cache aggressively by URL).
+        share_image_raw = (doc.get("share_image_url") or "").strip()
+        favicon_raw = (doc.get("favicon_url") or "").strip()
+
+        cache_key = hashlib.md5((share_image_raw + favicon_raw + share_title + share_desc).encode("utf-8")).hexdigest()[:8]
+
+        # Absolute OG image URL. Empty share_image means we have no OG image —
+        # in that case we omit the tag by pointing at a small transparent
+        # placeholder rather than a hard-coded "los angeles" fallback.
+        og_image = _abs_url(share_image_raw, base) if share_image_raw else ""
+        if og_image:
+            og_image = f"{og_image}{'&' if '?' in og_image else '?'}v={cache_key}"
+
+        favicon_url = _abs_url(favicon_raw, base) if favicon_raw else "/favicon.ico"
+        if favicon_raw:
+            favicon_url = f"{favicon_url}{'&' if '?' in favicon_url else '?'}v={cache_key}"
+
+        # apple-touch-icon prefers a PNG at 180x180. If the admin uploaded a
+        # square logo, reuse it. Otherwise use the built-in default.
+        apple_url = _abs_url(favicon_raw, base) if favicon_raw else "/apple-touch-icon.png"
+        if favicon_raw:
+            apple_url = f"{apple_url}{'&' if '?' in apple_url else '?'}v={cache_key}"
+
+        # HTML-escape any user-provided text before injecting into attributes
+        def esc(s: str) -> str:
+            return _html_lib.escape(s or "", quote=True)
+
+        replacements = {
+            "{{SHARE_TITLE}}":       esc(share_title),
+            "{{SHARE_DESCRIPTION}}": esc(share_desc),
+            "{{OG_IMAGE_URL}}":      esc(og_image),
+            "{{FAVICON_URL}}":       esc(favicon_url),
+            "{{APPLE_ICON_URL}}":    esc(apple_url),
+            "{{BRAND_NAME}}":        esc(brand),
+            "{{SITE_URL}}":          esc(base),
+        }
+        rendered = tpl
+        for k, v in replacements.items():
+            rendered = rendered.replace(k, v)
+
+        # If OG image is empty, strip the og:image lines entirely so scrapers
+        # don't see an empty content="" (which would show a broken preview).
+        if not og_image:
+            rendered = re.sub(r"[ \t]*<meta property=\"og:image[^>]*/>\n?", "", rendered)
+            rendered = re.sub(r"[ \t]*<meta name=\"twitter:image[^>]*/>\n?", "", rendered)
+
+        _HTML_OUT_PATH.write_text(rendered, encoding="utf-8")
+        logger.info("[render_public_index] Rewrote %s (og_title=%r, og_image=%r, favicon=%r)",
+                    _HTML_OUT_PATH.name, share_title[:60], og_image or "(none)", favicon_url)
+        return True
+    except Exception as e:
+        logger.warning("[render_public_index] failed: %s", e)
+        return False
+
+
+# =========================================================
 # Startup / seed on first boot
 # =========================================================
 @app.on_event("startup")
@@ -333,6 +466,10 @@ async def _startup():
         if not await db.availability.find_one({"id": "availability_singleton"}, {"_id": 0}):
             await db.availability.insert_one(to_doc(Availability().model_dump()))
             logger.info("Seeded availability at startup")
+
+        # Render index.html with the latest SEO/OG tags so social scrapers see
+        # the correct share preview even before an admin has ever saved.
+        await render_public_index()
     except Exception as e:
         logger.error("Startup seed failed: %s", e)
 
@@ -898,6 +1035,9 @@ async def update_site_content(payload: Dict[str, Any], admin=Depends(require_adm
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.site_content.update_one({"id": "site_content_singleton"}, {"$set": to_doc(payload)}, upsert=True)
     doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0})
+    # Rebuild static index.html so social scrapers see the latest OG tags
+    # (they don't run JS, so MetaManager wouldn't be visible to them).
+    await render_public_index()
     return doc
 
 
