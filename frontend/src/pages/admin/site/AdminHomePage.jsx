@@ -4,6 +4,15 @@ import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star } from 'lucide-rea
 import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
+import { FONT_PRESETS } from '@/context/FontContext';
+
+/** All font options across serif/sans/script — for the hero-specific
+ *  overrides which can pick anything regardless of role. */
+const ALL_FONT_OPTIONS = [
+  { group: 'Serif / display', items: FONT_PRESETS.serif },
+  { group: 'Sans / body',     items: FONT_PRESETS.sans  },
+  { group: 'Script / accent', items: (FONT_PRESETS.script || []).filter(p => p.id !== 'none') },
+];
 
 const SectionCard = memo(function SectionCard({ title, children, subtitle }) {
   return (
@@ -150,10 +159,98 @@ const HeroColorsPanel = memo(function HeroColorsPanel({ data, set }) {
   );
 });
 
-
-
-// Inline "Recent Work" portfolio preview — shows featured gallery items with quick feature/unfeature.
-// memo() prevents re-fetching whenever the parent's `data` object changes.
+/**
+ * HeroFontsPanel — dedicated font pickers for the three text elements in the
+ * hero (eyebrow, headline, subtitle) so the owner can pick a dramatic display
+ * font just for the hero without affecting section headings or body copy
+ * across the rest of the site. Empty value = fall back to the site-wide font.
+ */
+const HeroFontsPanel = memo(function HeroFontsPanel({ data, set }) {
+  const [open, setOpen] = useState(false);
+  const Picker = ({ label, hint, value, onChange, testId, previewText, sample }) => (
+    <div>
+      <label className="eyebrow block mb-1">{label}</label>
+      <select
+        className="input-cream !h-9 text-sm w-full"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        data-testid={testId}
+      >
+        <option value="">— Use site default —</option>
+        {ALL_FONT_OPTIONS.map(group => (
+          <optgroup key={group.group} label={group.group}>
+            {group.items.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      {hint && <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">{hint}</p>}
+      {value && (
+        <p
+          className="mt-2 text-lg"
+          style={{
+            fontFamily: (() => {
+              for (const g of ALL_FONT_OPTIONS) {
+                const hit = g.items.find(x => x.id === value);
+                if (hit) return hit.family;
+              }
+              return 'inherit';
+            })(),
+          }}
+        >
+          {sample || previewText}
+        </p>
+      )}
+    </div>
+  );
+  return (
+    <div className="border-t border-[color:var(--brand-border)] pt-4">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between text-left group"
+        data-testid="admin-hero-fonts-toggle"
+      >
+        <div>
+          <p className="eyebrow">HERO FONTS</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
+            Pick a dramatic display font just for the hero — leave blank to keep it matching the rest of the site.
+          </p>
+        </div>
+        <span className="text-sm text-[color:var(--brand-sage-deep)] group-hover:underline shrink-0 ml-3">{open ? 'Hide' : 'Customize hero fonts'}</span>
+      </button>
+      {open && (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Picker
+            label="EYEBROW FONT"
+            testId="admin-hero-eyebrow-font"
+            value={data.hero_eyebrow_font_id}
+            onChange={v => set({ hero_eyebrow_font_id: v })}
+            hint="The small UPPERCASE label above the headline."
+            sample={data.hero_eyebrow || 'SWELLDESIGNLA.COM'}
+          />
+          <Picker
+            label="HEADLINE FONT"
+            testId="admin-hero-headline-font"
+            value={data.hero_headline_font_id}
+            onChange={v => set({ hero_headline_font_id: v })}
+            hint="The big statement across the hero photo."
+            sample={data.hero_headline || 'Where your vision comes to life.'}
+          />
+          <Picker
+            label="SUBTITLE FONT"
+            testId="admin-hero-subhead-font"
+            value={data.hero_subhead_font_id}
+            onChange={v => set({ hero_subhead_font_id: v })}
+            hint="The tagline underneath the headline."
+            sample={data.hero_subhead || 'Custom design, thoughtful details, and a calm process.'}
+          />
+        </div>
+      )}
+    </div>
+  );
+});
 const RecentWorkPreview = memo(function RecentWorkPreview() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -450,6 +547,8 @@ const AdminHomePage = () => {
         </div>
 
         <HeroColorsPanel data={data} set={set} />
+
+        <HeroFontsPanel data={data} set={set} />
 
         <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-2">
           <div className="flex items-center justify-between flex-wrap gap-2">

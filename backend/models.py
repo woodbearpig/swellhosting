@@ -240,6 +240,15 @@ class SiteContent(Base):
     home_final_cta_secondary_label: str = ""     # blank = hide the secondary button
     home_final_cta_secondary_href: str = "/portfolio"
 
+    # Hero-specific font overrides. Empty string = use the site-wide font
+    # for that role (serif for headline, sans for eyebrow + subtitle). These
+    # let the owner pick a dramatic display font for the hero without
+    # affecting section headings or body copy across the rest of the site.
+    # Values are IDs from FONT_PRESETS (see frontend/src/lib/fonts.js).
+    hero_eyebrow_font_id: str = ""     # e.g. "montserrat" — falls back to site sans
+    hero_headline_font_id: str = ""    # e.g. "dmserif"     — falls back to site serif
+    hero_subhead_font_id: str = ""     # e.g. "figtree"     — falls back to site sans
+
     # Social / SEO share metadata – governs how the site's URL renders when
     # pasted into iMessage, Instagram DMs, Slack, Twitter, etc. Blank falls
     # back to the base <title>/<meta description> so the site still looks

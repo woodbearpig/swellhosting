@@ -364,9 +364,9 @@ const heroFadeIn = {
 };
 
 const SplitHero = ({ site }) => {
-  const headlineStyle = site?.hero_headline_color ? { color: site.hero_headline_color } : undefined;
-  const subheadStyle = site?.hero_subhead_color ? { color: site.hero_subhead_color } : undefined;
-  const eyebrowStyle = site?.hero_eyebrow_color ? { color: site.hero_eyebrow_color } : undefined;
+  const headlineStyle = { fontFamily: 'var(--hero-headline-font, inherit)', ...(site?.hero_headline_color ? { color: site.hero_headline_color } : {}) };
+  const subheadStyle  = { fontFamily: 'var(--hero-subhead-font, inherit)',  ...(site?.hero_subhead_color  ? { color: site.hero_subhead_color }  : {}) };
+  const eyebrowStyle  = { fontFamily: 'var(--hero-eyebrow-font, inherit)', letterSpacing: '0.2em', ...(site?.hero_eyebrow_color ? { color: site.hero_eyebrow_color } : {}) };
   const primaryBtnStyle = (site?.hero_primary_btn_bg || site?.hero_primary_btn_text)
     ? { backgroundColor: site.hero_primary_btn_bg || undefined, color: site.hero_primary_btn_text || undefined, borderColor: site.hero_primary_btn_bg || undefined }
     : undefined;
@@ -423,9 +423,12 @@ const FullBleedHero = ({ site }) => {
   const bgUrl = site?.hero_background_image_url || site?.hero_image_url || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
   const overlay = Math.max(0, Math.min(1, site?.hero_overlay_intensity ?? 0.45));
   const cream = 'var(--brand-cream)';
-  const headlineStyle = { color: site?.hero_headline_color || cream };
-  const subheadStyle = { color: site?.hero_subhead_color || cream };
-  const eyebrowStyle = { color: site?.hero_eyebrow_color || 'inherit', letterSpacing: '0.2em' };
+  // Font overrides via CSS variables set by FontContext.applyHeroFonts. If
+  // no hero-specific font is chosen, the variable resolves to `inherit` and
+  // the element falls back to its normal site-wide font.
+  const headlineStyle = { color: site?.hero_headline_color || cream, fontFamily: 'var(--hero-headline-font, inherit)' };
+  const subheadStyle  = { color: site?.hero_subhead_color  || cream, fontFamily: 'var(--hero-subhead-font, inherit)' };
+  const eyebrowStyle  = { color: site?.hero_eyebrow_color  || 'inherit', letterSpacing: '0.2em', fontFamily: 'var(--hero-eyebrow-font, inherit)' };
   const primaryBtnStyle = (site?.hero_primary_btn_bg || site?.hero_primary_btn_text)
     ? { backgroundColor: site.hero_primary_btn_bg || undefined, color: site.hero_primary_btn_text || undefined, borderColor: site.hero_primary_btn_bg || undefined }
     : undefined;
