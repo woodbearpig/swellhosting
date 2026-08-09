@@ -5,8 +5,68 @@ import { ArrowLeft, Trash2, Download } from 'lucide-react';
 import { api, publicUrl } from '@/lib/api';
 import { formatDate, eventTypeLabel, statusLabel } from '@/lib/utils';
 import { ReplyWithTemplateButton } from '@/components/admin/ReplyWithTemplateButton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const STATUSES = ['new', 'needs_follow_up', 'consult_scheduled', 'proposal_sent', 'booked', 'archived', 'lost'];
+
+/**
+ * Reusable delete-inquiry confirmation dialog.
+ * Uses a Shadcn AlertDialog rather than the native `window.confirm()` because
+ * some browsers (especially iframed previews and mobile in-app browsers)
+ * silently suppress native confirm() dialogs, which made the delete button
+ * appear "broken" even though the request would have gone through.
+ */
+const DeleteInquiryDialog = ({ inquiry, onDeleted, trigger }) => {
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const doDelete = async () => {
+    setBusy(true);
+    try {
+      await api.delete(`/admin/inquiries/${inquiry.id}`);
+      toast.success('Inquiry deleted');
+      setOpen(false);
+      onDeleted && onDeleted(inquiry.id);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Could not delete inquiry');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogContent data-testid="admin-inquiry-delete-confirm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this inquiry?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove <b>{inquiry.client_name || 'this anonymous inquiry'}</b> ({inquiry.client_email || 'no email'}) from your list. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Keep it</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => { e.preventDefault(); doDelete(); }}
+            disabled={busy}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            data-testid="admin-inquiry-delete-confirm-yes"
+          >
+            {busy ? 'Deleting…' : 'Yes, delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
 
 export const AdminInquiriesList = () => {
   const [items, setItems] = useState([]);
@@ -91,6 +151,21 @@ export const AdminInquiriesList = () => {
             <Link to={`/admin/inquiries/${i.id}`} className="col-span-2"><span className="badge-soft">{statusLabel(i.status)}</span></Link>
             <div className="col-span-2 text-right flex items-center justify-end gap-2">
               <ReplyWithTemplateButton inquiry={i} size="sm" testId={`reply-with-template-row-${i.id}`} />
+              <DeleteInquiryDialog
+                inquiry={i}
+                onDeleted={(deletedId) => setItems(items.filter(x => x.id !== deletedId))}
+                trigger={
+                  <button
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete inquiry"
+                    aria-label="Delete inquiry"
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid={`admin-inquiry-row-delete-${i.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                }
+              />
               <Link to={`/admin/inquiries/${i.id}`} className="text-sm text-[color:var(--brand-sage-deep)] hover:underline">Open →</Link>
             </div>
           </div>
@@ -122,7 +197,6 @@ export const AdminInquiryDetail = () => {
     toast.success('Note saved');
   };
   const remove = async () => {
-    if (!window.confirm('Delete this inquiry? This cannot be undone.')) return;
     await api.delete(`/admin/inquiries/${id}`);
     toast.success('Inquiry deleted');
     navigate('/admin/inquiries');
@@ -134,7 +208,15 @@ export const AdminInquiryDetail = () => {
         <Link to="/admin/inquiries" className="inline-flex items-center gap-2 text-sm link-underline"><ArrowLeft className="h-4 w-4" /> Back to inquiries</Link>
         <div className="flex items-center gap-2">
           <ReplyWithTemplateButton inquiry={i} testId="admin-inquiry-detail-reply" />
-          <button onClick={remove} className="btn-secondary text-red-600" data-testid="admin-inquiry-delete"><Trash2 className="h-4 w-4" /> Delete</button>
+          <DeleteInquiryDialog
+            inquiry={i}
+            onDeleted={() => navigate('/admin/inquiries')}
+            trigger={
+              <button className="btn-secondary text-red-600" data-testid="admin-inquiry-delete">
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            }
+          />
         </div>
       </div>
       <div>
