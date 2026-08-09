@@ -7,6 +7,16 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Wire Tailwind's font-serif / font-sans / font-script utilities to
+        // our CSS variables (set by FontContext from the admin selector). This
+        // is what makes changing the font in Admin → Brand actually flow
+        // through to every h1..h6 and any element with a font-* class.
+        serif:  ['var(--font-serif)',  'ui-serif',      'Georgia',    'serif'],
+        sans:   ['var(--font-sans)',   'ui-sans-serif', 'system-ui',  'sans-serif'],
+        script: ['var(--font-script)', 'cursive'],
+        mono:   ['var(--font-mono)',   'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
