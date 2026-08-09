@@ -20,6 +20,7 @@ import { BackdropsPage, LeaveReviewPage } from '@/pages/BackdropsAndReviews';
 import { NotFoundPage, PrivacyPage, TermsPage } from '@/pages/UtilityPages';
 
 import AdminLogin from '@/pages/admin/AdminLogin';
+import { AdminForgotPassword, AdminResetPassword } from '@/pages/admin/AdminPasswordReset';
 import AdminLayout from '@/pages/admin/AdminLayout';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import { AdminInquiriesList, AdminInquiryDetail } from '@/pages/admin/AdminInquiries';
@@ -120,6 +121,8 @@ function App() {
 
                 {/* Admin routes */}
                 <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+                <Route path="/admin/reset-password" element={<AdminResetPassword />} />
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="inquiries" element={<AdminInquiriesList />} />

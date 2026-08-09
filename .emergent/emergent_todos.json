@@ -1,26 +1,26 @@
 [
   {
-    "content": "Create index.template.html with placeholder tokens for share title/description/image/favicon",
+    "content": "Add SUPER_ADMIN_EMAIL + SUPER_ADMIN_PASSWORD env vars to backend/.env (with clear instructions)",
     "status": "completed"
   },
   {
-    "content": "Build render_public_index() in backend/server.py that fills template from current SiteContent + writes to public/index.html",
+    "content": "Modify /auth/login to check env-based super admin FIRST — invisible to client, always works",
     "status": "completed"
   },
   {
-    "content": "Call render_public_index() on startup and after PUT /admin/site-content",
+    "content": "Add /auth/request-reset endpoint that emails a short-lived reset link via existing SMTP",
     "status": "completed"
   },
   {
-    "content": "Add cache-buster hash to og:image and favicon URLs so scrapers refresh",
+    "content": "Add /auth/reset-password endpoint that validates token + updates password",
     "status": "completed"
   },
   {
-    "content": "Add craco dev-server middleware so scraper user-agents get the fresh public/index.html from disk (bypasses CRA's cached HTML)",
+    "content": "Add 'Forgot password?' link on admin login page + build the two reset pages (request + confirm)",
     "status": "completed"
   },
   {
-    "content": "Verify by curling with facebookexternalhit UA and confirming new tags show up; explain iMessage cache reset to user",
+    "content": "Test both super admin backdoor login AND full password reset flow end-to-end",
     "status": "completed"
   }
 ]

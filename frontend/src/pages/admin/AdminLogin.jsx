@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -60,6 +60,15 @@ const AdminLogin = () => {
             </div>
           </div>
           <button type="submit" disabled={busy} className="btn-primary w-full" data-testid="admin-login-submit">{busy ? 'Signing in…' : 'Sign in'}</button>
+          <div className="text-center pt-1">
+            <Link
+              to="/admin/forgot-password"
+              className="text-xs text-[color:var(--brand-text-muted)] hover:text-[color:var(--brand-sage-deep)] hover:underline"
+              data-testid="admin-forgot-password-link"
+            >
+              Forgot your password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
