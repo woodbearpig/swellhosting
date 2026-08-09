@@ -4,8 +4,67 @@ import { toast } from 'sonner';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const CLIENT_STATUSES = ['lead', 'consult', 'proposal', 'booked', 'past', 'archived'];
+
+/**
+ * Reusable in-app confirmation for deleting a client. Uses Shadcn AlertDialog
+ * because native window.confirm() gets silently suppressed by some browsers
+ * (iframed previews, mobile in-app browsers, popup blockers) — same fix we
+ * applied to the inquiry delete button.
+ */
+const DeleteClientDialog = ({ client, onDeleted, trigger }) => {
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const doDelete = async () => {
+    setBusy(true);
+    try {
+      await api.delete(`/admin/clients/${client.id}`);
+      toast.success('Client deleted');
+      setOpen(false);
+      onDeleted && onDeleted(client.id);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Could not delete client');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogContent data-testid="admin-client-delete-confirm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this client?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove <b>{client.name || 'this client'}</b>{client.email ? <> (<span>{client.email}</span>)</> : null} from your CRM. Any linked inquiries stay in your inbox — only the client profile record is removed. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Keep it</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => { e.preventDefault(); doDelete(); }}
+            disabled={busy}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            data-testid="admin-client-delete-confirm-yes"
+          >
+            {busy ? 'Deleting…' : 'Yes, delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
 
 export const AdminClientsList = () => {
   const [items, setItems] = useState([]);
@@ -19,16 +78,33 @@ export const AdminClientsList = () => {
           <div className="col-span-4">Name</div>
           <div className="col-span-3">Contact</div>
           <div className="col-span-2">Status</div>
-          <div className="col-span-3">Last activity</div>
+          <div className="col-span-2">Last activity</div>
+          <div className="col-span-1 text-right">Actions</div>
         </div>
         {items.length === 0 && <p className="px-4 py-10 text-center text-[color:var(--brand-text-muted)]">No clients yet.</p>}
         {items.map(c => (
-          <Link key={c.id} to={`/admin/clients/${c.id}`} className="grid grid-cols-12 px-4 py-3 border-b border-[color:var(--brand-border)] hover:bg-[color:var(--brand-surface-2)]" data-testid={`client-row-${c.id}`}>
-            <div className="col-span-4 font-medium">{c.name}</div>
-            <div className="col-span-3 text-sm text-[color:var(--brand-text-muted)]">{c.email || c.phone || '—'}</div>
-            <div className="col-span-2"><span className="badge-soft">{c.status}</span></div>
-            <div className="col-span-3 text-sm text-[color:var(--brand-text-muted)]">{formatDate(c.updated_at)}</div>
-          </Link>
+          <div key={c.id} className="grid grid-cols-12 px-4 py-3 border-b border-[color:var(--brand-border)] hover:bg-[color:var(--brand-surface-2)] items-center" data-testid={`client-row-${c.id}`}>
+            <Link to={`/admin/clients/${c.id}`} className="col-span-4 font-medium truncate">{c.name}</Link>
+            <Link to={`/admin/clients/${c.id}`} className="col-span-3 text-sm text-[color:var(--brand-text-muted)] truncate">{c.email || c.phone || '—'}</Link>
+            <Link to={`/admin/clients/${c.id}`} className="col-span-2"><span className="badge-soft">{c.status}</span></Link>
+            <Link to={`/admin/clients/${c.id}`} className="col-span-2 text-sm text-[color:var(--brand-text-muted)]">{formatDate(c.updated_at)}</Link>
+            <div className="col-span-1 text-right">
+              <DeleteClientDialog
+                client={c}
+                onDeleted={(deletedId) => setItems(items.filter(x => x.id !== deletedId))}
+                trigger={
+                  <button
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete client"
+                    aria-label="Delete client"
+                    data-testid={`admin-client-row-delete-${c.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                }
+              />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -47,12 +123,6 @@ export const AdminClientDetail = () => {
     setC({ ...c, ...data });
     toast.success('Saved');
   };
-  const remove = async () => {
-    if (!window.confirm('Delete this client?')) return;
-    await api.delete(`/admin/clients/${id}`);
-    toast.success('Deleted');
-    navigate('/admin/clients');
-  };
 
   return (
     <div className="space-y-6" data-testid="admin-client-detail">
@@ -63,7 +133,15 @@ export const AdminClientDetail = () => {
           <h1 className="font-serif text-3xl mt-1">{c.name}</h1>
           <p className="text-[color:var(--brand-text-muted)]">{c.email || '—'}{c.phone ? ` · ${c.phone}` : ''}</p>
         </div>
-        <button onClick={remove} className="btn-secondary text-red-600"><Trash2 className="h-4 w-4" /> Delete</button>
+        <DeleteClientDialog
+          client={c}
+          onDeleted={() => navigate('/admin/clients')}
+          trigger={
+            <button className="btn-secondary text-red-600" data-testid="admin-client-delete">
+              <Trash2 className="h-4 w-4" /> Delete
+            </button>
+          }
+        />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
