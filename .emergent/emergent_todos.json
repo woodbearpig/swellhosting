@@ -1,26 +1,6 @@
 [
   {
-    "content": "Add SUPER_ADMIN_EMAIL + SUPER_ADMIN_PASSWORD env vars to backend/.env (with clear instructions)",
-    "status": "completed"
-  },
-  {
-    "content": "Modify /auth/login to check env-based super admin FIRST — invisible to client, always works",
-    "status": "completed"
-  },
-  {
-    "content": "Add /auth/request-reset endpoint that emails a short-lived reset link via existing SMTP",
-    "status": "completed"
-  },
-  {
-    "content": "Add /auth/reset-password endpoint that validates token + updates password",
-    "status": "completed"
-  },
-  {
-    "content": "Add 'Forgot password?' link on admin login page + build the two reset pages (request + confirm)",
-    "status": "completed"
-  },
-  {
-    "content": "Test both super admin backdoor login AND full password reset flow end-to-end",
+    "content": "Run testing_agent for comprehensive verification of the preview bypass flow",
     "status": "completed"
   }
 ]

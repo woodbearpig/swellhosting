@@ -903,6 +903,152 @@ def main():
     runner.test("Favicon assets are accessible", test_favicon_assets_accessible)
     
     print("\n" + "="*60)
+    print("ITERATION 22: Preview Token Bypass (Coming Soon Staging)")
+    print("="*60)
+    
+    def test_site_content_no_preview_token():
+        """GET /api/site-content MUST NOT expose preview_token (security-critical)"""
+        print(f"  → GET /api/site-content (public endpoint)")
+        r = requests.get(f"{BASE_URL}/site-content")
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        data = r.json()
+        print(f"  → Response keys: {list(data.keys())[:10]}...")
+        
+        # CRITICAL: preview_token must NOT be in the response
+        assert "preview_token" not in data, "SECURITY VIOLATION: preview_token exposed in public /api/site-content"
+        print(f"  ✓ preview_token correctly NOT exposed in public endpoint")
+    
+    def test_preview_verify_valid_token():
+        """POST /api/preview/verify with correct token returns {ok:true}"""
+        runner.login()
+        
+        # Get the current preview token (admin-only endpoint)
+        r = requests.get(f"{BASE_URL}/admin/preview-token", headers=runner.headers())
+        print(f"  → GET /api/admin/preview-token: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        data = r.json()
+        token = data.get("preview_token", "").strip()
+        print(f"  → Got preview token: {token[:20]}..." if token else "  → No token found")
+        assert token, "preview_token should not be empty"
+        
+        # Verify the token (public endpoint, no auth)
+        print(f"  → POST /api/preview/verify with correct token")
+        r2 = requests.post(f"{BASE_URL}/preview/verify", json={"token": token})
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        
+        result = r2.json()
+        print(f"  → Response: {result}")
+        assert result.get("ok") == True, f"Expected ok=true, got {result}"
+        print(f"  ✓ Valid token correctly verified")
+    
+    def test_preview_verify_invalid_token():
+        """POST /api/preview/verify with wrong/empty/missing token returns {ok:false}"""
+        # Test with wrong token
+        print(f"  → POST /api/preview/verify with WRONG token")
+        r = requests.post(f"{BASE_URL}/preview/verify", json={"token": "wrong-token-12345"})
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        result = r.json()
+        print(f"  → Response: {result}")
+        assert result.get("ok") == False, f"Expected ok=false for wrong token, got {result}"
+        print(f"  ✓ Wrong token correctly rejected")
+        
+        # Test with empty token
+        print(f"  → POST /api/preview/verify with EMPTY token")
+        r2 = requests.post(f"{BASE_URL}/preview/verify", json={"token": ""})
+        result2 = r2.json()
+        assert result2.get("ok") == False, f"Expected ok=false for empty token, got {result2}"
+        print(f"  ✓ Empty token correctly rejected")
+        
+        # Test with missing token
+        print(f"  → POST /api/preview/verify with MISSING token")
+        r3 = requests.post(f"{BASE_URL}/preview/verify", json={})
+        result3 = r3.json()
+        assert result3.get("ok") == False, f"Expected ok=false for missing token, got {result3}"
+        print(f"  ✓ Missing token correctly rejected")
+    
+    def test_admin_preview_token_requires_auth():
+        """GET /api/admin/preview-token requires admin JWT (401/403 without auth)"""
+        print(f"  → GET /api/admin/preview-token WITHOUT auth")
+        r = requests.get(f"{BASE_URL}/admin/preview-token")
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code in [401, 403], f"Expected 401 or 403, got {r.status_code}"
+        print(f"  ✓ Correctly requires authentication")
+        
+        # With valid auth, should work
+        runner.login()
+        print(f"  → GET /api/admin/preview-token WITH auth")
+        r2 = requests.get(f"{BASE_URL}/admin/preview-token", headers=runner.headers())
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        
+        data = r2.json()
+        assert "preview_token" in data, "Should return preview_token"
+        print(f"  ✓ Returns preview_token with valid auth")
+    
+    def test_admin_preview_regenerate():
+        """POST /api/admin/preview/regenerate rotates token correctly"""
+        runner.login()
+        
+        # Get current token
+        r = requests.get(f"{BASE_URL}/admin/preview-token", headers=runner.headers())
+        old_token = r.json().get("preview_token", "")
+        print(f"  → Old token: {old_token[:20]}...")
+        
+        # Regenerate
+        print(f"  → POST /api/admin/preview/regenerate")
+        r2 = requests.post(f"{BASE_URL}/admin/preview/regenerate", headers=runner.headers())
+        print(f"  → Status: {r2.status_code}")
+        assert r2.status_code == 200, f"Expected 200, got {r2.status_code}"
+        
+        result = r2.json()
+        assert result.get("ok") == True, "Should return ok=true"
+        new_token = result.get("preview_token", "")
+        print(f"  → New token: {new_token[:20]}...")
+        assert new_token, "Should return new preview_token"
+        assert new_token != old_token, "New token should be different from old token"
+        print(f"  ✓ Token regenerated successfully")
+        
+        # Verify new token works
+        print(f"  → Verifying new token works")
+        r3 = requests.post(f"{BASE_URL}/preview/verify", json={"token": new_token})
+        assert r3.json().get("ok") == True, "New token should verify"
+        print(f"  ✓ New token verifies correctly")
+        
+        # Verify old token no longer works
+        print(f"  → Verifying old token is invalidated")
+        r4 = requests.post(f"{BASE_URL}/preview/verify", json={"token": old_token})
+        assert r4.json().get("ok") == False, "Old token should be invalidated"
+        print(f"  ✓ Old token correctly invalidated")
+        
+        # Verify GET /api/admin/preview-token returns the new token
+        print(f"  → Verifying GET returns new token")
+        r5 = requests.get(f"{BASE_URL}/admin/preview-token", headers=runner.headers())
+        fetched_token = r5.json().get("preview_token", "")
+        assert fetched_token == new_token, f"GET should return new token, got {fetched_token[:20]}..."
+        print(f"  ✓ GET /api/admin/preview-token returns new token")
+    
+    def test_admin_preview_regenerate_requires_auth():
+        """POST /api/admin/preview/regenerate requires admin JWT"""
+        print(f"  → POST /api/admin/preview/regenerate WITHOUT auth")
+        r = requests.post(f"{BASE_URL}/admin/preview/regenerate")
+        print(f"  → Status: {r.status_code}")
+        assert r.status_code in [401, 403], f"Expected 401 or 403, got {r.status_code}"
+        print(f"  ✓ Correctly requires authentication")
+    
+    runner.test("GET /api/site-content does NOT expose preview_token", test_site_content_no_preview_token)
+    runner.test("POST /api/preview/verify with valid token returns ok:true", test_preview_verify_valid_token)
+    runner.test("POST /api/preview/verify with invalid token returns ok:false", test_preview_verify_invalid_token)
+    runner.test("GET /api/admin/preview-token requires admin JWT", test_admin_preview_token_requires_auth)
+    runner.test("POST /api/admin/preview/regenerate rotates token", test_admin_preview_regenerate)
+    runner.test("POST /api/admin/preview/regenerate requires admin JWT", test_admin_preview_regenerate_requires_auth)
+    
+    print("\n" + "="*60)
     print("NO REGRESSIONS")
     print("="*60)
     runner.test("No regressions in core endpoints", test_no_regressions)

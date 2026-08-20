@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V9)
+# plan.md — swell design + media (V10)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -32,10 +32,10 @@
   - Keep admin editing pages **fast and focused**
 
 **Updated objective (current milestone)**
-- Ensure the **Admin** is:
-  - responsive while typing (no keystroke lag)
-  - smooth while scrolling (no compositor jank)
-  - reliable while navigating between admin pages (no “URL changed but content didn’t” symptom)
+- Ensure the owner can safely keep the public site behind **Coming Soon**, while sharing a **secret preview link** for client/internal review:
+  - Public sees Coming Soon
+  - `/?preview=<token>` shows the real site
+  - Token is never exposed publicly and can be rotated anytime
 
 ---
 
@@ -317,7 +317,7 @@ All items were implemented and validated (curl + browser automation screenshots)
 ### Phase P (P0) — Backdrops & Designs split + Quick Reply Templates + Hero color controls (COMPLETED ✅)
 **Goal:** Finish the interrupted feature work and add requested customization + reliability improvements.
 
-#### P1 — Backdrops → Backdrops & Designs (COMPLETED ✅)
+#### P1 — Backdrop → Backdrops & Designs (COMPLETED ✅)
 - Backdrop model updated to include `kind: 'backdrop' | 'design'`.
 - API supports filtering: `GET /api/backdrops?kind=design`.
 - Admin UI: `/admin/backdrops` includes tabs **All / Backdrops / Designs**.
@@ -350,11 +350,38 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 **Testing**
 - `/app/test_reports/iteration_18.json`
-  - Backend: 17/17 pass
-  - Frontend: all critical flows pass (minor polish applied to Reset visibility)
 
-**Credentials note**
-- Admin password is now: `Testing9!` (was previously documented as `Testing9`).
+---
+
+### Phase Q (P0) — Coming Soon **Preview Token Bypass** (Option A) (COMPLETED ✅)
+**Goal:** Allow a secret `/?preview=<token>` URL to bypass the Coming Soon curtain, without exposing the token publicly.
+
+**What shipped (this session)**
+- Backend (FastAPI)
+  - Public endpoint `GET /api/site-content` continues to **strip** `preview_token` (security-critical).
+  - Added admin-only endpoint: `GET /api/admin/preview-token` (requires admin JWT) to fetch the current token.
+  - Public verifier endpoint: `POST /api/preview/verify` returns `{ ok: true/false }` using constant-time compare.
+  - Admin rotation endpoint: `POST /api/admin/preview/regenerate` rotates and returns the new token.
+- Frontend (React)
+  - `PublicLayout.jsx`:
+    - If `site.coming_soon_active` and viewer is not authorized → show Coming Soon.
+    - If `?preview=<token>` validates → store `sw_preview_ok=1` in `sessionStorage` and bypass Coming Soon.
+    - Shows a floating banner (`data-testid="preview-mode-banner"`) with an **Exit preview** button that clears session storage.
+  - `AdminComingSoonPage.jsx`:
+    - Preview Link card fetches token via `/api/admin/preview-token`.
+    - Copy/Open buttons.
+    - Regenerate uses Shadcn `AlertDialog` (no native `window.confirm`).
+
+**Acceptance criteria verified (end-to-end)**
+- Public with Coming Soon enabled sees Coming Soon.
+- Valid preview URL renders full site and shows preview banner.
+- Preview session persists across navigation without the token query.
+- Invalid tokens are rejected.
+- Exit preview clears session and returns viewer to Coming Soon.
+- Admin card displays link, supports copy/open/regenerate, and rotation invalidates old links.
+
+**Testing**
+- `/app/test_reports/iteration_22.json` — 14/14 tests passed, 0 bugs.
 
 ---
 
@@ -371,9 +398,10 @@ All items were implemented and validated (curl + browser automation screenshots)
   - Backdrops/Designs split
   - Reply templates CRUD + inquiry reply button
   - Hero color override end-to-end
+  - **Preview token bypass** (Coming Soon staging)
 
 **Latest report**
-- `/app/test_reports/iteration_18.json`
+- `/app/test_reports/iteration_22.json`
 
 ---
 
@@ -404,16 +432,29 @@ cd /var/www/swell && ./deploy.sh
     - Typing is responsive (no keystroke lag)
     - Scrolling is smooth across page editors and lists on the VPS
     - Navigation between admin sections updates content immediately and reliably
+  - **Keep the public site in Coming Soon while sharing a private preview link**:
+    - Public sees Coming Soon
+    - `/?preview=<token>` bypass works
+    - Token can be rotated anytime
+    - No token leakage in public JSON
 - Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
 
 ---
 
 ## 7) Explicitly Deferred / Out of Scope (for now)
+
+### Next active task (blocked / awaiting user input)
+- **Elfsight Facebook Widget integration (P1)**
+  - Status: **BLOCKED** until the user confirms placement (Homepage/About/Footer/Social page/etc.) and provides final widget App ID/snippet details.
+  - Planned approach (once unblocked): add admin toggle + heading + App ID field; inject script safely in React without breaking SSR/social-scraper middleware.
+
+### Other deferred items
 - CRM Enhancements (P1):
   - Client tags
   - Lead pipeline status tracking on client profiles
 - Bulk inquiry actions (P2)
 - Twilio SMS Notifications (P3)
 - Stripe/PayPal Integration (P3)
+- SEO polish (sitemap.xml, robots.txt, schema) (P2/P3)
 - Backend refactor of `server.py` into routers (recommended but deferred unless requested)

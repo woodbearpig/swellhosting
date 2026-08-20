@@ -467,6 +467,26 @@ async def _startup():
             await db.availability.insert_one(to_doc(Availability().model_dump()))
             logger.info("Seeded availability at startup")
 
+        # First-time seed of the Coming-Soon preview token so admins have a
+        # working "Copy preview link" the moment they open the panel — no
+        # need to hit "Regenerate" before the first share.
+        try:
+            existing = await db.site_content.find_one(
+                {"id": "site_content_singleton", "preview_token": {"$in": [None, ""]}},
+                {"_id": 0, "id": 1},
+            )
+            # If the doc has no token (fresh install or older DB), mint one.
+            has_doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "preview_token": 1})
+            if has_doc and not (has_doc.get("preview_token") or "").strip():
+                import secrets as _secrets
+                await db.site_content.update_one(
+                    {"id": "site_content_singleton"},
+                    {"$set": {"preview_token": _secrets.token_urlsafe(24)}},
+                )
+                logger.info("Seeded preview_token on site_content_singleton")
+        except Exception as e:
+            logger.warning("preview_token seed failed: %s", e)
+
         # Render index.html with the latest SEO/OG tags so social scrapers see
         # the correct share preview even before an admin has ever saved.
         await render_public_index()
@@ -1205,8 +1225,51 @@ async def get_site_content():
     if not doc:
         sc = SiteContent()
         await db.site_content.insert_one(to_doc(sc.model_dump()))
-        return sc.model_dump()
+        doc = sc.model_dump()
+    # NEVER expose the preview token through the public endpoint — that would
+    # let anyone bypass the Coming Soon curtain.
+    doc.pop("preview_token", None)
     return doc
+
+
+@api.post("/preview/verify")
+async def verify_preview_token(payload: Dict[str, Any]):
+    """Constant-time check that a preview token matches the current secret.
+    Called by the frontend when a visitor lands with ?preview=<token>. Public
+    (no auth) because the whole point is to let a shareable link work."""
+    import hmac as _hmac
+    supplied = (payload.get("token") or "").strip()
+    if not supplied:
+        return {"ok": False}
+    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"preview_token": 1}) or {}
+    stored = (doc.get("preview_token") or "").strip()
+    return {"ok": bool(stored) and _hmac.compare_digest(supplied, stored)}
+
+
+@api.get("/admin/preview-token")
+async def get_preview_token(admin=Depends(require_admin)):
+    """Admin-only read of the current preview token.
+    We can't expose it through the public `/site-content` endpoint (anyone
+    could then bypass Coming Soon), so the admin panel fetches it here."""
+    doc = await db.site_content.find_one(
+        {"id": "site_content_singleton"}, {"preview_token": 1}
+    ) or {}
+    return {"preview_token": (doc.get("preview_token") or "").strip()}
+
+
+@api.post("/admin/preview/regenerate")
+async def regenerate_preview_token(admin=Depends(require_admin)):
+    """Rotate the preview token — any previously-shared preview links stop
+    working immediately. Returns the fresh token so the admin UI can build
+    a copy-friendly URL."""
+    import secrets
+    new_token = secrets.token_urlsafe(24)
+    await db.site_content.update_one(
+        {"id": "site_content_singleton"},
+        {"$set": {"preview_token": new_token}},
+        upsert=True,
+    )
+    return {"ok": True, "preview_token": new_token}
 
 
 @api.put("/admin/site-content")
