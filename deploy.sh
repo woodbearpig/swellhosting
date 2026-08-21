@@ -38,6 +38,11 @@ else
     DC="docker-compose"
 fi
 
+# --- Snapshot current commit BEFORE anything changes ---
+# We save this AFTER a successful health check so ./rollback.sh has a target.
+# The snapshot represents "what's live right now" — the previous good deploy.
+PREV_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo '')"
+
 # --- Git pull (with clear failure messaging) ---
 if [ "$SKIP_PULL" -eq 1 ]; then
     echo "→ Skipping git pull (--skip-pull flag)"
@@ -96,6 +101,14 @@ echo "→ Waiting for backend health…"
 sleep 6
 if curl -fsS http://localhost/api/health >/dev/null 2>&1; then
     echo "✅ Deployed — backend healthy"
+    # Record the PREVIOUS commit so ./rollback.sh knows where to go back to.
+    # We only write this when the deploy actually succeeded, so rollback
+    # never points at a broken snapshot.
+    if [ -n "$PREV_COMMIT" ] && [ "$PREV_COMMIT" != "$(git rev-parse HEAD 2>/dev/null || echo '')" ]; then
+        echo "$PREV_COMMIT" > .last_deploy_commit
+        echo "   (rollback target saved: ${PREV_COMMIT:0:8} — run ./rollback.sh to revert)"
+    fi
 else
     echo "⚠️  Deployed — could not verify /api/health locally. Check: $DC logs backend"
+    echo "   (rollback target NOT updated — ./rollback.sh will still target the last healthy deploy)"
 fi
