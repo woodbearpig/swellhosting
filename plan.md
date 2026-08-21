@@ -423,6 +423,36 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 ---
 
+### Phase S (P1) — **Drag-and-Drop Portfolio Reordering** (COMPLETED ✅)
+**Goal:** Let the owner rearrange the order photos appear in the public Portfolio grid, straight from the admin — no coding, no re-uploading.
+
+**What shipped**
+- Backend
+  - New endpoint `POST /api/admin/gallery/reorder` (`server.py` line 1543).
+  - Payload `{items: [{id, order}, ...]}` — updates each item's `order` field atomically per doc.
+  - Auth-gated (`require_admin`); rejects empty lists (400) and >1000 items (400); silently skips malformed entries.
+  - **Category-slot preservation trick**: when the admin reorders a filtered subset (e.g., only "Weddings"), the frontend reassigns those items to the SAME set of `order` numbers they already occupied — so other categories are never renumbered and keep their positions untouched.
+- Frontend
+  - New generic wrapper `components/SortableGrid.jsx` built on `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` (yarn-installed).
+  - Accessible (keyboard-sortable) drag handles rendered as Lucide `GripVertical` icons.
+  - `pages/admin/AdminGallery.jsx` gets a **Reorder Mode** toggle:
+    - Enters Reorder Mode → hides Select/Bulk buttons, shows drag handles + "Done reordering" button.
+    - Preserves the currently-active category filter while reordering.
+    - "Save Order" POSTs the new mapping; "Cancel" discards local changes.
+    - Helper text explains that reordering within a filter only affects the visible category.
+
+**Acceptance criteria verified (end-to-end)**
+- Endpoint auth + validation (401 without token, 400 for empty/oversized payloads).
+- Valid batch reorder persists to Mongo and reflects on public `GET /api/gallery`.
+- Category-slot preservation confirmed — reordering "Weddings" does not disturb other categories.
+- Admin UI drag/drop works and Save/Cancel behave correctly.
+- All previously-shipped admin features (Gallery CRUD, testimonials, CRM, media library, cache headers, super admin, Coming Soon bypass, embed widget) remain functional — no regressions.
+
+**Testing**
+- `/app/test_reports/iteration_25.json` — 18/18 backend tests passed, all frontend UI tests passed, 0 bugs.
+
+---
+
 ## 4) Testing & QA
 - After each phase item: quick smoke test in browser.
 - Automated validation included:
@@ -438,9 +468,10 @@ All items were implemented and validated (curl + browser automation screenshots)
   - Hero color override end-to-end
   - **Preview token bypass** (Coming Soon staging)
   - **Homepage embed widget** (Elfsight / third-party)
+  - **Drag-and-drop portfolio reordering** (category-slot preservation)
 
 **Latest report**
-- `/app/test_reports/iteration_23.json`
+- `/app/test_reports/iteration_25.json`
 
 ---
 

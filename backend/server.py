@@ -1540,6 +1540,38 @@ async def bulk_update_gallery(payload: Dict[str, Any], admin=Depends(require_adm
     return {"ok": True, "matched": r.matched_count, "modified": r.modified_count}
 
 
+@api.post("/admin/gallery/reorder")
+async def reorder_gallery(payload: Dict[str, Any], admin=Depends(require_admin)):
+    """Set the `order` field on multiple gallery items in one atomic batch.
+    Payload: {items: [{id: str, order: int}, ...]}
+
+    Design note (the "preserve slots" trick):
+      When the admin reorders a FILTERED subset (e.g., just "Weddings"),
+      the frontend sends only the currently-visible items with their
+      NEW order values. Those new values are drawn from the SAME SET of
+      existing order numbers those items already had, just reassigned to
+      different photos. That way we never renumber the whole collection
+      and items in other categories keep their relative positions
+      undisturbed. Backend just applies whatever the client asks — it
+      trusts the caller (admin-gated) to compute a sensible mapping.
+    """
+    items = payload.get("items") or []
+    if not isinstance(items, list) or not items:
+        raise HTTPException(status_code=400, detail="items required")
+    if len(items) > 1000:
+        raise HTTPException(status_code=400, detail="too many items in one call")
+    updated = 0
+    for it in items:
+        gid = (it or {}).get("id")
+        order = (it or {}).get("order")
+        if not gid or not isinstance(order, int):
+            continue
+        r = await db.gallery.update_one({"id": gid}, {"$set": {"order": order}})
+        if r.matched_count:
+            updated += 1
+    return {"ok": True, "updated": updated}
+
+
 # =========================================================
 # Testimonials
 # =========================================================

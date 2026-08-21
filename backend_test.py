@@ -402,11 +402,196 @@ class CacheAndSystemStatsTester:
         
         return True
 
+    def test_gallery_reorder_no_auth(self):
+        """Test POST /api/admin/gallery/reorder returns 401 without token"""
+        success, response, _ = self.run_test(
+            "Gallery reorder - no auth (should return 401)",
+            "POST",
+            "/api/admin/gallery/reorder",
+            401,
+            data={"items": [{"id": "test", "order": 1}]}
+        )
+        return success
+
+    def test_gallery_reorder_empty_items(self):
+        """Test POST /api/admin/gallery/reorder rejects empty items list with 400"""
+        success, response, _ = self.run_test(
+            "Gallery reorder - empty items (should return 400)",
+            "POST",
+            "/api/admin/gallery/reorder",
+            400,
+            data={"items": []},
+            headers={'Authorization': f'Bearer {self.regular_token}'}
+        )
+        return success
+
+    def test_gallery_reorder_too_many_items(self):
+        """Test POST /api/admin/gallery/reorder rejects >1000 items with 400"""
+        # Create 1001 fake items
+        items = [{"id": f"item_{i}", "order": i} for i in range(1001)]
+        success, response, _ = self.run_test(
+            "Gallery reorder - too many items (should return 400)",
+            "POST",
+            "/api/admin/gallery/reorder",
+            400,
+            data={"items": items},
+            headers={'Authorization': f'Bearer {self.regular_token}'}
+        )
+        return success
+
+    def test_gallery_reorder_valid(self):
+        """Test POST /api/admin/gallery/reorder with valid payload"""
+        # First, get existing gallery items
+        success, gallery_items, _ = self.run_test(
+            "Get gallery items for reorder test",
+            "GET",
+            "/api/gallery",
+            200
+        )
+        
+        if not success or not gallery_items:
+            print("   ⚠️  No gallery items to test reorder with")
+            return True  # Skip test if no items
+        
+        # Take first 3 items and swap their order values
+        items_to_reorder = gallery_items[:min(3, len(gallery_items))]
+        if len(items_to_reorder) < 2:
+            print("   ⚠️  Need at least 2 items to test reorder")
+            return True  # Skip if not enough items
+        
+        # Swap order values
+        reorder_payload = [
+            {"id": items_to_reorder[0]["id"], "order": items_to_reorder[1].get("order", 1)},
+            {"id": items_to_reorder[1]["id"], "order": items_to_reorder[0].get("order", 0)}
+        ]
+        
+        success, response, _ = self.run_test(
+            "Gallery reorder - valid payload",
+            "POST",
+            "/api/admin/gallery/reorder",
+            200,
+            data={"items": reorder_payload},
+            headers={'Authorization': f'Bearer {self.regular_token}'}
+        )
+        
+        if success:
+            if response.get("ok") and response.get("updated") == 2:
+                print(f"   ✓ Successfully reordered {response.get('updated')} items")
+                return True
+            else:
+                print(f"   ❌ Expected ok=true and updated=2, got: {response}")
+                self.failed_tests.append("Gallery reorder - response structure")
+                return False
+        return False
+
+    def test_gallery_reorder_malformed_entries(self):
+        """Test POST /api/admin/gallery/reorder silently skips malformed entries"""
+        # Mix valid and invalid entries
+        payload = {
+            "items": [
+                {"id": "valid_id_1", "order": 10},  # valid
+                {"id": "valid_id_2"},  # missing order
+                {"order": 20},  # missing id
+                None,  # null entry
+                {"id": "valid_id_3", "order": "not_an_int"},  # wrong type
+            ]
+        }
+        
+        success, response, _ = self.run_test(
+            "Gallery reorder - malformed entries (should skip invalid, process valid)",
+            "POST",
+            "/api/admin/gallery/reorder",
+            200,
+            data=payload,
+            headers={'Authorization': f'Bearer {self.regular_token}'}
+        )
+        
+        if success:
+            # Should return ok=true even if some entries were skipped
+            if response.get("ok"):
+                print(f"   ✓ Endpoint handled malformed entries gracefully (updated={response.get('updated')})")
+                return True
+            else:
+                print(f"   ❌ Expected ok=true, got: {response}")
+                self.failed_tests.append("Gallery reorder - malformed handling")
+                return False
+        return False
+
+    def test_gallery_crud_regression(self):
+        """Test existing gallery CRUD endpoints still work"""
+        print(f"\n🔍 Testing gallery CRUD regression...")
+        self.tests_run += 1
+        all_passed = True
+        
+        # Test GET /api/gallery
+        try:
+            response = requests.get(f"{self.base_url}/api/gallery", timeout=10)
+            if response.status_code == 200:
+                print(f"  ✓ GET /api/gallery works (status 200)")
+            else:
+                print(f"  ❌ GET /api/gallery failed (status {response.status_code})")
+                all_passed = False
+                self.failed_tests.append("Gallery CRUD - GET /api/gallery")
+        except Exception as e:
+            print(f"  ❌ GET /api/gallery error: {e}")
+            all_passed = False
+            self.failed_tests.append("Gallery CRUD - GET /api/gallery error")
+        
+        # Test POST /api/admin/gallery (create)
+        try:
+            headers = {'Authorization': f'Bearer {self.regular_token}', 'Content-Type': 'application/json'}
+            test_item = {
+                "image_url": "/api/uploads/test.jpg",
+                "title": "Test Gallery Item",
+                "category": "weddings",
+                "featured": False
+            }
+            response = requests.post(f"{self.base_url}/api/admin/gallery", json=test_item, headers=headers, timeout=10)
+            if response.status_code in [200, 201]:
+                created_id = response.json().get("id")
+                print(f"  ✓ POST /api/admin/gallery works (created id={created_id})")
+                
+                # Test PUT /api/admin/gallery/{id} (update)
+                if created_id:
+                    update_data = {"title": "Updated Test Item"}
+                    response = requests.put(f"{self.base_url}/api/admin/gallery/{created_id}", json=update_data, headers=headers, timeout=10)
+                    if response.status_code == 200:
+                        print(f"  ✓ PUT /api/admin/gallery/{created_id} works")
+                    else:
+                        print(f"  ❌ PUT /api/admin/gallery/{created_id} failed (status {response.status_code})")
+                        all_passed = False
+                        self.failed_tests.append("Gallery CRUD - PUT")
+                    
+                    # Test DELETE /api/admin/gallery/{id}
+                    response = requests.delete(f"{self.base_url}/api/admin/gallery/{created_id}", headers=headers, timeout=10)
+                    if response.status_code == 200:
+                        print(f"  ✓ DELETE /api/admin/gallery/{created_id} works")
+                    else:
+                        print(f"  ❌ DELETE /api/admin/gallery/{created_id} failed (status {response.status_code})")
+                        all_passed = False
+                        self.failed_tests.append("Gallery CRUD - DELETE")
+            else:
+                print(f"  ❌ POST /api/admin/gallery failed (status {response.status_code})")
+                all_passed = False
+                self.failed_tests.append("Gallery CRUD - POST")
+        except Exception as e:
+            print(f"  ❌ Gallery CRUD error: {e}")
+            all_passed = False
+            self.failed_tests.append("Gallery CRUD - error")
+        
+        if all_passed:
+            self.tests_passed += 1
+            print(f"\n✅ PASSED - Gallery CRUD regression tests")
+        else:
+            print(f"\n❌ FAILED - Some gallery CRUD tests failed")
+        
+        return all_passed
+
 def main():
     tester = CacheAndSystemStatsTester()
     
     print("=" * 70)
-    print("HTTP CACHING + SUPER ADMIN SYSTEM STATS BACKEND TESTS")
+    print("BACKEND TESTS: CACHING + SYSTEM STATS + GALLERY REORDER")
     print("=" * 70)
     
     # Auth tests
@@ -446,6 +631,24 @@ def main():
     tester.test_system_stats_bad_token()
     tester.test_system_stats_regular_admin()
     tester.test_system_stats_super_admin()
+    
+    # Gallery reorder tests
+    print("\n" + "=" * 70)
+    print("GALLERY REORDER ENDPOINT TESTS")
+    print("=" * 70)
+    
+    tester.test_gallery_reorder_no_auth()
+    tester.test_gallery_reorder_empty_items()
+    tester.test_gallery_reorder_too_many_items()
+    tester.test_gallery_reorder_valid()
+    tester.test_gallery_reorder_malformed_entries()
+    
+    # Gallery CRUD regression
+    print("\n" + "=" * 70)
+    print("GALLERY CRUD REGRESSION TESTS")
+    print("=" * 70)
+    
+    tester.test_gallery_crud_regression()
     
     # Print results
     print("\n" + "=" * 70)

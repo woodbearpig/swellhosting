@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, X, Upload, CheckSquare, Square, Tag, ChevronDown, ChevronUp, GripVertical, Settings2, Save } from 'lucide-react';
+import { Plus, Trash2, X, Upload, CheckSquare, Square, Tag, ChevronDown, ChevronUp, GripVertical, Settings2, Save, MoveVertical } from 'lucide-react';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
+import { SortableGrid } from '@/components/SortableGrid';
 import { useSite } from '@/context/SiteContext';
 
 const prettyLabel = (s) => (s || '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -158,6 +159,15 @@ export const AdminGallery = () => {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
+  // Drag-to-reorder state:
+  //   • reorderMode — when true, the grid renders drag handles + everything
+  //     else (bulk-select toolbar, edit/delete buttons) is hidden to avoid
+  //     accidental clicks during a drag.
+  //   • savingOrder — briefly true while POST /admin/gallery/reorder is
+  //     in-flight; we disable further drags until it settles to prevent
+  //     race conditions with rapid drops.
+  const [reorderMode, setReorderMode] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
   const bulkMenuRef = useRef(null);
 
   // Local editable copy of the categories list – only committed to the
@@ -203,6 +213,49 @@ export const AdminGallery = () => {
     if (!window.confirm('Delete this image?')) return;
     await api.delete(`/admin/gallery/${id}`);
     load(); toast.success('Deleted');
+  };
+
+  /**
+   * onGridReorder — called by SortableGrid after the user drops an item.
+   * `nextVisible` is the currently-filtered subset in its new order.
+   *
+   * The "preserve slots" trick:
+   *   We only touch the order values of items in the currently-visible
+   *   filter. Each item in the new arrangement takes over one of the
+   *   existing order values from that same subset. That way items in
+   *   OTHER categories keep their relative positions untouched — the
+   *   client can safely reorder "Weddings" without disturbing
+   *   "Corporate" or "Birthdays."
+   *
+   * Uses optimistic UI: we update the visible order immediately and roll
+   * back if the backend save fails.
+   */
+  const onGridReorder = async (nextVisible) => {
+    // Snapshot the current order-value "slots" occupied by the visible
+    // items so we can reassign them to their new photos.
+    const oldVisible = filtered.slice();
+    const orderSlots = oldVisible.map(it => it.order ?? 0).sort((a, b) => a - b);
+    const reassigned = nextVisible.map((it, i) => ({ ...it, order: orderSlots[i] }));
+
+    // Optimistic UI: patch `items` locally so the grid re-renders instantly.
+    const patchMap = new Map(reassigned.map(it => [it.id, it.order]));
+    const previousItems = items.slice();
+    setItems(prev => prev.map(it => (patchMap.has(it.id) ? { ...it, order: patchMap.get(it.id) } : it)));
+
+    setSavingOrder(true);
+    try {
+      await api.post('/admin/gallery/reorder', {
+        items: reassigned.map(it => ({ id: it.id, order: it.order })),
+      });
+      toast.success('Order saved');
+    } catch (e) {
+      // Roll back on failure and reload from the server to sync.
+      setItems(previousItems);
+      toast.error(e?.response?.data?.detail || 'Could not save new order — reverted');
+      load();
+    } finally {
+      setSavingOrder(false);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -363,7 +416,16 @@ export const AdminGallery = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!selectMode ? (
+          {reorderMode ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setReorderMode(false)}
+              data-testid="admin-gallery-reorder-done"
+            >
+              <Save className="h-4 w-4" /> Done reordering
+            </button>
+          ) : !selectMode ? (
             <>
               <button
                 type="button"
@@ -373,6 +435,16 @@ export const AdminGallery = () => {
                 title="Add, rename, remove or reorder the category filter bubbles"
               >
                 <Settings2 className="h-4 w-4" /> {manageOpen ? 'Close' : 'Manage categories'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setReorderMode(true)}
+                disabled={items.length === 0}
+                data-testid="admin-gallery-reorder-mode"
+                title="Drag photos to reorder them"
+              >
+                <MoveVertical className="h-4 w-4" /> Reorder
               </button>
               <button
                 type="button"
@@ -612,6 +684,42 @@ export const AdminGallery = () => {
           <p className="font-serif text-lg">Nothing here yet.</p>
           <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">{tab === 'all' ? 'Add your first photo above.' : `No photos in “${tab === 'uncategorized' ? 'Uncategorized' : labelForKey(tab)}” yet.`}</p>
         </div>
+      ) : reorderMode ? (
+        <>
+          <p className="text-xs text-[color:var(--brand-text-muted)] -mt-2 mb-3">
+            <strong>Reorder mode</strong> — drag any photo by its grip handle to move it. Changes save automatically. Click <em>Done reordering</em> above when finished.
+            {tab !== 'all' && tab !== 'uncategorized' && <> Reordering here only affects photos in <strong>“{labelForKey(tab)}”</strong> — other categories are unaffected.</>}
+          </p>
+          <SortableGrid
+            items={filtered}
+            onReorder={onGridReorder}
+            disabled={savingOrder}
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+            renderItem={(g, dragHandle) => (
+              <div
+                className="card-cream overflow-hidden relative transition-shadow shadow-sm hover:shadow-md"
+                data-testid={`admin-gallery-card-${g.id}`}
+              >
+                {/* Drag handle overlay — top-left corner */}
+                {dragHandle && (
+                  <div className="absolute top-2 left-2 z-10">
+                    {dragHandle}
+                  </div>
+                )}
+                <div className="aspect-square overflow-hidden bg-[color:var(--brand-surface-2)]">
+                  <img src={publicUrl(g.image_url)} alt={g.title} className="w-full h-full object-cover pointer-events-none" loading="lazy" draggable="false" />
+                </div>
+                <div className="p-3">
+                  <p className="font-medium text-sm truncate">{g.title || 'Untitled'}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="badge-soft">{labelForKey(g.category)}</span>
+                    {g.featured && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)]">Featured</span>}
+                  </div>
+                </div>
+              </div>
+            )}
+          />
+        </>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map(g => {

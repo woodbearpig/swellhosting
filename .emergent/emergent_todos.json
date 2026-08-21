@@ -1,26 +1,14 @@
 [
   {
-    "content": "Review current deploy.sh to understand pull/build flow and identify where to snapshot previous commit",
+    "content": "Run testing_agent_v3 for Admin Gallery drag-and-drop (backend + frontend)",
     "status": "completed"
   },
   {
-    "content": "Modify deploy.sh: snapshot current commit BEFORE git pull, save to .last_deploy_commit only on successful health check",
+    "content": "Review iteration report and fix any bugs surfaced",
     "status": "completed"
   },
   {
-    "content": "Create rollback.sh: read .last_deploy_commit, confirm with user, git reset --hard, rebuild, restart nginx, health check",
-    "status": "completed"
-  },
-  {
-    "content": "Add .last_deploy_commit to .gitignore (it's server-local state)",
-    "status": "completed"
-  },
-  {
-    "content": "Dry-run test both scripts locally to catch syntax issues",
-    "status": "completed"
-  },
-  {
-    "content": "Document usage summary for the user",
+    "content": "Update plan.md to mark phase COMPLETED",
     "status": "completed"
   }
 ]
