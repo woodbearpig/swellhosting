@@ -51,3 +51,22 @@ async def require_admin(creds: Optional[HTTPAuthorizationCredentials] = Depends(
     if not payload or payload.get("role") != "admin":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return payload
+
+
+async def require_super_admin(creds: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Gate an endpoint to the env-defined super admin only.
+    Everyone else — including authenticated regular admins — gets a
+    404 instead of 401/403 so the endpoint appears not to exist for
+    them (extra stealth for support-only tooling). Real 401 is only
+    returned when no auth header is present (to distinguish "you
+    forgot the header" from "you're not allowed").
+    """
+    if not creds or not creds.credentials:
+        # Return 404 too — never leak the endpoint's existence.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    payload = decode_token(creds.credentials)
+    if not payload or payload.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    if payload.get("sub") != "super-admin":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    return payload

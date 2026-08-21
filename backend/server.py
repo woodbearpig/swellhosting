@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta, date, time as dt_time
 from typing import List, Optional, Dict, Any
 
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, Form, Request
 import io
 import csv
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -23,7 +23,7 @@ from models import (
     Inquiry, Client, Consultation, Availability, NewsletterSubscriber,
     CustomPalette,
 )
-from auth import hash_password, verify_password, create_token, require_admin
+from auth import hash_password, verify_password, create_token, require_admin, require_super_admin
 from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html, make_ics, owner_new_inquiry_html
 from crypto_utils import encrypt, decrypt
 import google_calendar as gcal
@@ -93,6 +93,70 @@ def slugify(text: str) -> str:
     text = re.sub(r"[^\w\s-]", "", text)
     text = re.sub(r"[\s_-]+", "-", text)
     return text.strip("-")
+
+
+# =========================================================
+# HTTP caching helpers for public GET endpoints
+# ---------------------------------------------------------
+# These add ETag + short-lived Cache-Control headers to a handful of
+# heavily-hit public endpoints (site-content, services, gallery, etc.).
+# Purpose: absorb launch-day traffic spikes (14K+ FB followers driving
+# 1000s of visitors in short bursts) without hammering FastAPI/MongoDB.
+#
+# Behavior:
+#   • Browsers cache the response for `PUBLIC_CACHE_MAX_AGE` seconds.
+#   • Cloudflare (when configured in front) caches at the edge for
+#     `PUBLIC_CACHE_S_MAXAGE` seconds — most visitors never touch the VPS.
+#   • `must-revalidate` means clients must check freshness after expiry
+#     instead of silently serving stale data.
+#   • An ETag derived from the payload lets revalidation return `304 Not
+#     Modified` (tiny 0-body response) if content hasn't changed, so
+#     Cloudflare and browsers both save bandwidth.
+#   • On admin save (or any state change), the ETag naturally changes
+#     because the payload changed — no manual cache invalidation needed.
+#
+# All admin endpoints intentionally skip these headers (no caching) so
+# the owner always sees the latest state when editing.
+# =========================================================
+import hashlib as _hashlib
+import json as _json
+
+PUBLIC_CACHE_MAX_AGE = 60        # browser hard-cache window (seconds)
+PUBLIC_CACHE_S_MAXAGE = 60       # CDN (Cloudflare) hard-cache window (seconds)
+
+
+def _compute_etag(payload: Any) -> str:
+    """Deterministic short hash of a JSON-serializable payload. Used as an
+    HTTP ETag. Sorted keys → stable across dict ordering."""
+    try:
+        blob = _json.dumps(payload, sort_keys=True, default=str, ensure_ascii=False)
+    except Exception:
+        blob = str(payload)
+    return 'W/"' + _hashlib.md5(blob.encode("utf-8")).hexdigest()[:16] + '"'
+
+
+def cache_public_response(payload: Any, request=None, extra_headers: Optional[Dict[str, str]] = None):
+    """Wrap a JSON-serializable payload in a JSONResponse with proper
+    Cache-Control + ETag headers. If the incoming request already sent
+    a matching If-None-Match, we return a 304 with no body (fastest possible
+    response — literally 0 bytes of JSON to send)."""
+    etag = _compute_etag(payload)
+    headers = {
+        "Cache-Control": f"public, max-age={PUBLIC_CACHE_MAX_AGE}, s-maxage={PUBLIC_CACHE_S_MAXAGE}, must-revalidate",
+        "ETag": etag,
+        "Vary": "Accept-Encoding",
+    }
+    if extra_headers:
+        headers.update(extra_headers)
+
+    # If the client already has this exact version cached, serve 304.
+    if request is not None:
+        inm = request.headers.get("if-none-match") or request.headers.get("If-None-Match")
+        if inm and inm.strip() == etag:
+            return JSONResponse(status_code=304, content=None, headers=headers)
+
+    return JSONResponse(content=payload, headers=headers)
+
 
 
 # =========================================================
@@ -536,13 +600,13 @@ async def login(payload: LoginPayload):
     if su:
         token = create_token(su)
         logger.info("Super admin login (email=%s)", su["email"])
-        return TokenResponse(token=token, user={"id": su["id"], "email": su["email"], "name": su["name"], "role": su["role"]})
+        return TokenResponse(token=token, user={"id": su["id"], "email": su["email"], "name": su["name"], "role": su["role"], "is_super_admin": True})
     # 2. Normal DB-backed admin
     user = await db.admin_users.find_one({"email": payload.email.lower().strip()}, {"_id": 0})
     if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(user)
-    return TokenResponse(token=token, user={"id": user["id"], "email": user["email"], "name": user.get("name", ""), "role": user.get("role", "admin")})
+    return TokenResponse(token=token, user={"id": user["id"], "email": user["email"], "name": user.get("name", ""), "role": user.get("role", "admin"), "is_super_admin": False})
 
 
 @api.get("/auth/me")
@@ -554,10 +618,12 @@ async def me(admin=Depends(require_admin)):
             "email": admin.get("email", os.environ.get("SUPER_ADMIN_EMAIL", "")),
             "name": os.environ.get("SUPER_ADMIN_NAME") or "Support",
             "role": "admin",
+            "is_super_admin": True,
         }
     user = await db.admin_users.find_one({"id": admin["sub"]}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Not found")
+    user["is_super_admin"] = False
     return user
 
 
@@ -1220,7 +1286,7 @@ async def _migrate_media_library() -> int:
 # Site Content
 # =========================================================
 @api.get("/site-content")
-async def get_site_content():
+async def get_site_content(request: Request):
     doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0})
     if not doc:
         sc = SiteContent()
@@ -1229,7 +1295,7 @@ async def get_site_content():
     # NEVER expose the preview token through the public endpoint — that would
     # let anyone bypass the Coming Soon curtain.
     doc.pop("preview_token", None)
-    return doc
+    return cache_public_response(doc, request=request)
 
 
 @api.post("/preview/verify")
@@ -1367,20 +1433,20 @@ async def reset_inquiry_form(admin=Depends(require_admin)):
 # Services
 # =========================================================
 @api.get("/services")
-async def list_services(published: Optional[bool] = None):
+async def list_services(request: Request, published: Optional[bool] = None):
     query: Dict[str, Any] = {}
     if published is not None:
         query["published"] = published
     docs = await db.services.find(query, {"_id": 0}).sort("order", 1).to_list(500)
-    return docs
+    return cache_public_response(docs, request=request)
 
 
 @api.get("/services/{slug}")
-async def get_service(slug: str):
+async def get_service(slug: str, request: Request):
     doc = await db.services.find_one({"slug": slug}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Service not found")
-    return doc
+    return cache_public_response(doc, request=request)
 
 
 @api.post("/admin/services")
@@ -1415,14 +1481,14 @@ async def delete_service(sid: str, admin=Depends(require_admin)):
 # Gallery
 # =========================================================
 @api.get("/gallery")
-async def list_gallery(category: Optional[str] = None, featured: Optional[bool] = None):
+async def list_gallery(request: Request, category: Optional[str] = None, featured: Optional[bool] = None):
     query: Dict[str, Any] = {}
     if category and category != "all":
         query["category"] = category
     if featured is not None:
         query["featured"] = featured
     docs = await db.gallery.find(query, {"_id": 0}).sort("order", 1).to_list(1000)
-    return docs
+    return cache_public_response(docs, request=request)
 
 
 @api.post("/admin/gallery")
@@ -1482,14 +1548,14 @@ _TESTIMONIAL_PUBLIC_PROJECTION = {"_id": 0, "reviewer_email": 0}
 
 
 @api.get("/testimonials")
-async def list_testimonials(featured: Optional[bool] = None):
+async def list_testimonials(request: Request, featured: Optional[bool] = None):
     """Public list. Only 'approved' rows are ever returned to the public API.
     reviewer_email is hidden."""
     query: Dict[str, Any] = {"$or": [{"status": "approved"}, {"status": {"$exists": False}}]}
     if featured is not None:
         query["featured"] = featured
     docs = await db.testimonials.find(query, _TESTIMONIAL_PUBLIC_PROJECTION).sort("order", 1).to_list(500)
-    return docs
+    return cache_public_response(docs, request=request)
 
 
 @api.post("/testimonials/submit")
@@ -1609,8 +1675,8 @@ async def delete_testimonial(tid: str, admin=Depends(require_admin)):
 # Backdrops
 # =========================================================
 @api.get("/backdrops")
-async def list_backdrops(featured: Optional[bool] = None, kind: Optional[str] = None):
-    """Public list \u2014 only active items. Optional filter by kind ('backdrop' or 'design')."""
+async def list_backdrops(request: Request, featured: Optional[bool] = None, kind: Optional[str] = None):
+    """Public list — only active items. Optional filter by kind ('backdrop' or 'design')."""
     query: Dict[str, Any] = {"$or": [{"active": True}, {"active": {"$exists": False}}]}
     if featured is not None:
         query["featured"] = featured
@@ -1621,7 +1687,7 @@ async def list_backdrops(featured: Optional[bool] = None, kind: Optional[str] = 
         else:
             query["kind"] = kind
     docs = await db.backdrops.find(query, {"_id": 0}).sort("order", 1).to_list(500)
-    return docs
+    return cache_public_response(docs, request=request)
 
 
 @api.get("/admin/backdrops")
@@ -1733,9 +1799,9 @@ async def reorder_reply_templates(payload: Dict[str, Any], admin=Depends(require
 # FAQs
 # =========================================================
 @api.get("/faqs")
-async def list_faqs():
+async def list_faqs(request: Request):
     docs = await db.faqs.find({}, {"_id": 0}).sort("order", 1).to_list(500)
-    return docs
+    return cache_public_response(docs, request=request)
 
 
 @api.post("/admin/faqs")
@@ -2701,9 +2767,10 @@ async def list_palettes():
 
 
 @api.get("/palettes/active")
-async def get_active_palette():
+async def get_active_palette(request: Request):
     pid = await _effective_palette_id()
-    return await _resolve_palette(pid)
+    resolved = await _resolve_palette(pid)
+    return cache_public_response(resolved, request=request)
 
 
 @api.put("/admin/palettes/active")
@@ -2815,6 +2882,188 @@ async def health():
 
 
 # =========================================================
+# System stats (super admin only)
+# ---------------------------------------------------------
+# Read-only diagnostic endpoint. Returns server resource usage
+# (RAM/CPU/disk), app-level volume metrics (inquiry counts, media
+# library size, etc.), and MongoDB storage stats. Gated by
+# `require_super_admin` which returns 404 (not 401/403) for anyone
+# else so the endpoint appears not to exist to non-super admins.
+# Uses only Python stdlib (no psutil dep).
+# =========================================================
+def _read_meminfo() -> Dict[str, int]:
+    """Parse /proc/meminfo. Values are in bytes. Linux-only; returns
+    empty dict on other platforms so callers can degrade gracefully."""
+    out: Dict[str, int] = {}
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f:
+                parts = line.split(":")
+                if len(parts) != 2:
+                    continue
+                key = parts[0].strip()
+                # Values are like "12345 kB"
+                val = parts[1].strip().split()
+                if not val:
+                    continue
+                try:
+                    n = int(val[0]) * (1024 if len(val) > 1 and val[1].lower() == "kb" else 1)
+                    out[key] = n
+                except ValueError:
+                    continue
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def _read_uptime_seconds() -> float:
+    try:
+        with open("/proc/uptime", "r") as f:
+            return float(f.read().split()[0])
+    except (FileNotFoundError, ValueError):
+        return 0.0
+
+
+def _dir_size_bytes(path: Path) -> tuple:
+    """Recursively total size + file count. Ignores unreadable entries so
+    a single permission error doesn't fail the whole call."""
+    total = 0
+    files = 0
+    if not path.exists():
+        return 0, 0
+    for root, _dirs, filenames in os.walk(path):
+        for name in filenames:
+            try:
+                total += (Path(root) / name).stat().st_size
+                files += 1
+            except OSError:
+                continue
+    return total, files
+
+
+@api.get("/admin/system-stats")
+async def get_system_stats(_su=Depends(require_super_admin)):
+    """Point-in-time snapshot of server + app health. Cheap enough to
+    poll from the admin UI every 30s. Returns everything the super admin
+    needs to spot an incoming problem (RAM/CPU/disk pressure, DB bloat,
+    uploads folder runaway growth)."""
+    now = datetime.now(timezone.utc)
+
+    # --- Server: RAM ---
+    mem = _read_meminfo()
+    ram_total = mem.get("MemTotal", 0)
+    ram_available = mem.get("MemAvailable", 0)
+    ram_used = max(0, ram_total - ram_available) if ram_total else 0
+    ram_pct = round(100 * ram_used / ram_total, 1) if ram_total else 0.0
+
+    # --- Server: CPU (load average / cores as a % proxy) ---
+    try:
+        load1, load5, load15 = os.getloadavg()
+    except (OSError, AttributeError):
+        load1 = load5 = load15 = 0.0
+    try:
+        cores = os.cpu_count() or 1
+    except Exception:
+        cores = 1
+    # Rough approximation: load / cores ≈ CPU utilization ratio.
+    cpu_pct_1m = round(100 * load1 / cores, 1)
+    cpu_pct_5m = round(100 * load5 / cores, 1)
+    cpu_pct_15m = round(100 * load15 / cores, 1)
+
+    # --- Server: Disk (root filesystem) ---
+    try:
+        du = shutil.disk_usage("/")
+        disk_total = du.total
+        disk_used = du.used
+        disk_free = du.free
+        disk_pct = round(100 * disk_used / disk_total, 1) if disk_total else 0.0
+    except Exception:
+        disk_total = disk_used = disk_free = 0
+        disk_pct = 0.0
+
+    # --- Server: uptime ---
+    uptime_seconds = _read_uptime_seconds()
+
+    # --- App volume: inquiries ---
+    since_7d = (now - timedelta(days=7)).isoformat()
+    since_30d = (now - timedelta(days=30)).isoformat()
+    inquiries_total = await db.inquiries.count_documents({})
+    inquiries_7d = await db.inquiries.count_documents({"created_at": {"$gte": since_7d}})
+    inquiries_30d = await db.inquiries.count_documents({"created_at": {"$gte": since_30d}})
+
+    # Status breakdown (top statuses only)
+    status_pipe = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}]
+    status_breakdown = []
+    async for row in db.inquiries.aggregate(status_pipe):
+        status_breakdown.append({"status": row.get("_id") or "new", "count": row["count"]})
+
+    # --- App volume: content counts ---
+    counts = {
+        "clients": await db.clients.count_documents({}),
+        "consultations": await db.consultations.count_documents({}),
+        "services": await db.services.count_documents({}),
+        "gallery_items": await db.gallery.count_documents({}),
+        "backdrops": await db.backdrops.count_documents({}),
+        "testimonials": await db.testimonials.count_documents({}),
+        "faqs": await db.faqs.count_documents({}),
+        "blog_posts": await db.blog_posts.count_documents({}),
+        "media_assets": await db.media_library.count_documents({}),
+        "admin_users": await db.admin_users.count_documents({}),
+        "newsletter_subscribers": await db.newsletter_subscribers.count_documents({}),
+    }
+
+    # --- Uploads folder size on disk ---
+    uploads_dir = ROOT_DIR / "uploads"
+    uploads_bytes, uploads_files = _dir_size_bytes(uploads_dir)
+
+    # --- MongoDB storage stats ---
+    mongo_stats: Dict[str, Any] = {}
+    try:
+        raw = await db.command("dbStats")
+        mongo_stats = {
+            "collections": raw.get("collections", 0),
+            "objects": raw.get("objects", 0),
+            "data_size": int(raw.get("dataSize", 0)),
+            "storage_size": int(raw.get("storageSize", 0)),
+            "index_size": int(raw.get("indexSize", 0)),
+        }
+    except Exception as e:
+        mongo_stats = {"error": str(e)}
+
+    return {
+        "generated_at": now.isoformat(),
+        "server": {
+            "ram_total_bytes": ram_total,
+            "ram_used_bytes": ram_used,
+            "ram_available_bytes": ram_available,
+            "ram_pct": ram_pct,
+            "cpu_cores": cores,
+            "cpu_load_1m": load1,
+            "cpu_load_5m": load5,
+            "cpu_load_15m": load15,
+            "cpu_pct_1m": cpu_pct_1m,
+            "cpu_pct_5m": cpu_pct_5m,
+            "cpu_pct_15m": cpu_pct_15m,
+            "disk_total_bytes": disk_total,
+            "disk_used_bytes": disk_used,
+            "disk_free_bytes": disk_free,
+            "disk_pct": disk_pct,
+            "uptime_seconds": uptime_seconds,
+        },
+        "app": {
+            "inquiries_total": inquiries_total,
+            "inquiries_last_7d": inquiries_7d,
+            "inquiries_last_30d": inquiries_30d,
+            "status_breakdown": status_breakdown,
+            "counts": counts,
+            "uploads_bytes": uploads_bytes,
+            "uploads_files": uploads_files,
+        },
+        "mongo": mongo_stats,
+    }
+
+
+# =========================================================
 # Mount
 # =========================================================
 app.include_router(api)
@@ -2825,4 +3074,6 @@ app.add_middleware(
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
+    # Expose caching headers so browser dev tools + Cloudflare can see them.
+    expose_headers=["ETag", "Cache-Control", "X-Content-Version"],
 )

@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame, LifeBuoy, Activity } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
@@ -55,6 +55,18 @@ const groups = [
       { to: '/admin/settings', label: 'Settings', icon: Settings },
     ],
   },
+  // ---- SUPPORT group ----
+  // Rendered ONLY when the authenticated user is the env-defined super admin
+  // (see AdminLayout body). Client-side gate is just cosmetic — the real
+  // enforcement lives in the backend which returns 404 for the endpoint to
+  // anyone but the super admin.
+  {
+    label: 'Support',
+    superAdminOnly: true,
+    items: [
+      { to: '/admin/system', label: 'System health', icon: Activity },
+    ],
+  },
 ];
 
 const AdminLayout = () => {
@@ -86,7 +98,7 @@ const AdminLayout = () => {
             <button onClick={() => setOpen(false)} className="lg:hidden"><X className="h-5 w-5" /></button>
           </div>
           <nav className="px-3 pb-4 space-y-5 overflow-y-auto max-h-[calc(100vh-70px)]">
-            {groups.map(g => (
+            {groups.filter(g => !g.superAdminOnly || user?.is_super_admin).map(g => (
               <div key={g.label}>
                 <p className="eyebrow px-2 mb-1">{g.label}</p>
                 {g.items.map(item => {

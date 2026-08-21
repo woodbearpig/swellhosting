@@ -41,6 +41,7 @@ import AdminSocialContactPage from '@/pages/admin/site/AdminSocialContactPage';
 import AdminComingSoonPage from '@/pages/admin/site/AdminComingSoonPage';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminIntegrations from '@/pages/admin/AdminIntegrations';
+import AdminSystemPage from '@/pages/admin/AdminSystemPage';
 import AdminPalettes from '@/pages/admin/AdminPalettes';
 import AdminInquiryForm from '@/pages/admin/AdminInquiryForm';
 import AdminMedia from '@/pages/admin/AdminMedia';
@@ -153,6 +154,7 @@ function App() {
                   <Route path="palettes" element={<AdminPalettes />} />
                   <Route path="integrations" element={<AdminIntegrations />} />
                   <Route path="settings" element={<AdminSettings />} />
+                  <Route path="system" element={<AdminSystemPage />} />
                 </Route>
               </Routes>
             </BrowserRouter>
