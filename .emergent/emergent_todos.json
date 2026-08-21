@@ -1,6 +1,18 @@
 [
   {
-    "content": "Run testing_agent for full end-to-end coverage",
+    "content": "Add home_widget_show_header field to SiteContent (default true, back-compat)",
+    "status": "completed"
+  },
+  {
+    "content": "Update HomeEmbedSection to skip header render when toggle is off",
+    "status": "completed"
+  },
+  {
+    "content": "Update AdminHomePage EmbedWidgetCard: add toggle + conditionally hide header fields",
+    "status": "completed"
+  },
+  {
+    "content": "Compile + restart + screenshot verify both modes",
     "status": "completed"
   }
 ]

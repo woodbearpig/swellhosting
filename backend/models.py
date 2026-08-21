@@ -297,6 +297,10 @@ class SiteContent(Base):
     # injects it into <head> exactly once, then renders the rest of the HTML in-place.
     # Position controls WHERE on the homepage it appears (see HomeEmbedSection).
     home_widget_active: bool = False
+    # When true, the eyebrow/heading/subheading render above the widget.
+    # Turn OFF if the widget (e.g. Elfsight Facebook feed) already has its
+    # own branding/heading and you want a cleaner, unwrapped section.
+    home_widget_show_header: bool = True
     home_widget_eyebrow: str = "FOLLOW ALONG"
     home_widget_heading: str = "See our latest work on Facebook"
     home_widget_subheading: str = ""

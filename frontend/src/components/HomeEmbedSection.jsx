@@ -30,6 +30,8 @@ export const HomeEmbedSection = ({ at }) => {
   const heading = (site?.home_widget_heading || '').trim();
   const subheading = (site?.home_widget_subheading || '').trim();
   const snippet = (site?.home_widget_snippet || '').trim();
+  // Default true when the field is missing (back-compat with old docs).
+  const showHeader = site?.home_widget_show_header !== false;
 
   return (
     <section
@@ -37,7 +39,7 @@ export const HomeEmbedSection = ({ at }) => {
       data-testid="home-embed-widget-section"
       data-widget-position={at}
     >
-      {(eyebrow || heading || subheading) && (
+      {showHeader && (eyebrow || heading || subheading) && (
         <motion.div {...fadeInUp} className="mb-10">
           <SectionHeader eyebrow={eyebrow} title={heading} subtitle={subheading} />
         </motion.div>

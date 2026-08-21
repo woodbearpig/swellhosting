@@ -392,35 +392,57 @@ const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
 
       {active && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="rounded-xl bg-[color:var(--brand-sage-tint)]/30 p-3 flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="h-5 w-5 mt-0.5 shrink-0"
+              checked={data.home_widget_show_header !== false}
+              onChange={e => set({ home_widget_show_header: e.target.checked })}
+              data-testid="admin-home-widget-show-header"
+              id="admin-home-widget-show-header"
+            />
+            <label htmlFor="admin-home-widget-show-header" className="cursor-pointer flex-1">
+              <p className="text-sm font-medium">Show section heading above the widget</p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
+                Turn this off if your widget (e.g. Elfsight) already has its own heading/branding — the section will render as just the widget with no extra text above it.
+              </p>
+            </label>
+          </div>
+
+          {data.home_widget_show_header !== false && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="eyebrow block mb-1">EYEBROW</label>
+                <TextField
+                  value={data.home_widget_eyebrow || ''}
+                  onCommit={v => set({ home_widget_eyebrow: v })}
+                  placeholder="FOLLOW ALONG"
+                  data-testid="admin-home-widget-eyebrow"
+                />
+              </div>
+              <div>
+                <label className="eyebrow block mb-1">HEADING</label>
+                <TextField
+                  value={data.home_widget_heading || ''}
+                  onCommit={v => set({ home_widget_heading: v })}
+                  placeholder="See our latest work on Facebook"
+                  data-testid="admin-home-widget-heading"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="eyebrow block mb-1">SUBHEADING (optional)</label>
+                <TextField
+                  value={data.home_widget_subheading || ''}
+                  onCommit={v => set({ home_widget_subheading: v })}
+                  placeholder="A short sentence under the heading — leave blank to hide."
+                  data-testid="admin-home-widget-subheading"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="eyebrow block mb-1">EYEBROW</label>
-              <TextField
-                value={data.home_widget_eyebrow || ''}
-                onCommit={v => set({ home_widget_eyebrow: v })}
-                placeholder="FOLLOW ALONG"
-                data-testid="admin-home-widget-eyebrow"
-              />
-            </div>
-            <div>
-              <label className="eyebrow block mb-1">HEADING</label>
-              <TextField
-                value={data.home_widget_heading || ''}
-                onCommit={v => set({ home_widget_heading: v })}
-                placeholder="See our latest work on Facebook"
-                data-testid="admin-home-widget-heading"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="eyebrow block mb-1">SUBHEADING (optional)</label>
-              <TextField
-                value={data.home_widget_subheading || ''}
-                onCommit={v => set({ home_widget_subheading: v })}
-                placeholder="A short sentence under the heading — leave blank to hide."
-                data-testid="admin-home-widget-subheading"
-              />
-            </div>
-            <div className="sm:col-span-2">
               <label className="eyebrow block mb-1">POSITION ON HOMEPAGE</label>
               <select
                 className="input-cream"
