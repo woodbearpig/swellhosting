@@ -6,6 +6,7 @@ import { api, publicUrl } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
 import { SectionHeader } from '@/components/SectionEyebrow';
 import { InstagramFeed } from '@/components/InstagramFeed';
+import { HomeEmbedSection } from '@/components/HomeEmbedSection';
 import { TestimonialCard, BackdropCard } from '@/pages/BackdropsAndReviews';
 
 const fadeInUp = {
@@ -83,6 +84,9 @@ const HomePage = () => {
         <ValuePillars site={site} />
       )}
 
+      {/* EMBED WIDGET slot: after-hero */}
+      <HomeEmbedSection at="after-hero" />
+
       {/* SERVICES */}
       {site?.home_services_active !== false && (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-services-section">
@@ -111,6 +115,9 @@ const HomePage = () => {
       </section>
       )}
 
+      {/* EMBED WIDGET slot: after-services */}
+      <HomeEmbedSection at="after-services" />
+
       {/* GALLERY PREVIEW */}
       {site?.home_gallery_active !== false && (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-gallery-section">
@@ -128,6 +135,9 @@ const HomePage = () => {
       </section>
       )}
 
+      {/* EMBED WIDGET slot: after-portfolio (Gallery/Portfolio preview) */}
+      <HomeEmbedSection at="after-portfolio" />
+
       {/* INSTAGRAM FEED (only renders if configured) */}
       <InstagramFeed />
 
@@ -143,6 +153,9 @@ const HomePage = () => {
         </div>
       </section>
       )}
+
+      {/* EMBED WIDGET slot: after-backdrops */}
+      <HomeEmbedSection at="after-backdrops" />
 
 
       {/* PROCESS */}
@@ -181,6 +194,9 @@ const HomePage = () => {
         )}
       </section>
       )}
+
+      {/* EMBED WIDGET slot: after-testimonials (default) */}
+      <HomeEmbedSection at="after-testimonials" />
 
       {/* MEET THE DESIGNER */}
       {site?.home_designer_active !== false && (() => {
@@ -295,6 +311,9 @@ const HomePage = () => {
         );
       })()}
 
+      {/* EMBED WIDGET slot: after-designer */}
+      <HomeEmbedSection at="after-designer" />
+
       {/* FAQ PREVIEW */}
       {site?.home_faq_active !== false && (
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-faq-section">
@@ -310,6 +329,12 @@ const HomePage = () => {
         <div className="mt-6"><Link to="/faq" className="link-underline text-sm">All FAQ →</Link></div>
       </section>
       )}
+
+      {/* EMBED WIDGET slot: after-faq */}
+      <HomeEmbedSection at="after-faq" />
+
+      {/* EMBED WIDGET slot: before-cta */}
+      <HomeEmbedSection at="before-cta" />
 
       {/* CTA */}
       {site?.home_final_cta_active !== false && (() => {

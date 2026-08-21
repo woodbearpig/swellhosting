@@ -291,6 +291,18 @@ class SiteContent(Base):
     home_instagram_subtitle: str = ""
     home_instagram_count: int = 12
 
+    # Home embeddable widget (Elfsight Facebook feed / Google Reviews / any third-party embed).
+    # We deliberately store the raw snippet string so the owner can paste ANY provider's
+    # code without a redeploy — the frontend safely extracts <script src="..."> and
+    # injects it into <head> exactly once, then renders the rest of the HTML in-place.
+    # Position controls WHERE on the homepage it appears (see HomeEmbedSection).
+    home_widget_active: bool = False
+    home_widget_eyebrow: str = "FOLLOW ALONG"
+    home_widget_heading: str = "See our latest work on Facebook"
+    home_widget_subheading: str = ""
+    home_widget_snippet: str = ""            # Raw HTML paste (script + div)
+    home_widget_position: str = "after-testimonials"  # after-hero | after-services | after-portfolio | after-backdrops | after-testimonials | after-designer | after-faq | before-cta
+
     # Footer element visibility + copyright override
     footer_show_logo: bool = True
     footer_show_explore: bool = True

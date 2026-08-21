@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V10)
+# plan.md — swell design + media (V11)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -20,6 +20,7 @@
   - Reuse images site-wide via a central Media Library (“upload once, use everywhere”)
   - Manage homepage “Recent Work” images from the **Portfolio** (curated gallery items)
   - Show a live **Instagram feed** on the homepage with **admin-editable labels** and **launch-day traffic protection** (server-side cache)
+  - **Paste and render third-party widgets (Facebook feed, reviews, etc.) on the homepage without coding**
   - Manage a **Backdrops & Designs** catalog and present it publicly in separate sections
   - Use **Quick Reply Templates** to respond to inquiries via one-click Gmail compose
   - Adjust **Hero banner readability** by setting headline/subhead/button colors over the hero image
@@ -31,11 +32,10 @@
   - Eliminate “flash of full site” when **Coming Soon mode** is enabled
   - Keep admin editing pages **fast and focused**
 
-**Updated objective (current milestone)**
-- Ensure the owner can safely keep the public site behind **Coming Soon**, while sharing a **secret preview link** for client/internal review:
-  - Public sees Coming Soon
-  - `/?preview=<token>` shows the real site
-  - Token is never exposed publicly and can be rotated anytime
+**Updated objectives (current milestone)**
+- Enable safe pre-launch review and social proof:
+  - **Coming Soon preview link**: public sees Coming Soon; private `/?preview=<token>` bypass works; token is never exposed publicly.
+  - **Homepage social widget slot**: admin can paste an embed snippet (Elfsight Facebook feed or other) and place it on the homepage.
 
 ---
 
@@ -206,7 +206,7 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 #### K3 — Media Library picker integration (P0) (COMPLETED ✅)
 - Implemented reusable picker component `MediaPickerDialog.jsx`.
-- Wired the picker into all existing image fields (7 total).
+- Wired the picker into all existing admin image fields (7 total).
 
 #### K4 — Conditional Logic in Inquiry Form Builder (SIMPLE mode) (P1) (COMPLETED ✅)
 - Added `field.conditional = { field, equals }`.
@@ -356,7 +356,7 @@ All items were implemented and validated (curl + browser automation screenshots)
 ### Phase Q (P0) — Coming Soon **Preview Token Bypass** (Option A) (COMPLETED ✅)
 **Goal:** Allow a secret `/?preview=<token>` URL to bypass the Coming Soon curtain, without exposing the token publicly.
 
-**What shipped (this session)**
+**What shipped**
 - Backend (FastAPI)
   - Public endpoint `GET /api/site-content` continues to **strip** `preview_token` (security-critical).
   - Added admin-only endpoint: `GET /api/admin/preview-token` (requires admin JWT) to fetch the current token.
@@ -385,6 +385,44 @@ All items were implemented and validated (curl + browser automation screenshots)
 
 ---
 
+### Phase R (P1) — Homepage **Embed Widget / Elfsight Facebook Feed** (COMPLETED ✅)
+**Goal:** Let the owner paste an Elfsight Facebook feed snippet (or any third-party widget embed) into the admin panel and render it on the homepage, with no coding.
+
+**What shipped**
+- Backend (SiteContent)
+  - Added 6 new SiteContent fields:
+    - `home_widget_active` (default false)
+    - `home_widget_eyebrow`, `home_widget_heading`, `home_widget_subheading`
+    - `home_widget_snippet` (raw HTML snippet string)
+    - `home_widget_position` (one of 8 homepage slots)
+- Frontend (Public)
+  - `EmbedWidget.jsx`: parses the snippet, hoists external ` <script src="…">` into `<head>` exactly once (deduped), executes inline scripts if present, and renders the remaining HTML.
+  - `HomeEmbedSection.jsx`: renders the section ONLY when `home_widget_active` is true and the section’s slot matches `home_widget_position`.
+  - `HomePage.jsx`: includes 8 safe “slots”:
+    - `after-hero`, `after-services`, `after-portfolio`, `after-backdrops`, `after-testimonials` (default), `after-designer`, `after-faq`, `before-cta`
+  - When active but snippet is blank, a tasteful **placeholder card** appears so the client can approve placement before the final snippet exists.
+- Frontend (Admin)
+  - `/admin/home` includes a new “Facebook feed / embed widget” card:
+    - Toggle on/off
+    - Eyebrow/heading/subheading
+    - Position dropdown (8 options)
+    - Snippet textarea
+    - Security warning: “Only paste code from trusted sources — this runs live on your site.”
+    - “Load Elfsight template” button that inserts the correct snippet shape for easy copy/paste later.
+
+**Acceptance criteria verified (end-to-end)**
+- Widget hidden when `home_widget_active=false`.
+- Placeholder shown when active but snippet is blank.
+- Pasted Elfsight-style snippet injects platform.js into `<head>` and renders the target div.
+- Only one widget section renders at a time.
+- Position changes move the section to the correct part of the homepage.
+- No regressions in other homepage sections or Coming Soon preview bypass.
+
+**Testing**
+- `/app/test_reports/iteration_23.json` — 33/33 tests passed, 0 bugs.
+
+---
+
 ## 4) Testing & QA
 - After each phase item: quick smoke test in browser.
 - Automated validation included:
@@ -399,9 +437,10 @@ All items were implemented and validated (curl + browser automation screenshots)
   - Reply templates CRUD + inquiry reply button
   - Hero color override end-to-end
   - **Preview token bypass** (Coming Soon staging)
+  - **Homepage embed widget** (Elfsight / third-party)
 
 **Latest report**
-- `/app/test_reports/iteration_22.json`
+- `/app/test_reports/iteration_23.json`
 
 ---
 
@@ -410,6 +449,14 @@ All items were implemented and validated (curl + browser automation screenshots)
 ```bash
 cd /var/www/swell && ./deploy.sh
 ```
+
+**Operational note (observed in production today)**
+- After deploy, the site briefly returned **502** until nginx was restarted.
+- Manual fix that worked immediately:
+  ```bash
+  cd /var/www/swell && docker compose restart nginx
+  ```
+- (Optional future improvement) add an nginx restart into `deploy.sh` after containers update to avoid any post-deploy upstream caching issues.
 
 ---
 
@@ -428,6 +475,7 @@ cd /var/www/swell && ./deploy.sh
   - Manage **Backdrops & Designs** separately.
   - Reply to inquiries quickly using **Gmail compose templates**.
   - Ensure hero readability by adjusting **Hero headline/subhead/button colors**.
+  - **Paste a Facebook feed (Elfsight) or other widget snippet into Admin → Home and have it render on the homepage**.
   - **Use the admin comfortably**:
     - Typing is responsive (no keystroke lag)
     - Scrolling is smooth across page editors and lists on the VPS
@@ -444,10 +492,9 @@ cd /var/www/swell && ./deploy.sh
 
 ## 7) Explicitly Deferred / Out of Scope (for now)
 
-### Next active task (blocked / awaiting user input)
-- **Elfsight Facebook Widget integration (P1)**
-  - Status: **BLOCKED** until the user confirms placement (Homepage/About/Footer/Social page/etc.) and provides final widget App ID/snippet details.
-  - Planned approach (once unblocked): add admin toggle + heading + App ID field; inject script safely in React without breaking SSR/social-scraper middleware.
+### Next active task (post-widget)
+- **Payments & invoicing (Stripe/PayPal)**
+  - Deposits, payment plans, invoices linked to CRM/client profiles.
 
 ### Other deferred items
 - CRM Enhancements (P1):
@@ -455,6 +502,5 @@ cd /var/www/swell && ./deploy.sh
   - Lead pipeline status tracking on client profiles
 - Bulk inquiry actions (P2)
 - Twilio SMS Notifications (P3)
-- Stripe/PayPal Integration (P3)
 - SEO polish (sitemap.xml, robots.txt, schema) (P2/P3)
 - Backend refactor of `server.py` into routers (recommended but deferred unless requested)

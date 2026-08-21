@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, memo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star, AlertTriangle, Facebook } from 'lucide-react';
 import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
@@ -326,6 +326,178 @@ const RecentWorkPreview = memo(function RecentWorkPreview() {
 });
 
 /**
+ * ELFSIGHT_TEMPLATE — the exact Elfsight embed snippet shape. The App ID
+ * is a placeholder; the owner replaces it with the ID from their Elfsight
+ * dashboard. Kept as a constant so we can offer a one-click "load the
+ * template" button in the admin, so nothing has to be memorized.
+ */
+const ELFSIGHT_TEMPLATE = `<script src="https://static.elfsight.com/platform/platform.js" async></script>
+<div class="elfsight-app-YOUR-APP-ID-HERE" data-elfsight-app-lazy></div>`;
+
+const WIDGET_POSITIONS = [
+  { value: 'after-hero', label: 'After the hero (very top)' },
+  { value: 'after-services', label: 'After the services grid' },
+  { value: 'after-portfolio', label: 'After the Recent Work portfolio' },
+  { value: 'after-backdrops', label: 'After the Backdrops section' },
+  { value: 'after-testimonials', label: 'After the Testimonials (recommended)' },
+  { value: 'after-designer', label: 'After the Meet the Designer bio' },
+  { value: 'after-faq', label: 'After the FAQ preview' },
+  { value: 'before-cta', label: 'Right before the final CTA (bottom)' },
+];
+
+/**
+ * EmbedWidgetCard — admin editor for the pasteable homepage widget
+ * (Elfsight Facebook feed, Google Reviews, POWr, or ANY third-party
+ * embed). Snippet is stored raw and rendered via <EmbedWidget />,
+ * which safely hoists <script src="…"> tags into <head>.
+ *
+ * Design notes:
+ *   • Section is section-visibility-toggle driven (home_widget_active).
+ *   • The paste box carries a very visible security warning because
+ *     the content is executed on the live site.
+ *   • Owner can one-click load a template for the most common case
+ *     (Elfsight Facebook feed) so nothing has to be memorized.
+ */
+const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
+  const active = !!data.home_widget_active;
+  const snippet = data.home_widget_snippet || '';
+  const loadTemplate = () => {
+    if (snippet.trim() && !window.confirm('Replace your current snippet with the Elfsight Facebook feed template?')) return;
+    set({ home_widget_snippet: ELFSIGHT_TEMPLATE });
+  };
+  const clearSnippet = () => {
+    if (!window.confirm('Clear the widget snippet? The section will show the placeholder until you paste new code.')) return;
+    set({ home_widget_snippet: '' });
+  };
+
+  return (
+    <div className={`card-cream p-6 space-y-4 ${active ? '' : 'opacity-80'}`} data-testid="admin-home-widget-card">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="font-serif text-xl flex items-center gap-2">
+            <Facebook className="h-5 w-5 text-[color:var(--brand-sage-deep)]" />
+            Facebook feed / embed widget
+          </p>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1 max-w-2xl">
+            Paste any Elfsight, POWr, Tagembed, or third-party embed snippet and it will render on the homepage. Use it for a Facebook feed, Google Reviews, event calendar, or anything else.
+          </p>
+        </div>
+        <ToggleRow
+          label={active ? 'Section on' : 'Section off'}
+          checked={active}
+          onChange={v => set({ home_widget_active: v })}
+          testId="admin-home-widget-toggle"
+        />
+      </div>
+
+      {active && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="eyebrow block mb-1">EYEBROW</label>
+              <TextField
+                value={data.home_widget_eyebrow || ''}
+                onCommit={v => set({ home_widget_eyebrow: v })}
+                placeholder="FOLLOW ALONG"
+                data-testid="admin-home-widget-eyebrow"
+              />
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">HEADING</label>
+              <TextField
+                value={data.home_widget_heading || ''}
+                onCommit={v => set({ home_widget_heading: v })}
+                placeholder="See our latest work on Facebook"
+                data-testid="admin-home-widget-heading"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="eyebrow block mb-1">SUBHEADING (optional)</label>
+              <TextField
+                value={data.home_widget_subheading || ''}
+                onCommit={v => set({ home_widget_subheading: v })}
+                placeholder="A short sentence under the heading — leave blank to hide."
+                data-testid="admin-home-widget-subheading"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="eyebrow block mb-1">POSITION ON HOMEPAGE</label>
+              <select
+                className="input-cream"
+                value={data.home_widget_position || 'after-testimonials'}
+                onChange={e => set({ home_widget_position: e.target.value })}
+                data-testid="admin-home-widget-position"
+              >
+                {WIDGET_POSITIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-3">
+            <div className="flex items-start gap-2 rounded-xl bg-[color:var(--brand-blush-tint)] p-3">
+              <AlertTriangle className="h-4 w-4 text-[color:var(--brand-text)] mt-0.5 shrink-0" />
+              <p className="text-xs leading-relaxed">
+                <strong>Only paste code from trusted sources — this runs live on your site.</strong>{' '}
+                Elfsight, POWr, and other reputable widget providers are safe. Never paste code from a stranger, forum, or email you don't recognize.
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                <label className="eyebrow">WIDGET CODE SNIPPET</label>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={loadTemplate}
+                    className="btn-secondary !h-8 text-xs"
+                    data-testid="admin-home-widget-load-template"
+                  >
+                    <Facebook className="h-3.5 w-3.5" /> Load Elfsight template
+                  </button>
+                  {snippet && (
+                    <button
+                      type="button"
+                      onClick={clearSnippet}
+                      className="btn-secondary !h-8 text-xs text-red-600"
+                      data-testid="admin-home-widget-clear"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+              <TextArea
+                rows={6}
+                value={snippet}
+                onCommit={v => set({ home_widget_snippet: v })}
+                placeholder={'Paste the full snippet from Elfsight here, e.g.\n<script src="https://static.elfsight.com/..." async></script>\n<div class="elfsight-app-xxxx" data-elfsight-app-lazy></div>'}
+                className="font-mono text-xs"
+                data-testid="admin-home-widget-snippet"
+              />
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1.5">
+                Leave blank to show a "widget will appear here" placeholder on the homepage — useful while you're still setting things up.
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-[color:var(--brand-sage-tint)]/40 p-3 text-xs text-[color:var(--brand-text-muted)] leading-relaxed">
+              <p className="font-medium text-[color:var(--brand-text)] mb-1">How to get your Elfsight snippet:</p>
+              <ol className="list-decimal ml-4 space-y-0.5">
+                <li>Sign up at <a href="https://elfsight.com" target="_blank" rel="noreferrer" className="link-underline">elfsight.com</a> and pick "Facebook Feed"</li>
+                <li>Connect your Facebook Page and customize the look</li>
+                <li>Click "Add to website" → copy the code that starts with <code>&lt;script src=…</code></li>
+                <li>Paste it into the box above and hit Save</li>
+              </ol>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+});
+
+/**
  * ValuePillarsCard — dedicated editor for the Canva-style "Value pillars"
  * homepage section. Gives the owner a large multi-line textarea for each
  * pillar body (this is the main friction point on the generic teaser card,
@@ -574,6 +746,7 @@ const AdminHomePage = () => {
           <ToggleRow label="Services grid (home section)" hint="The 6-service grid on the home page only. Toggle it off to hide the ‘What we do (Services teaser)’ block below." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
           <ToggleRow label="Recent Work preview" hint="Portfolio strip linking to /portfolio." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
           <ToggleRow label="Instagram feed" hint="Live IG posts strip." checked={data.home_instagram_active !== false} onChange={v => set({ home_instagram_active: v })} />
+          <ToggleRow label="Facebook feed / embed widget" hint="Elfsight or any pasted embed snippet." checked={!!data.home_widget_active} onChange={v => set({ home_widget_active: v })} />
           <ToggleRow label="Process timeline" hint="Numbered step boxes." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
           <ToggleRow label="Testimonials" hint="Client reviews." checked={data.home_testimonials_active !== false} onChange={v => set({ home_testimonials_active: v })} />
           <ToggleRow label="Backdrops" hint="Featured backdrops section linking to /backdrops." checked={data.home_backdrops_active !== false} onChange={v => set({ home_backdrops_active: v })} />
@@ -645,6 +818,8 @@ const AdminHomePage = () => {
         </div>
         <p className="text-xs text-[color:var(--brand-text-muted)]">The “@ handle” button in the top-right uses your <strong>Instagram URL</strong> from <Link to="/admin/social-contact" className="link-underline">Contact &amp; social</Link>.</p>
       </SectionCard>
+
+      <EmbedWidgetCard data={data} set={set} />
 
       <SectionCard title="The Process (timeline)" subtitle="The 5 numbered step boxes shown mid-page.">
         <EyebrowTitleSubtitleRow prefix="home_process" data={data} set={set} />

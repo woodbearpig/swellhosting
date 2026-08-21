@@ -1,6 +1,6 @@
 [
   {
-    "content": "Run testing_agent for comprehensive verification of the preview bypass flow",
+    "content": "Run testing_agent for full end-to-end coverage",
     "status": "completed"
   }
 ]
