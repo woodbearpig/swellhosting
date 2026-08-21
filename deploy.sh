@@ -82,6 +82,13 @@ $DC build
 echo "→ Restarting services"
 $DC up -d
 
+# When Docker recreates a container (backend or frontend), it gets a fresh
+# internal IP. Nginx caches upstream IPs and will return 502s until it
+# re-resolves. A quick nginx restart flushes that cache and ensures every
+# deploy comes back clean without manual intervention.
+echo "→ Refreshing nginx upstream cache"
+$DC restart nginx >/dev/null 2>&1 || echo "⚠️  Nginx restart skipped (container not present?)"
+
 echo "→ Cleaning old images"
 docker image prune -f >/dev/null 2>&1 || true
 
