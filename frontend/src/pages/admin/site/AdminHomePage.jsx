@@ -499,7 +499,7 @@ const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
                 data-testid="admin-home-widget-snippet"
               />
               <p className="text-xs text-[color:var(--brand-text-muted)] mt-1.5">
-                Leave blank to show a "widget will appear here" placeholder on the homepage — useful while you're still setting things up.
+                While this is blank, the widget section is <strong>hidden from the public site</strong> — nothing appears until you paste a real snippet. (You can still preview the placeholder via the Coming Soon preview link.)
               </p>
             </div>
 

@@ -12,9 +12,13 @@ const fadeInUp = {
 
 /**
  * HomeEmbedSection — a homepage slot that renders the admin-configured
- * embed widget (Elfsight Facebook feed, etc.) only when both:
- *   1. `home_widget_active` is true
- *   2. `home_widget_position` matches the `at` prop of this instance
+ * embed widget (Elfsight Facebook feed, etc.) only when ALL of:
+ *   1. `home_widget_active` is true (section toggled on)
+ *   2. `home_widget_snippet` is non-empty on the PUBLIC site
+ *      (safety net so the "widget will appear here" placeholder can
+ *      never accidentally leak to real visitors — placeholder is
+ *      only shown when previewing via the ?preview=<token> bypass)
+ *   3. `home_widget_position` matches the `at` prop of this instance
  *
  * We instantiate this component at every candidate slot in HomePage.jsx
  * (after-hero, after-services, etc.) and let the site content decide
@@ -32,6 +36,18 @@ export const HomeEmbedSection = ({ at }) => {
   const snippet = (site?.home_widget_snippet || '').trim();
   // Default true when the field is missing (back-compat with old docs).
   const showHeader = site?.home_widget_show_header !== false;
+
+  // Are we viewing via a preview link (client review) or as public? Preview
+  // sessions get the placeholder so the client can visualize placement even
+  // before a snippet exists; real public visitors NEVER see the placeholder.
+  const isPreviewSession = (() => {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return false;
+    try { return sessionStorage.getItem('sw_preview_ok') === '1'; } catch (_) { return false; }
+  })();
+
+  // Safety net: on the public site, an empty snippet means "nothing to show" —
+  // hide the entire section. The placeholder is only useful during preview.
+  if (!snippet && !isPreviewSession) return null;
 
   return (
     <section
