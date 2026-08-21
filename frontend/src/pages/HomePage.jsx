@@ -399,7 +399,7 @@ const SplitHero = ({ site }) => {
     ? { backgroundColor: site.hero_secondary_btn_bg || undefined, color: site.hero_secondary_btn_text || undefined, borderColor: site.hero_secondary_btn_text || undefined }
     : undefined;
   return (
-  <section className="relative overflow-hidden" data-testid="home-hero-section">
+  <section className="relative overflow-hidden hero-perf" data-testid="home-hero-section">
     <div className="hero-wash absolute inset-0 -z-10" aria-hidden />
     <div className="watercolor-noise absolute inset-0 -z-10 opacity-60" aria-hidden />
     <div className="blob b-peach" style={{ width: 220, height: 220, top: -40, left: -60 }} />
@@ -462,14 +462,16 @@ const FullBleedHero = ({ site }) => {
     : undefined;
   return (
     <section
-      className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] flex items-center justify-center text-center bg-neutral-900"
+      className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] flex items-center justify-center text-center bg-neutral-900 hero-perf"
       data-testid="home-hero-section-fullbleed"
     >
       <img
         src={publicUrl(bgUrl)}
         alt="swell design + media hero"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover hero-img-perf"
         loading="eager"
+        decoding="async"
+        fetchpriority="high"
       />
       {/* Overlay: soft dark-to-transparent gradient from the bottom + subtle vignette for legibility */}
       <div
@@ -499,7 +501,7 @@ const FullBleedHero = ({ site }) => {
           </Link>
           <Link
             to={site?.hero_secondary_cta_href || '/gallery'}
-            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/20 hover:bg-white/30 text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
             style={secondaryBtnStyle}
             data-testid="home-hero-secondary-cta"
           >

@@ -292,3 +292,44 @@ code {
     height: 0;
     font-style: italic;
 }
+
+/* =========================================================
+ * Scroll & paint performance
+ * ---------------------------------------------------------
+ * The full-bleed hero renders a large image behind text and
+ * scrolls with the page. Without a GPU hint the browser
+ * repaints the entire section on every scroll frame, which
+ * shows up as micro-jank on the wide hero. `translateZ(0)`
+ * (or `will-change: transform`) promotes the section to its
+ * own compositor layer so scrolling only compositing runs —
+ * no repaint of pixel data. `contain: layout paint style`
+ * further isolates the hero so changes elsewhere on the page
+ * (like framer-motion `whileInView` triggers below) don't
+ * force the hero to recalc layout.
+ * ========================================================= */
+.hero-perf {
+    will-change: transform;
+    transform: translateZ(0);
+    contain: layout paint style;
+    backface-visibility: hidden;
+}
+
+.hero-img-perf {
+    /* Same GPU-layer treatment applied to the image element itself so
+     * the browser doesn't have to combine main-thread painting with
+     * compositor work when it decodes/repaints the JPEG.  */
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Optional but powerful: opt below-fold sections out of layout/paint work
+ * until they're near the viewport. `content-visibility: auto` is the
+ * single biggest scroll-perf win available in 2025 browsers. We reserve
+ * a rough intrinsic height so the scrollbar doesn't jump. Apply this
+ * class to a section only if the visual content is roughly that height. */
+.cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 800px;
+}
+
