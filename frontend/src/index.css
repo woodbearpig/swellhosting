@@ -105,7 +105,35 @@ code {
 }
 
 /* Utility helpers */
-.container-narrow { @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8; }
+/* Main content container.
+ *   • Default (all screens): 1152px — safe reading width on laptops.
+ *   • xl (≥1280px):         1280px — modest bump so 1440×900 laptops
+ *                            (MacBook Air etc.) feel less letterboxed.
+ *   • 2xl (≥1536px):        1440px — wide desktops (1920px+) actually
+ *                            use their real estate without pushing text lines past
+ *                            the ~90-char comfort limit for the two-column sections.
+ * Horizontal padding stays generous so no content ever touches the viewport edge.
+ * Uses raw media queries because @apply with responsive prefixes + arbitrary
+ * values can behave inconsistently in some Tailwind setups. */
+.container-narrow {
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 72rem;   /* 1152px — default */
+}
+@media (min-width: 640px) {
+    .container-narrow { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+@media (min-width: 1024px) {
+    .container-narrow { padding-left: 2rem; padding-right: 2rem; }
+}
+@media (min-width: 1280px) {
+    .container-narrow { max-width: 80rem; }    /* 1280px — xl */
+}
+@media (min-width: 1536px) {
+    .container-narrow { max-width: 1440px; }   /* 2xl — wide desktops */
+}
 .eyebrow { @apply text-[0.72rem] tracking-[0.22em] uppercase text-[color:var(--brand-text-muted)]; }
 .watercolor-noise {
     background-image: radial-gradient(rgba(31,30,28,0.04) 1px, transparent 1px);
