@@ -76,7 +76,7 @@ const BackdropsPageCopyCard = () => {
           <FileText className="h-4 w-4 text-[color:var(--brand-sage-deep)]" />
           <div>
             <p className="font-serif text-lg leading-tight">Public /backdrops page copy</p>
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Edit the headers, taglines, and section toggles for the standalone Backdrops page (swelldesignla.com/backdrops).</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Headers, taglines, and section toggles for the /backdrops page.</p>
           </div>
         </div>
         <span className="text-sm text-[color:var(--brand-sage-deep)] shrink-0 ml-3">{open ? 'Hide' : 'Edit copy'}</span>
@@ -140,7 +140,7 @@ const BackdropsPageCopyCard = () => {
                 onCommit={v => save({ backdrops_page_designs_subtitle: v })}
               />
             </div>
-            <p className="text-xs text-[color:var(--brand-text-muted)]">The Designs section only appears if you have at least one item marked as <b>Design</b> below.</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)]">The Designs section only appears if at least one item is marked as <b>Design</b> below.</p>
           </div>
         </div>
       )}

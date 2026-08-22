@@ -106,7 +106,7 @@ const LegalPageEditor = ({ id, publicPath, label, initial, onSave }) => {
           onChange={e => setField({ updated: e.target.value })}
           data-testid={`admin-legal-${id}-updated`}
         />
-        <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Shown as a small italic line under the title. Leave blank to hide.</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Small italic line under the title. Blank hides it.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

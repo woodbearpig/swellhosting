@@ -40,7 +40,7 @@ export const BookingRulesCard = () => {
         </div>
         <div className="flex-1">
           <p className="font-serif text-xl">Booking rules</p>
-          <p className="text-sm text-[color:var(--brand-text-muted)]">Control how far in advance people can book, minimum notice, buffer times, and daily limits. Applies to the phone consultation step of every inquiry.</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)]">Booking window, minimum notice, buffer, and daily limits for the phone consultation step.</p>
         </div>
       </div>
 

@@ -71,7 +71,7 @@ const AdminAboutPage = () => {
             </div>
           </div>
           <p className="text-[11px] text-[color:var(--brand-text-muted)] mt-2 leading-snug max-w-xl">
-            <b>Wide diptych photo?</b> Pick <em>Above the text (full width)</em> as the Layout with <em>Auto</em> ratio — both halves stay visible, no whitespace, no cropping.
+            Wide diptych? Choose <em>Above the text</em> + <em>Auto</em> ratio so both halves stay visible.
           </p>
         </div>
         <div><label className="eyebrow block mb-1">DESIGNER NAME</label><TextField value={data.designer_name || ''} onCommit={v => set({ designer_name: v })} /></div>
@@ -91,7 +91,7 @@ const AdminAboutPage = () => {
         <div>
           <p className="font-serif text-xl">Social share preview & browser tab</p>
           <p className="text-sm text-[color:var(--brand-text-muted)] mt-1 max-w-2xl">
-            Controls how your site looks when someone posts the link in iMessage, an Instagram DM, Slack, Facebook or Twitter — plus the icon and title in the browser tab. Everything is optional; blank values fall back to sensible defaults using your business name and tagline.
+            How your site appears in iMessage, Slack, Facebook, and social shares — plus the browser tab icon. Blank fields fall back to your business name and tagline.
           </p>
         </div>
 
@@ -103,7 +103,7 @@ const AdminAboutPage = () => {
               onCommit={v => set({ share_title: v })}
               placeholder={`${data.business_name || 'swell design + media'} — ${data.tagline || 'LA event styling'}`}
             />
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Shown as the big bold headline on the link preview card. Keep under ~60 chars.</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Big bold headline on the link preview. Keep under ~60 chars.</p>
           </div>
           <div>
             <label className="eyebrow block mb-1">TWITTER / X HANDLE (OPTIONAL)</label>
@@ -112,7 +112,7 @@ const AdminAboutPage = () => {
               onCommit={v => set({ share_twitter_handle: v })}
               placeholder="@swelldesignla"
             />
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Attributes the preview to your account on Twitter/X shares.</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Attributes the preview to your account on X shares.</p>
           </div>
         </div>
 
@@ -139,7 +139,7 @@ const AdminAboutPage = () => {
               >Reset</button>
             </div>
           ) : (
-            <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Using the built-in default (cream + "s" mark). Upload a hero shot to replace it.</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Using the built-in default. Upload a hero shot to replace it.</p>
           )}
           <div className="flex items-center gap-2 flex-wrap">
             <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); set({ share_image_url: r.url }); } }} data-testid="admin-share-image-upload" />
@@ -162,7 +162,7 @@ const AdminAboutPage = () => {
           ) : (
             <div className="mb-2 flex items-center gap-3">
               <img src="/apple-touch-icon.png" alt="default favicon" className="h-8 w-8 rounded border border-[color:var(--brand-border)]" />
-              <span className="text-xs text-[color:var(--brand-text-muted)]">Using the built-in default. Upload a square PNG (at least 180×180) to replace it.</span>
+              <span className="text-xs text-[color:var(--brand-text-muted)]">Using the default. Upload a square PNG (≥ 180×180) to replace it.</span>
             </div>
           )}
           <div className="flex items-center gap-2 flex-wrap">

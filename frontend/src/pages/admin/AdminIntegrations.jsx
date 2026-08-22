@@ -145,7 +145,7 @@ export const AdminIntegrations = () => {
       {/* GOOGLE CALENDAR */}
       <Section
         title="Google Calendar"
-        subtitle="When connected: new consultations are auto-added to your calendar, and existing calendar events block conflicting time slots."
+        subtitle="Auto-adds new consultations to your calendar and blocks conflicting time slots."
       >
         <div className="flex items-center gap-3">
           {gcalStatus?.connected ? (
@@ -165,7 +165,7 @@ export const AdminIntegrations = () => {
           <div className="flex-1 min-w-0">
             <p className="font-medium leading-tight">OAuth setup guide for client (PDF)</p>
             <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">
-              A polished 12-page walkthrough you can email to your client. Explains the 5-minute Google Cloud setup in plain English, with screenshots-in-words, an analogy for the technical bits, and a troubleshooting section.
+              A 12-page PDF walkthrough you can email your client — plain English, with a troubleshooting section.
             </p>
           </div>
           <a
@@ -204,7 +204,7 @@ export const AdminIntegrations = () => {
                 <CheckCircle2 className="h-5 w-5 mt-0.5 text-[color:var(--brand-sage-deep)] shrink-0" />
                 <div className="flex-1">
                   <p className="font-medium mb-1">OAuth is pre-configured — one-click connect available</p>
-                  <p className="text-sm text-[color:var(--brand-text-muted)] mb-3">Click below, sign in with your Gmail, and grant Calendar access. That's it.</p>
+                  <p className="text-sm text-[color:var(--brand-text-muted)] mb-3">Click below, sign in with Gmail, and grant Calendar access.</p>
                   <button onClick={connectGoogle} className="btn-primary" data-testid="gcal-connect-oneclick">
                     <LinkIcon className="h-4 w-4" /> Sign in with Google
                   </button>
@@ -214,8 +214,8 @@ export const AdminIntegrations = () => {
               <>
                 <div className="rounded-2xl bg-[color:var(--brand-blush-tint)] p-4 text-sm space-y-2">
                   <p className="font-medium">Manual OAuth credentials — fallback only</p>
-                  <p className="text-[color:var(--brand-text-muted)]">The recommended setup is to put <code className="text-xs font-mono">GOOGLE_CLIENT_ID</code> and <code className="text-xs font-mono">GOOGLE_CLIENT_SECRET</code> in your server's <code className="text-xs font-mono">.env</code> file (see the PDF guide above) — then this whole section disappears and you get a single one-click "Sign in with Google" button.</p>
-                  <p className="text-[color:var(--brand-text-muted)]">If you can't SSH into the server right now, you can paste the same two values here instead. The connect flow is identical either way — this is just a browser-based fallback.</p>
+                  <p className="text-[color:var(--brand-text-muted)]">Recommended: put <code className="text-xs font-mono">GOOGLE_CLIENT_ID</code> and <code className="text-xs font-mono">GOOGLE_CLIENT_SECRET</code> in your server's <code className="text-xs font-mono">.env</code> (see PDF above). This section then disappears and you get a one-click "Sign in with Google" button.</p>
+                  <p className="text-[color:var(--brand-text-muted)]">Can't SSH right now? Paste the same two values here as a browser-based fallback.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className="eyebrow block mb-1">CLIENT ID</label><input className="input-cream" value={gcalForm.client_id} onChange={e => setGcalForm(f => ({ ...f, client_id: e.target.value }))} placeholder="xxxxx.apps.googleusercontent.com" data-testid="gcal-client-id" /></div>
@@ -243,7 +243,7 @@ export const AdminIntegrations = () => {
       {/* INSTAGRAM */}
       <Section
         title="Instagram feed"
-        subtitle="When connected: your latest 12 Instagram posts show on the homepage. Auto-refreshes every hour."
+        subtitle="Shows your latest 12 Instagram posts on the homepage. Refreshes hourly."
       >
         <div className="flex items-center gap-3">
           {igStatus?.configured ? (

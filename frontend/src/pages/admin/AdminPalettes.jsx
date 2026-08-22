@@ -199,7 +199,7 @@ const PhotoUploadCard = ({ onCreated, allPalettes }) => {
         </div>
         <div className="flex-1">
           <p className="font-serif text-lg">Create a palette from a photo</p>
-          <p className="text-sm text-[color:var(--brand-text-muted)]">Upload any inspiration photo (a dress, a flower arrangement, a sunset) and we'll turn its colors into a reusable site theme.</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)]">Upload an inspiration photo and we'll turn its colors into a reusable site theme.</p>
         </div>
       </div>
 
@@ -540,7 +540,7 @@ export const AdminPalettes = () => {
           <div>
             <p className="eyebrow">AUTOMATION</p>
             <h2 className="font-serif text-2xl sm:text-3xl mt-1">Season auto-switch</h2>
-            <p className="text-[color:var(--brand-text-muted)] mt-1 text-sm">Schedule palettes to activate automatically on set dates — e.g. Halloween Oct 15 → Nov 1, or Christmas Dec 1 → Dec 26.</p>
+            <p className="text-[color:var(--brand-text-muted)] mt-1 text-sm">Schedule palettes to activate on set dates — e.g. Halloween or Christmas.</p>
           </div>
           <div className="flex gap-2">
             <button className="btn-secondary" onClick={addSchedule} data-testid="schedule-add"><Plus className="h-4 w-4" /> Add schedule</button>
@@ -574,7 +574,7 @@ export const AdminPalettes = () => {
             />
           ))}
           {schedules.length === 0 && (
-            <p className="text-sm text-[color:var(--brand-text-muted)] italic">No schedules yet. Click "Add schedule" to set your first automatic switch.</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)] italic">No schedules yet.</p>
           )}
         </div>
       </section>

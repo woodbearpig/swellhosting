@@ -68,7 +68,7 @@ export const AdminTestimonials = () => {
         <div>
           <p className="eyebrow">CONTENT</p>
           <h1 className="font-serif text-3xl sm:text-4xl mt-1">Testimonials & reviews</h1>
-          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">Add reviews manually or approve customer-submitted ones from the Pending queue.</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">Add reviews manually or approve customer submissions.</p>
         </div>
         <button className="btn-primary" onClick={() => setEditing({ name: '', event_type: '', quote: '', rating: 5, featured: false, photo_url: '', status: 'approved' })} data-testid="admin-testimonials-new"><Plus className="h-4 w-4" /> New</button>
       </div>

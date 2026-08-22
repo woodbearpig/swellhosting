@@ -9,7 +9,7 @@ const AdminFooterPage = () => {
       <PageHeader
         eyebrow="LAYOUT"
         title="Footer"
-        subtitle="The bottom of every page — links, newsletter, contact info, copyright."
+        subtitle="Links, newsletter, contact info, and copyright at the bottom of every page."
         saving={saving} dirty={dirty} onSave={save}
         saveTestId="admin-footer-save"
       />
@@ -24,7 +24,7 @@ const AdminFooterPage = () => {
 
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Show / hide footer elements</p>
-        <p className="text-sm text-[color:var(--brand-text-muted)] -mt-2">Toggle any block off to hide it from the site footer.</p>
+        <p className="text-sm text-[color:var(--brand-text-muted)] -mt-2">Toggle any block off to hide it from the footer.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ToggleRow label="Logo & tagline column" checked={data.footer_show_logo !== false} onChange={v => set({ footer_show_logo: v })} />
           <ToggleRow label="Explore links column" checked={data.footer_show_explore !== false} onChange={v => set({ footer_show_explore: v })} />

@@ -13,10 +13,10 @@
   },
   {
     "content": "Extend the pass to remaining admin pages after approval",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "Compile check + brief testing agent for regressions",
-    "status": "pending"
+    "status": "completed"
   }
 ]

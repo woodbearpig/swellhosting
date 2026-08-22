@@ -675,7 +675,7 @@ const AdminHomePage = () => {
                 <input type="radio" name="hero_layout_mode" value="full_bleed" checked={data.hero_layout_mode === 'full_bleed'} onChange={() => set({ hero_layout_mode: 'full_bleed' })} className="mt-1" data-testid="admin-hero-mode-fullbleed" />
                 <div>
                   <p className="font-medium">Full-width background</p>
-                  <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Photo fills the top of the page; centered cream headline overlaid with a soft dark gradient for legibility.</p>
+                  <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Photo fills the top of the page with a centered cream headline over a soft dark overlay.</p>
                 </div>
               </div>
             </label>

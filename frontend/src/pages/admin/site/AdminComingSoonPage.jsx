@@ -173,7 +173,7 @@ const AdminComingSoonPage = () => {
       <PageHeader
         eyebrow="PAGE"
         title="Coming soon"
-        subtitle="Turn the entire public site into a coming-soon landing page. Admin stays accessible."
+        subtitle="Turn the public site into a coming-soon landing page. Admin stays accessible."
         saving={saving} dirty={dirty} onSave={save}
         saveTestId="admin-coming-soon-save"
       />
@@ -187,7 +187,7 @@ const AdminComingSoonPage = () => {
         <input type="checkbox" className="h-5 w-5" checked={!!data.coming_soon_active} onChange={e => set({ coming_soon_active: e.target.checked })} data-testid="admin-coming-soon-toggle" />
         <div>
           <p className="font-medium">Show Coming Soon page instead of the site</p>
-          <p className="text-xs text-[color:var(--brand-text-muted)]">Public visitors see only the coming-soon page. Admin still works.</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)]">Public visitors see only the coming-soon page.</p>
         </div>
       </label>
 
@@ -227,7 +227,7 @@ const AdminComingSoonPage = () => {
 
       <div className="card-cream p-6 space-y-3">
         <p className="font-serif text-xl">Contact overrides</p>
-        <p className="text-sm text-[color:var(--brand-text-muted)]">Leave blank to inherit from Contact &amp; social. Fill any field to override just on this page.</p>
+        <p className="text-sm text-[color:var(--brand-text-muted)]">Blank fields inherit from Contact &amp; social. Fill any to override just here.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="eyebrow block mb-1">EMAIL OVERRIDE</label><TextField value={data.coming_soon_email_override || ''} onCommit={v => set({ coming_soon_email_override: v })} placeholder={`(defaults to ${data.contact_email || 'contact email'})`} /></div>
           <div><label className="eyebrow block mb-1">PHONE OVERRIDE</label><TextField value={data.coming_soon_phone_override || ''} onCommit={v => set({ coming_soon_phone_override: v })} placeholder={`(defaults to ${data.contact_phone || 'contact phone'})`} /></div>

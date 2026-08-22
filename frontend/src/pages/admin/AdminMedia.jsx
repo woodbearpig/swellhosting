@@ -92,7 +92,7 @@ const BulkTagModal = ({ open, count, onClose, onApply }) => {
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="font-serif text-xl">Tag {count} selected</p>
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Comma-separated tags. Lowercase preferred (e.g. weddings, blush).</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Comma-separated. Lowercase preferred.</p>
           </div>
           <button onClick={onClose} className="h-8 w-8 inline-flex items-center justify-center"><X className="h-4 w-4" /></button>
         </div>
@@ -330,7 +330,7 @@ const AdminMedia = ({ pickerMode = false, onPick = null, onClose = null }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setBulkDeleteOpen(false)} data-testid="media-bulk-delete-modal">
           <div className="bg-[color:var(--brand-cream)] rounded-3xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
             <p className="font-serif text-xl">Delete {selectedCount} image{selectedCount === 1 ? '' : 's'}?</p>
-            <p className="text-sm text-[color:var(--brand-text-muted)] mt-2">This can't be undone. Any admin form that references one of these images will show a broken thumbnail until you replace it.</p>
+            <p className="text-sm text-[color:var(--brand-text-muted)] mt-2">This can't be undone. Any admin form referencing a deleted image will show a broken thumbnail until replaced.</p>
             <div className="mt-4 flex justify-end gap-2">
               <button className="btn-secondary" onClick={() => setBulkDeleteOpen(false)}>Cancel</button>
               <button

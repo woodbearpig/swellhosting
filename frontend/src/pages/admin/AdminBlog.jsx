@@ -77,7 +77,7 @@ export const AdminBlog = () => {
                   onChange={e => setEditing({ ...editing, tags: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) })}
                   data-testid="admin-blog-tags"
                 />
-                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Comma-separated. These become the filter pills at the top of the public Blog page.</p>
+                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Comma-separated. Becomes the filter pills on the public Blog page.</p>
               </div>
               <div className="flex items-center gap-6 flex-wrap">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">

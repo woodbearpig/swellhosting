@@ -9,7 +9,7 @@ const AdminSocialContactPage = () => {
       <PageHeader
         eyebrow="CONTACT"
         title="Contact & social"
-        subtitle="Email, phone, hours, social URLs — used across the footer, coming soon page, and contact page."
+        subtitle="Email, phone, hours, and social URLs — used across the site."
         saving={saving} dirty={dirty} onSave={save}
         saveTestId="admin-social-save"
       />
@@ -36,7 +36,7 @@ const AdminSocialContactPage = () => {
 
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Page visibility toggles</p>
-        <p className="text-sm text-[color:var(--brand-text-muted)] -mt-2">Hide entire sections of the public pages without deleting anything.</p>
+        <p className="text-sm text-[color:var(--brand-text-muted)] -mt-2">Hide entire sections without deleting anything.</p>
 
         <div>
           <p className="eyebrow mb-2">CONTACT PAGE (/contact)</p>

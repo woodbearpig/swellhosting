@@ -49,3 +49,4 @@ frontend/node_modules/.cache/default-development/4.pack
 # after each successful deploy. NEVER commit this — every VPS has
 # its own copy pointing at its own last-known-good commit.
 .last_deploy_commit
+frontend/node_modules/.cache/default-development/15.pack
