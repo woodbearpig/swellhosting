@@ -687,8 +687,8 @@ export const AdminGallery = () => {
       ) : reorderMode ? (
         <>
           <p className="text-xs text-[color:var(--brand-text-muted)] -mt-2 mb-3">
-            <strong>Reorder mode</strong> — drag any photo by its grip handle to move it. Changes save automatically. Click <em>Done reordering</em> above when finished.
-            {tab !== 'all' && tab !== 'uncategorized' && <> Reordering here only affects photos in <strong>“{labelForKey(tab)}”</strong> — other categories are unaffected.</>}
+            Drag photos by the grip handle to reorder. Changes save as you go.
+            {tab !== 'all' && tab !== 'uncategorized' && <> Only affects <strong>“{labelForKey(tab)}”</strong>.</>}
           </p>
           <SortableGrid
             items={filtered}
