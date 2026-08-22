@@ -1,14 +1,22 @@
 [
   {
-    "content": "Run testing_agent_v3 for Admin Gallery drag-and-drop (backend + frontend)",
+    "content": "Audit all admin helper text and categorize (delete / tighten / tooltip / keep)",
     "status": "completed"
   },
   {
-    "content": "Review iteration report and fix any bugs surfaced",
+    "content": "Apply trim pass to 2-3 representative pages first",
     "status": "completed"
   },
   {
-    "content": "Update plan.md to mark phase COMPLETED",
+    "content": "Screenshot before/after for user approval",
     "status": "completed"
+  },
+  {
+    "content": "Extend the pass to remaining admin pages after approval",
+    "status": "pending"
+  },
+  {
+    "content": "Compile check + brief testing agent for regressions",
+    "status": "pending"
   }
 ]

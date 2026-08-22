@@ -94,7 +94,7 @@ const ChangeCredentialsCard = () => {
         </div>
         <div className="flex-1">
           <p className="font-serif text-xl">Change your login credentials</p>
-          <p className="text-sm text-[color:var(--brand-text-muted)]">Update your admin email, display name, or password. You'll need to enter your current password to confirm the change.</p>
+          <p className="text-sm text-[color:var(--brand-text-muted)]">Update your email, display name, or password.</p>
         </div>
       </div>
 
@@ -314,7 +314,7 @@ BUSINESS_EMAIL=info@swelldesignla.com`}</pre>
           </button>
         </div>
         <p className="text-xs text-[color:var(--brand-text-muted)]">
-          Sends a real email to the address above using your SMTP settings. If it arrives, all site emails will work too.
+          Sends a real email. If it arrives, everything's wired correctly.
         </p>
 
         {testResult && (
@@ -489,8 +489,7 @@ const ReplyTemplatesCard = () => {
         </button>
       </div>
       <p className="text-sm text-[color:var(--brand-text-muted)] mb-4">
-        Pre-written replies for common inquiry responses. Selecting one from the "Reply with…" dropdown on an inquiry
-        opens Gmail with your email pre-filled — so you can review, personalize, and send from your regular inbox.
+        Pre-written replies for common inquiries. Picking one from the "Reply with…" dropdown opens Gmail with the email pre-filled.
         <button type="button" onClick={() => setShowHelp(s => !s)} className="ml-1 link-underline inline-flex items-center gap-1 text-xs">
           <HelpCircle className="h-3 w-3" /> {showHelp ? 'Hide placeholders' : 'What placeholders can I use?'}
         </button>
@@ -498,7 +497,7 @@ const ReplyTemplatesCard = () => {
 
       {showHelp && (
         <div className="mb-4 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-surface-2)] p-3">
-          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Type these placeholders anywhere in the subject or body — they'll be swapped for the actual inquiry details when you click "Reply".</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Placeholders swap for real inquiry details when you reply.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
             {PLACEHOLDER_LIST.map(p => (
               <div key={p.token} className="flex items-baseline gap-2">
@@ -516,7 +515,7 @@ const ReplyTemplatesCard = () => {
         <div className="rounded-xl border border-dashed border-[color:var(--brand-border)] p-6 text-center">
           <MessageSquare className="h-6 w-6 mx-auto text-[color:var(--brand-text-muted)] mb-2" />
           <p className="text-sm font-medium">No reply templates yet</p>
-          <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Create a few common replies (like "Thanks for reaching out!" or "Here's the proposal") to speed up your inbox.</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Save common replies to speed up your inbox.</p>
         </div>
       ) : (
         <div className="divide-y divide-[color:var(--brand-border)]">
@@ -548,7 +547,6 @@ const ReplyTemplatesCard = () => {
               <div>
                 <label className="eyebrow block mb-1">TEMPLATE NAME <span className="text-red-500">*</span></label>
                 <input className="input-cream" placeholder="e.g. Thanks — proposal coming soon" value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} data-testid="admin-reply-template-name" />
-                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Only shown to you in the reply dropdown.</p>
               </div>
               <div>
                 <label className="eyebrow block mb-1">EMAIL SUBJECT <span className="text-red-500">*</span></label>
@@ -564,10 +562,6 @@ const ReplyTemplatesCard = () => {
                   placeholder={`Hi {first_name},\n\nThank you for your interest in swell design + media for your {event_type} on {event_date}! I've reviewed your request and I'd love to chat more.\n\nI'll put together a custom proposal and send it your way within the next 24 hours.\n\nWarmly,\nSam`}
                   data-testid="admin-reply-template-body"
                 />
-                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">
-                  Use placeholders like <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">{'{first_name}'}</code>{' '}
-                  and <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">{'{event_date}'}</code> — they'll be filled in automatically.
-                </p>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">

@@ -42,13 +42,12 @@ const AdminBrandPage = () => {
           </div>
           <div>
             <p className="font-serif text-xl">Typography</p>
-            <p className="text-sm text-[color:var(--brand-text-muted)]">Choose the fonts used everywhere on the site. Changes preview instantly and save with the button at the top.</p>
           </div>
         </div>
 
         <div>
           <p className="eyebrow mb-1">HEADLINE FONT</p>
-          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Used for all H1/H2/H3 titles across the site.</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">For headlines site-wide.</p>
           <select className="input-cream" value={data.font_serif_id || 'cormorant'} onChange={e => { set({ font_serif_id: e.target.value }); applyFonts({ serifId: e.target.value, sansId: data.font_sans_id, scriptId: data.font_script_id }); }} data-testid="admin-font-serif">
             {FONT_PRESETS.serif.map(p => <option key={p.id} value={p.id}>{p.name}{p.preview ? ` — ${p.preview}` : ''}</option>)}
           </select>
@@ -60,7 +59,7 @@ const AdminBrandPage = () => {
 
         <div>
           <p className="eyebrow mb-1">BODY FONT</p>
-          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Used for paragraphs, buttons, labels — 90% of what visitors read.</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">For body copy, buttons, and labels.</p>
           <select className="input-cream" value={data.font_sans_id || 'manrope'} onChange={e => { set({ font_sans_id: e.target.value }); applyFonts({ serifId: data.font_serif_id, sansId: e.target.value, scriptId: data.font_script_id }); }} data-testid="admin-font-sans">
             {FONT_PRESETS.sans.map(p => <option key={p.id} value={p.id}>{p.name}{p.preview ? ` — ${p.preview}` : ''}</option>)}
           </select>
@@ -72,7 +71,7 @@ const AdminBrandPage = () => {
 
         <div>
           <p className="eyebrow mb-1">SCRIPT / ACCENT FONT</p>
-          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Used for small flourishes like "a warm welcome" or hero decorations. Pick <em>None</em> to remove all script accents.</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">For decorative accents. Choose <em>None</em> to remove.</p>
           <select className="input-cream" value={data.font_script_id || 'allura'} onChange={e => { set({ font_script_id: e.target.value }); applyFonts({ serifId: data.font_serif_id, sansId: data.font_sans_id, scriptId: e.target.value }); }} data-testid="admin-font-script">
             {FONT_PRESETS.script.map(p => <option key={p.id} value={p.id}>{p.name}{p.preview ? ` — ${p.preview}` : ''}</option>)}
           </select>

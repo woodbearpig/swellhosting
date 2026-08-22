@@ -108,9 +108,7 @@ const HeroColorsPanel = memo(function HeroColorsPanel({ data, set }) {
         <div>
           <p className="eyebrow">HERO TEXT &amp; BUTTON COLORS</p>
           <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
-            {mode === 'full_bleed'
-              ? 'Tune contrast for the photo background — pick a headline color that pops against your hero image.'
-              : 'Optional overrides for the split hero. Leave blank to use the brand theme colors.'}
+            Optional overrides. Leave blank to use the theme colors.
           </p>
         </div>
         <span className="text-sm text-[color:var(--brand-sage-deep)] group-hover:underline shrink-0 ml-3">{open ? 'Hide' : 'Customize colors'}</span>
@@ -136,7 +134,6 @@ const HeroColorsPanel = memo(function HeroColorsPanel({ data, set }) {
               value={data.hero_eyebrow_color || ''}
               onChange={v => set({ hero_eyebrow_color: v })}
               testId="admin-hero-eyebrow-color"
-              hint="The small UPPERCASE label above the headline."
             />
           </div>
           <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)]">
@@ -215,7 +212,7 @@ const HeroFontsPanel = memo(function HeroFontsPanel({ data, set }) {
         <div>
           <p className="eyebrow">HERO FONTS</p>
           <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
-            Pick a dramatic display font just for the hero — leave blank to keep it matching the rest of the site.
+            Optional — override just the hero fonts.
           </p>
         </div>
         <span className="text-sm text-[color:var(--brand-sage-deep)] group-hover:underline shrink-0 ml-3">{open ? 'Hide' : 'Customize hero fonts'}</span>
@@ -227,7 +224,6 @@ const HeroFontsPanel = memo(function HeroFontsPanel({ data, set }) {
             testId="admin-hero-eyebrow-font"
             value={data.hero_eyebrow_font_id}
             onChange={v => set({ hero_eyebrow_font_id: v })}
-            hint="The small UPPERCASE label above the headline."
             sample={data.hero_eyebrow || 'SWELLDESIGNLA.COM'}
           />
           <Picker
@@ -235,7 +231,6 @@ const HeroFontsPanel = memo(function HeroFontsPanel({ data, set }) {
             testId="admin-hero-headline-font"
             value={data.hero_headline_font_id}
             onChange={v => set({ hero_headline_font_id: v })}
-            hint="The big statement across the hero photo."
             sample={data.hero_headline || 'Where your vision comes to life.'}
           />
           <Picker
@@ -243,7 +238,6 @@ const HeroFontsPanel = memo(function HeroFontsPanel({ data, set }) {
             testId="admin-hero-subhead-font"
             value={data.hero_subhead_font_id}
             onChange={v => set({ hero_subhead_font_id: v })}
-            hint="The tagline underneath the headline."
             sample={data.hero_subhead || 'Custom design, thoughtful details, and a calm process.'}
           />
         </div>
@@ -275,7 +269,7 @@ const RecentWorkPreview = memo(function RecentWorkPreview() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-[color:var(--brand-text-muted)]">These 6 images show in the “Recent Work” strip on your homepage. Feature or unfeature portfolio items below — or manage the full portfolio for reordering, titles, and categories.</p>
+        <p className="text-sm text-[color:var(--brand-text-muted)]">Star up to 6 photos to feature on the homepage.</p>
         <Link to="/admin/portfolio" className="btn-secondary !h-8 text-xs" data-testid="admin-home-portfolio-link">Manage full portfolio <ExternalLink className="h-3.5 w-3.5" /></Link>
       </div>
 
@@ -285,7 +279,7 @@ const RecentWorkPreview = memo(function RecentWorkPreview() {
         <>
           <p className="eyebrow">SHOWING NOW ({featured.length}/6)</p>
           {featured.length === 0 && (
-            <div className="card-cream p-4 text-sm text-[color:var(--brand-text-muted)]">No featured items yet. Star some images below and they'll appear on the homepage.</div>
+            <div className="card-cream p-4 text-sm text-[color:var(--brand-text-muted)]">No featured items yet — star any photo below.</div>
           )}
           {featured.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -379,7 +373,7 @@ const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
             Facebook feed / embed widget
           </p>
           <p className="text-sm text-[color:var(--brand-text-muted)] mt-1 max-w-2xl">
-            Paste any Elfsight, POWr, Tagembed, or third-party embed snippet and it will render on the homepage. Use it for a Facebook feed, Google Reviews, event calendar, or anything else.
+            Paste any Elfsight, POWr, or third-party embed — Facebook feed, Google Reviews, etc.
           </p>
         </div>
         <ToggleRow
@@ -404,7 +398,7 @@ const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
             <label htmlFor="admin-home-widget-show-header" className="cursor-pointer flex-1">
               <p className="text-sm font-medium">Show section heading above the widget</p>
               <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
-                Turn this off if your widget (e.g. Elfsight) already has its own heading/branding — the section will render as just the widget with no extra text above it.
+                Turn off if your widget already has its own heading.
               </p>
             </label>
           </div>
@@ -499,7 +493,7 @@ const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
                 data-testid="admin-home-widget-snippet"
               />
               <p className="text-xs text-[color:var(--brand-text-muted)] mt-1.5">
-                While this is blank, the widget section is <strong>hidden from the public site</strong> — nothing appears until you paste a real snippet. (You can still preview the placeholder via the Coming Soon preview link.)
+                Section is <strong>hidden from the public site</strong> while this is blank.
               </p>
             </div>
 
@@ -553,8 +547,8 @@ const ValuePillarsCard = memo(function ValuePillarsCard({ data, set }) {
         <div>
           <p className="font-serif text-xl">Value pillars (narrative section)</p>
           <p className="text-sm text-[color:var(--brand-text-muted)] mt-0.5 max-w-2xl">
-            A magazine-style block for the homepage: one big italic-accent headline on the left, and long-form value blocks on the right.
-            {!active && ' Turn it on above to make this section appear on your homepage.'}
+            Magazine-style block: italic-accent headline on the left, value blocks on the right.
+            {!active && ' Turn it on above to show this section.'}
           </p>
         </div>
         {!active && (
@@ -582,7 +576,7 @@ const ValuePillarsCard = memo(function ValuePillarsCard({ data, set }) {
           data-testid="admin-home-pillars-headline"
         />
         <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">
-          <b>Tip:</b> wrap any words in <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">*asterisks*</code> to render them in italic serif (matches the accent style in your Canva reference).
+          Wrap words in <code className="font-mono text-[11px] px-1 rounded bg-white border border-[color:var(--brand-border)]">*asterisks*</code> to render them in italic serif.
         </p>
       </div>
 
@@ -600,7 +594,6 @@ const ValuePillarsCard = memo(function ValuePillarsCard({ data, set }) {
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div>
             <p className="eyebrow">PILLARS (right column)</p>
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Each pillar has a short title and a longer paragraph. Add as many as you like.</p>
           </div>
           <button type="button" className="btn-secondary !h-8 text-xs" onClick={addItem} data-testid="admin-home-pillar-add">
             <Plus className="h-3.5 w-3.5" /> Add pillar
@@ -610,7 +603,6 @@ const ValuePillarsCard = memo(function ValuePillarsCard({ data, set }) {
         {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[color:var(--brand-border)] p-6 text-center">
             <p className="text-sm font-medium">No pillars yet</p>
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Add your first pillar to describe what makes your work special.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -660,12 +652,12 @@ const AdminHomePage = () => {
       <PageHeader
         eyebrow="PAGE"
         title="Home page"
-        subtitle="Everything visitors see on your homepage: hero, sections, Recent Work, Instagram feed, process timeline."
+        subtitle="Hero, sections, Recent Work, Instagram, and process timeline."
         saving={saving} dirty={dirty} onSave={save}
         saveTestId="admin-home-save"
       />
 
-      <SectionCard title="Hero" subtitle="The big top banner — headline, subhead, buttons, and image.">
+      <SectionCard title="Hero" subtitle="Headline, subhead, buttons, image.">
         <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-surface-2)]/40" data-testid="admin-hero-layout-mode">
           <p className="eyebrow">LAYOUT STYLE</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -764,14 +756,14 @@ const AdminHomePage = () => {
 
       <SectionCard title="Section visibility" subtitle="Toggle any full section on or off.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <ToggleRow label="Value pillars (narrative)" hint="Big italic-accent headline + long-form value blocks. See section below." checked={!!data.home_pillars_active} onChange={v => set({ home_pillars_active: v })} />
-          <ToggleRow label="Services grid (home section)" hint="The 6-service grid on the home page only. Toggle it off to hide the ‘What we do (Services teaser)’ block below." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
+          <ToggleRow label="Value pillars (narrative)" hint="Italic-accent headline + long-form value blocks." checked={!!data.home_pillars_active} onChange={v => set({ home_pillars_active: v })} />
+          <ToggleRow label="Services grid (home section)" hint="The 6-service teaser grid on the home page." checked={data.home_services_active !== false} onChange={v => set({ home_services_active: v })} />
           <ToggleRow label="Recent Work preview" hint="Portfolio strip linking to /portfolio." checked={data.home_gallery_active !== false} onChange={v => set({ home_gallery_active: v })} />
           <ToggleRow label="Instagram feed" hint="Live IG posts strip." checked={data.home_instagram_active !== false} onChange={v => set({ home_instagram_active: v })} />
           <ToggleRow label="Facebook feed / embed widget" hint="Elfsight or any pasted embed snippet." checked={!!data.home_widget_active} onChange={v => set({ home_widget_active: v })} />
           <ToggleRow label="Process timeline" hint="Numbered step boxes." checked={data.home_process_active !== false} onChange={v => set({ home_process_active: v })} />
           <ToggleRow label="Testimonials" hint="Client reviews." checked={data.home_testimonials_active !== false} onChange={v => set({ home_testimonials_active: v })} />
-          <ToggleRow label="Backdrops" hint="Featured backdrops section linking to /backdrops." checked={data.home_backdrops_active !== false} onChange={v => set({ home_backdrops_active: v })} />
+          <ToggleRow label="Backdrops" hint="Featured backdrops linking to /backdrops." checked={data.home_backdrops_active !== false} onChange={v => set({ home_backdrops_active: v })} />
           <ToggleRow label="Meet the designer" hint="Bio + photo block." checked={data.home_designer_active !== false} onChange={v => set({ home_designer_active: v })} />
           <ToggleRow label="FAQ preview" hint="Common questions with link to full FAQ." checked={data.home_faq_active !== false} onChange={v => set({ home_faq_active: v })} />
           <ToggleRow label="Final call-to-action" hint="Closing card near the footer." checked={data.home_final_cta_active !== false} onChange={v => set({ home_final_cta_active: v })} />
@@ -781,19 +773,19 @@ const AdminHomePage = () => {
           <div className="space-y-3">
             <ToggleRow
               label="Services page (whole site)"
-              hint="Governs the standalone /services page and the ‘Services’ item in the header & footer nav. Turn OFF to hide services entirely site-wide — your section text and services list are preserved for whenever you're ready."
+              hint="Hides the /services page and its nav item. Content is preserved when off."
               checked={data.services_page_active !== false}
               onChange={v => set({ services_page_active: v })}
             />
             <ToggleRow
               label="Blog (whole site)"
-              hint="Off by default. Governs the /blog page, individual /blog/:slug posts, and the ‘Blog’ item in the header & footer. Most owners keep this off and let their IG feed be their blog — flip it on anytime; your posts are preserved."
+              hint="Off by default. Governs /blog, individual posts, and the nav item. Content is preserved when off."
               checked={data.blog_page_active === true}
               onChange={v => set({ blog_page_active: v })}
             />
             <ToggleRow
               label="FAQ page (whole site)"
-              hint="Off by default. Governs the /faq page and the ‘FAQ’ item in the header & footer. Turn ON once your questions are ready; the homepage FAQ preview is a separate toggle above."
+              hint="Off by default. Governs the /faq page and its nav item. Homepage FAQ preview is a separate toggle above."
               checked={data.faq_page_active === true}
               onChange={v => set({ faq_page_active: v })}
             />
@@ -804,7 +796,7 @@ const AdminHomePage = () => {
       <ValuePillarsCard data={data} set={set} />
 
       {data.home_services_active !== false ? (
-        <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid on the home page.">
+        <SectionCard title="What we do (Services teaser)" subtitle="Eyebrow, title, and subtitle for the services grid.">
           <EyebrowTitleSubtitleRow prefix="home_services" data={data} set={set} />
         </SectionCard>
       ) : (
@@ -814,12 +806,12 @@ const AdminHomePage = () => {
             <span className="text-xs px-2.5 py-1 rounded-full bg-[color:var(--brand-surface-2)] text-[color:var(--brand-text-muted)]">Currently hidden</span>
           </div>
           <p className="text-sm text-[color:var(--brand-text-muted)] mt-1">
-            The Services grid is turned off in Section visibility above, so this editor is hidden. Turn the toggle back on to edit these fields.
+            Turn the toggle in <em>Section visibility</em> back on to edit these fields.
           </p>
         </div>
       )}
 
-      <SectionCard title="Recent Work" subtitle="Eyebrow, title, subtitle — plus which portfolio items appear.">
+      <SectionCard title="Recent Work" subtitle="Eyebrow, title, subtitle — plus which portfolio items feature.">
         <EyebrowTitleSubtitleRow prefix="home_gallery" data={data} set={set} />
         <div className="border-t border-[color:var(--brand-border)] pt-4">
           <RecentWorkPreview />
@@ -838,7 +830,7 @@ const AdminHomePage = () => {
             </select>
           </div>
         </div>
-        <p className="text-xs text-[color:var(--brand-text-muted)]">The “@ handle” button in the top-right uses your <strong>Instagram URL</strong> from <Link to="/admin/social-contact" className="link-underline">Contact &amp; social</Link>.</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)]">The <strong>@ handle</strong> button pulls from your <Link to="/admin/social-contact" className="link-underline">Contact &amp; social</Link> Instagram URL.</p>
       </SectionCard>
 
       <EmbedWidgetCard data={data} set={set} />
@@ -872,12 +864,12 @@ const AdminHomePage = () => {
           <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.home_testimonials_eyebrow || ''} onCommit={v => set({ home_testimonials_eyebrow: v })} /></div>
           <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.home_testimonials_title || ''} onCommit={v => set({ home_testimonials_title: v })} /></div>
         </div>
-        <p className="text-xs text-[color:var(--brand-text-muted)]">Only <strong>featured</strong> reviews with status <em>Approved</em> appear here. Manage in <Link to="/admin/testimonials" className="link-underline">Content → Testimonials</Link>.</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)]">Only <em>Approved</em>, <em>Featured</em> reviews show here. Manage in <Link to="/admin/testimonials" className="link-underline">Content → Testimonials</Link>.</p>
       </SectionCard>
 
-      <SectionCard title="Backdrops heading" subtitle="A catalog strip on the homepage — only shows if there are featured backdrops.">
+      <SectionCard title="Backdrops heading" subtitle="Only shows if there are featured backdrops.">
         <EyebrowTitleSubtitleRow prefix="home_backdrops" data={data} set={set} />
-        <p className="text-xs text-[color:var(--brand-text-muted)]">Add & feature backdrops in <Link to="/admin/backdrops" className="link-underline">Content → Backdrops</Link>. Only ones marked <em>Featured</em> appear on the homepage.</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)]">Manage in <Link to="/admin/backdrops" className="link-underline">Content → Backdrops</Link>. Only <em>Featured</em> items appear here.</p>
       </SectionCard>
 
       <SectionCard title="FAQ heading">
@@ -887,11 +879,11 @@ const AdminHomePage = () => {
         </div>
       </SectionCard>
 
-      <SectionCard title="Final call-to-action" subtitle="The soft-pink closing card at the very bottom of the homepage — the last thing every visitor sees before the footer.">
+      <SectionCard title="Final call-to-action" subtitle="The soft-pink closing card at the bottom of the homepage.">
         <div className="grid grid-cols-1 gap-3">
           <ToggleRow
             label="Show heart icon"
-            hint="The little heart above the headline. Turn off for a cleaner look."
+            hint="The little heart above the headline."
             checked={data.home_final_cta_show_heart !== false}
             onChange={v => set({ home_final_cta_show_heart: v })}
           />
@@ -911,13 +903,12 @@ const AdminHomePage = () => {
               onCommit={v => set({ home_final_cta_subtitle: v })}
               placeholder="Take two minutes to share your vision. We'll be in touch within 1–2 business days."
             />
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines preserved as paragraph breaks. Leave blank to hide.</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines become paragraph breaks. Blank hides this line.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="eyebrow block mb-1">PRIMARY BUTTON — LABEL</label>
               <TextField value={data.home_final_cta_primary_label || ''} onCommit={v => set({ home_final_cta_primary_label: v })} placeholder="Start your inquiry" />
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Leave blank to hide the primary button.</p>
             </div>
             <div>
               <label className="eyebrow block mb-1">PRIMARY BUTTON — LINK</label>
@@ -926,17 +917,17 @@ const AdminHomePage = () => {
             <div>
               <label className="eyebrow block mb-1">SECONDARY BUTTON — LABEL</label>
               <TextField value={data.home_final_cta_secondary_label || ''} onCommit={v => set({ home_final_cta_secondary_label: v })} placeholder="See the portfolio (optional)" />
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Leave blank to hide the secondary button.</p>
             </div>
             <div>
               <label className="eyebrow block mb-1">SECONDARY BUTTON — LINK</label>
               <TextField value={data.home_final_cta_secondary_href || ''} onCommit={v => set({ home_final_cta_secondary_href: v })} placeholder="/portfolio" />
             </div>
           </div>
+          <p className="text-xs text-[color:var(--brand-text-muted)] -mt-1">Leave a label blank to hide that button.</p>
         </div>
       </SectionCard>
 
-      <SectionCard title="Meet the designer" subtitle="The bio block on the homepage with photo + call-to-action buttons.">
+      <SectionCard title="Meet the designer" subtitle="Bio block with photo + call-to-action buttons.">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-1">
             <label className="eyebrow block mb-1">PHOTO</label>
@@ -964,7 +955,7 @@ const AdminHomePage = () => {
                 </button>
               )}
             </div>
-            <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Optional. If left blank, the photo from Admin → About page is used automatically.</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Optional. If blank, the About page photo is used.</p>
             <div className="mt-3">
               <label className="text-[11px] block mb-1 uppercase tracking-wider text-[color:var(--brand-text-muted)]">Layout</label>
               <select
@@ -1009,7 +1000,7 @@ const AdminHomePage = () => {
               </div>
             </div>
             <p className="text-[11px] text-[color:var(--brand-text-muted)] mt-2 leading-snug">
-              <b>Wide diptych photo?</b> Pick <em>Above the text (full width)</em> as the Layout with <em>Auto</em> ratio — both halves stay visible, no whitespace, no cropping.
+              Wide diptych? Choose <em>Above the text</em> + <em>Auto</em> ratio so both halves stay visible.
             </p>
           </div>
 
@@ -1032,7 +1023,7 @@ const AdminHomePage = () => {
                 onCommit={v => set({ designer_bio: v })}
                 placeholder="A short paragraph about you and your craft."
               />
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines preserved as paragraph breaks.</p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Blank lines become paragraph breaks.</p>
             </div>
             <div>
               <label className="eyebrow block mb-1">SIGNATURE (OPTIONAL)</label>
@@ -1041,7 +1032,7 @@ const AdminHomePage = () => {
                 onCommit={v => set({ designer_signature: v })}
                 placeholder="— Sam"
               />
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Rendered under the bio in the hand-lettered script font for a personal touch. Leave blank to hide.</p>
+              <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Rendered in script font under the bio. Blank hides it.</p>
             </div>
             <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)]">
               <p className="eyebrow mb-2">CALL-TO-ACTION BUTTONS</p>
@@ -1063,7 +1054,6 @@ const AdminHomePage = () => {
                   <TextField value={data.designer_cta_secondary_href || ''} onCommit={v => set({ designer_cta_secondary_href: v })} placeholder="/about" />
                 </div>
               </div>
-              <p className="text-xs text-[color:var(--brand-text-muted)] mt-2">Leave a label blank to hide that button.</p>
             </div>
           </div>
         </div>
