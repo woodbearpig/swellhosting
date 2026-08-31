@@ -639,6 +639,93 @@ const ValuePillarsCard = memo(function ValuePillarsCard({ data, set }) {
 
 
 
+/**
+ * HeroSlideshowCard — manage the cross-fade hero slideshow. Toggle it on,
+ * set how long each slide holds, and build a reorderable list of images using
+ * the same Upload + MediaPicker pattern used elsewhere. Needs 2+ images to run;
+ * otherwise the single hero image above is shown.
+ */
+const HeroSlideshowCard = memo(function HeroSlideshowCard({ data, set }) {
+  const images = Array.isArray(data.hero_slideshow_images) ? data.hero_slideshow_images : [];
+  const active = !!data.hero_slideshow_active;
+  const interval = data.hero_slideshow_interval || 5;
+  const enough = images.filter(Boolean).length >= 2;
+
+  const addImage = (url) => { if (url) set({ hero_slideshow_images: [...images, url] }); };
+  const removeImage = (idx) => set({ hero_slideshow_images: images.filter((_, i) => i !== idx) });
+  const swap = (a, b) => {
+    if (a < 0 || b < 0 || a >= images.length || b >= images.length) return;
+    const next = [...images];
+    [next[a], next[b]] = [next[b], next[a]];
+    set({ hero_slideshow_images: next });
+  };
+
+  return (
+    <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-3" data-testid="admin-hero-slideshow">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="eyebrow">HERO SLIDESHOW</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">
+            Smoothly cross-fades through several photos. Works in both layouts. Needs 2+ images.
+          </p>
+        </div>
+        <ToggleRow
+          label={active ? 'On' : 'Off'}
+          checked={active}
+          onChange={v => set({ hero_slideshow_active: v })}
+          testId="admin-hero-slideshow-toggle"
+        />
+      </div>
+
+      {active && !enough && (
+        <div className="rounded-xl bg-[color:var(--brand-blush-tint)] p-3 text-xs leading-relaxed" data-testid="admin-hero-slideshow-hint">
+          Add at least 2 images below to start the slideshow — until then the single hero image above is shown.
+        </div>
+      )}
+
+      {active && (
+        <>
+          <div>
+            <label className="eyebrow block mb-1">SECONDS PER SLIDE ({interval}s)</label>
+            <input
+              type="range"
+              min="2" max="12" step="1"
+              value={interval}
+              onChange={e => set({ hero_slideshow_interval: parseFloat(e.target.value) })}
+              className="w-full accent-[color:var(--brand-sage-deep)]"
+              data-testid="admin-hero-slideshow-interval"
+            />
+            <p className="text-xs text-[color:var(--brand-text-muted)]">Each photo fades to the next over ~1 second.</p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="btn-secondary text-xs cursor-pointer">
+              Upload image
+              <input type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) { const r = await uploadFile(f); addImage(r.url); } }} data-testid="admin-hero-slideshow-upload" />
+            </label>
+            <MediaPickerButton testId="media-picker-hero-slideshow" onSelect={url => addImage(url)} />
+          </div>
+
+          {images.length > 0 && (
+            <div className="space-y-2">
+              {images.map((url, idx) => (
+                <div key={idx} className="card-cream p-2 flex items-center gap-2" data-testid={`admin-hero-slide-${idx}`}>
+                  <div className="h-8 w-8 rounded-full bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] flex items-center justify-center text-sm font-medium shrink-0">{idx + 1}</div>
+                  <img src={publicUrl(url)} alt="" className="h-12 w-12 rounded-lg object-cover shrink-0 bg-[color:var(--brand-surface-2)]" />
+                  <span className="text-xs text-[color:var(--brand-text-muted)] truncate flex-1 font-mono">{url}</span>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === 0} onClick={() => swap(idx - 1, idx)} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)] disabled:opacity-30" disabled={idx === images.length - 1} onClick={() => swap(idx, idx + 1)} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                  <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => removeImage(idx)} aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+});
+
 const AdminHomePage = () => {
   const { data, set, save, saving, dirty } = useSiteAdminData();
   if (!data) return <p>Loading…</p>;
@@ -696,6 +783,8 @@ const AdminHomePage = () => {
           </div>
           <TextField className="mt-2" value={data.hero_image_url || ''} onCommit={v => set({ hero_image_url: v })} />
         </div>
+
+        <HeroSlideshowCard data={data} set={set} />
 
         {data.hero_layout_mode === 'full_bleed' && (
           <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-sage-tint)]/30" data-testid="admin-hero-fullbleed-controls">

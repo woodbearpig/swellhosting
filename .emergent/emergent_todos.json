@@ -1,22 +1,18 @@
 [
   {
-    "content": "Audit all admin helper text and categorize (delete / tighten / tooltip / keep)",
+    "content": "Add hero slideshow fields to SiteContent model (active, images list, interval)",
     "status": "completed"
   },
   {
-    "content": "Apply trim pass to 2-3 representative pages first",
+    "content": "Build cross-fade HeroSlideshow component + integrate into both Split and FullBleed heroes",
     "status": "completed"
   },
   {
-    "content": "Screenshot before/after for user approval",
+    "content": "Add admin UI: slideshow toggle, interval, reorderable image list in Hero card",
     "status": "completed"
   },
   {
-    "content": "Extend the pass to remaining admin pages after approval",
-    "status": "completed"
-  },
-  {
-    "content": "Compile check + brief testing agent for regressions",
+    "content": "Compile check + screenshot verification + test",
     "status": "completed"
   }
 ]

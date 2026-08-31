@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Sparkles, Heart, Calendar, Star, MessageSquarePlus } from 'lucide-react';
 import { api, publicUrl } from '@/lib/api';
 import { useSite } from '@/context/SiteContext';
@@ -388,6 +388,59 @@ const heroFadeIn = {
   transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
 };
 
+/**
+ * HeroSlideshow — a gentle cross-fade slideshow for the hero photo.
+ *
+ * Renders every image absolutely-positioned and stacked, then fades between
+ * them by animating `opacity` only (GPU-friendly, no layout thrash). The parent
+ * MUST be `position: relative` and define the box size (both hero layouts do).
+ *
+ * Accessibility: honors `prefers-reduced-motion` — when the user prefers
+ * reduced motion (or fewer than 2 images are provided), it simply holds on the
+ * first image with no cycling.
+ */
+const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-cover', eager = false }) => {
+  const reduceMotion = useReducedMotion();
+  const list = (Array.isArray(images) ? images : []).filter(Boolean);
+  const [index, setIndex] = useState(0);
+
+  // Keep the active index valid if the list length changes (e.g. admin edits).
+  useEffect(() => { if (index > list.length - 1) setIndex(0); }, [list.length, index]);
+
+  useEffect(() => {
+    if (reduceMotion || list.length < 2) return;
+    const ms = Math.max(2, Number(interval) || 5) * 1000;
+    const id = setInterval(() => setIndex(i => (i + 1) % list.length), ms);
+    return () => clearInterval(id);
+  }, [reduceMotion, list.length, interval]);
+
+  if (list.length === 0) return null;
+
+  return (
+    <>
+      {list.map((src, i) => (
+        <img
+          key={`${src}-${i}`}
+          src={publicUrl(src)}
+          alt={i === 0 ? alt : ''}
+          aria-hidden={i !== 0}
+          className={`absolute inset-0 h-full w-full ${imgClassName} transition-opacity duration-1000 ease-in-out motion-reduce:transition-none`}
+          style={{ opacity: i === index ? 1 : 0 }}
+          loading={eager && i === 0 ? 'eager' : 'lazy'}
+          decoding="async"
+        />
+      ))}
+    </>
+  );
+};
+
+/** True when the slideshow should take over the hero photo. */
+const heroSlideshowActive = (site) =>
+  !!site?.hero_slideshow_active &&
+  Array.isArray(site?.hero_slideshow_images) &&
+  site.hero_slideshow_images.filter(Boolean).length >= 2;
+
+
 const SplitHero = ({ site }) => {
   const headlineStyle = { fontFamily: 'var(--hero-headline-font, inherit)', ...(site?.hero_headline_color ? { color: site.hero_headline_color } : {}) };
   const subheadStyle  = { fontFamily: 'var(--hero-subhead-font, inherit)',  ...(site?.hero_subhead_color  ? { color: site.hero_subhead_color }  : {}) };
@@ -427,8 +480,17 @@ const SplitHero = ({ site }) => {
 
       <motion.div className="lg:col-span-5" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
         <div className="relative">
-          <div className="rounded-[2rem] overflow-hidden lift-shadow aspect-[4/5] bg-[color:var(--brand-surface-2)]">
-            <img src={publicUrl(site?.hero_image_url) || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Editorial event styling by swell design + media" className="h-full w-full object-cover" />
+          <div className="relative rounded-[2rem] overflow-hidden lift-shadow aspect-[4/5] bg-[color:var(--brand-surface-2)]">
+            {heroSlideshowActive(site) ? (
+              <HeroSlideshow
+                images={site.hero_slideshow_images}
+                interval={site?.hero_slideshow_interval || 5}
+                alt="Editorial event styling by swell design + media"
+                imgClassName="object-cover"
+              />
+            ) : (
+              <img src={publicUrl(site?.hero_image_url) || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Editorial event styling by swell design + media" className="h-full w-full object-cover" />
+            )}
           </div>
           <div className="absolute -bottom-6 -left-6 card-cream p-4 hidden sm:block">
             <div className="flex items-center gap-2 text-sm">
@@ -465,14 +527,24 @@ const FullBleedHero = ({ site }) => {
       className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] flex items-center justify-center text-center bg-neutral-900 hero-perf"
       data-testid="home-hero-section-fullbleed"
     >
-      <img
-        src={publicUrl(bgUrl)}
-        alt="swell design + media hero"
-        className="absolute inset-0 w-full h-full object-cover hero-img-perf"
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
+      {heroSlideshowActive(site) ? (
+        <HeroSlideshow
+          images={site.hero_slideshow_images}
+          interval={site?.hero_slideshow_interval || 5}
+          alt="swell design + media hero"
+          imgClassName="object-cover hero-img-perf"
+          eager
+        />
+      ) : (
+        <img
+          src={publicUrl(bgUrl)}
+          alt="swell design + media hero"
+          className="absolute inset-0 w-full h-full object-cover hero-img-perf"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
+      )}
       {/* Overlay: soft dark-to-transparent gradient from the bottom + subtle vignette for legibility */}
       <div
         aria-hidden

@@ -56,6 +56,14 @@ class SiteContent(Base):
     hero_layout_mode: str = "split"
     # Only used in full_bleed mode — the wide background photo. If empty, falls back to hero_image_url.
     hero_background_image_url: str = ""
+
+    # Hero slideshow: when active and 2+ images are provided, the hero photo
+    # gently cross-fades through this list of images. Applies to BOTH layout
+    # modes (split portrait + full-bleed background). Falls back to the single
+    # image automatically when off or fewer than 2 images are set.
+    hero_slideshow_active: bool = False
+    hero_slideshow_images: List[str] = Field(default_factory=list)
+    hero_slideshow_interval: float = 5.0  # seconds each slide holds before fading to the next
     # Overlay intensity for full_bleed hero: 0.0 (none) to 1.0 (fully black). Default gives cream text good legibility.
     hero_overlay_intensity: float = 0.45
     hero_primary_cta_label: str = "Start your inquiry"
