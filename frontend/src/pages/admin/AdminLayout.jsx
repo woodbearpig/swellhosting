@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, Layout as LayoutIcon, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame, LifeBuoy, Activity } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, CalendarClock, Boxes, Image, MessageSquare, HelpCircle, BookOpen, Settings, LogOut, Menu, X, Palette, Plug, FileText, FolderOpen, Home, Sparkles, User as UserIcon, Navigation, PanelBottom, AtSign, EyeOff, Frame, LifeBuoy, Activity } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
 import { Toaster } from 'sonner';
