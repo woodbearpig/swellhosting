@@ -1,18 +1,22 @@
 [
   {
-    "content": "Add hero slideshow fields to SiteContent model (active, images list, interval)",
+    "content": "Backend: add hero_text_align_x + hero_text_vertical_pos fields to SiteContent",
     "status": "completed"
   },
   {
-    "content": "Build cross-fade HeroSlideshow component + integrate into both Split and FullBleed heroes",
+    "content": "Frontend: apply horizontal alignment + percentage vertical position to FullBleedHero text block",
     "status": "completed"
   },
   {
-    "content": "Add admin UI: slideshow toggle, interval, reorderable image list in Hero card",
+    "content": "Frontend: make overlay gradient adapt when text moves toward the top",
     "status": "completed"
   },
   {
-    "content": "Compile check + screenshot verification + test",
+    "content": "Admin: add L/C/R buttons + vertical position slider in full-bleed hero controls",
+    "status": "completed"
+  },
+  {
+    "content": "Production build (yarn build) + screenshot verification",
     "status": "completed"
   }
 ]

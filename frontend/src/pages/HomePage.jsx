@@ -522,9 +522,24 @@ const FullBleedHero = ({ site }) => {
   const secondaryBtnStyle = (site?.hero_secondary_btn_bg || site?.hero_secondary_btn_text)
     ? { backgroundColor: site.hero_secondary_btn_bg || undefined, color: site.hero_secondary_btn_text || undefined, borderColor: (site.hero_secondary_btn_text || 'rgba(255,255,255,0.6)') }
     : undefined;
+
+  // ---- Text placement over the photo (admin-controlled) ----
+  const alignX = site?.hero_text_align_x || 'center';
+  // Clamp vertical position to a safe 8–92% band so the text always keeps a
+  // little breathing room from the top/bottom edges. 50 = centered (default).
+  const vPos = Math.max(8, Math.min(92, typeof site?.hero_text_vertical_pos === 'number' ? site.hero_text_vertical_pos : 50));
+  const alignItems = alignX === 'left' ? 'items-start' : alignX === 'right' ? 'items-end' : 'items-center';
+  const textAlignClass = alignX === 'left' ? 'text-left' : alignX === 'right' ? 'text-right' : 'text-center';
+  const blockMargin = alignX === 'left' ? 'mr-auto' : alignX === 'right' ? 'ml-auto' : 'mx-auto';
+  const btnJustify = alignX === 'left' ? 'justify-start' : alignX === 'right' ? 'justify-end' : 'justify-center';
+  // When the text sits high (upper ~third), add a soft top scrim so it stays
+  // legible even where the base gradient is lightest. No effect at/below center,
+  // so the default look is unchanged.
+  const topScrim = vPos < 45 ? ((45 - vPos) / 45) * (overlay + 0.1) : 0;
+
   return (
     <section
-      className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] flex items-center justify-center text-center bg-neutral-900 hero-perf"
+      className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] bg-neutral-900 hero-perf"
       data-testid="home-hero-section-fullbleed"
     >
       {heroSlideshowActive(site) ? (
@@ -553,34 +568,52 @@ const FullBleedHero = ({ site }) => {
           background: `linear-gradient(to top, rgba(0,0,0,${overlay + 0.15}) 0%, rgba(0,0,0,${overlay * 0.6}) 40%, rgba(0,0,0,${overlay * 0.3}) 70%, rgba(0,0,0,${overlay * 0.4}) 100%)`,
         }}
       />
-      <motion.div {...heroFadeIn} className="relative z-10 container-narrow px-6 py-24 sm:py-32 text-[color:var(--brand-cream)]">
-        {site?.hero_eyebrow && (
-          <div className="eyebrow mb-4 opacity-90" style={eyebrowStyle}>
-            {site.hero_eyebrow}
+      {/* Adaptive top scrim — only appears when the text is placed high, keeping it readable there. */}
+      {topScrim > 0.01 && (
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(to bottom, rgba(0,0,0,${topScrim}) 0%, rgba(0,0,0,0) 45%)` }}
+        />
+      )}
+      {/* Positioner: places the text block vertically at vPos% of the hero.
+          translateY(-vPos%) anchors it so 0%=top-aligned, 50%=centered, 100%=bottom-aligned. */}
+      <div
+        className="absolute left-0 right-0 z-10 px-6"
+        style={{ top: `${vPos}%`, transform: `translateY(-${vPos}%)` }}
+      >
+        <motion.div
+          {...heroFadeIn}
+          className={`container-narrow flex flex-col ${alignItems} ${textAlignClass} text-[color:var(--brand-cream)]`}
+        >
+          {site?.hero_eyebrow && (
+            <div className="eyebrow mb-4 opacity-90" style={eyebrowStyle}>
+              {site.hero_eyebrow}
+            </div>
+          )}
+          <h1 className={`font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.02em] max-w-4xl ${blockMargin} drop-shadow-md`} style={headlineStyle}>
+            {site?.hero_headline || 'Where your vision comes to life.'}
+          </h1>
+          {site?.hero_subhead && (
+            <p className={`mt-5 text-lg sm:text-xl leading-relaxed max-w-2xl ${blockMargin} opacity-95 drop-shadow-sm`} style={subheadStyle}>
+              {site.hero_subhead}
+            </p>
+          )}
+          <div className={`mt-8 flex flex-wrap items-center ${btnJustify} gap-3`}>
+            <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
+              {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to={site?.hero_secondary_cta_href || '/gallery'}
+              className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/20 hover:bg-white/30 text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
+              style={secondaryBtnStyle}
+              data-testid="home-hero-secondary-cta"
+            >
+              {site?.hero_secondary_cta_label || 'View the gallery'}
+            </Link>
           </div>
-        )}
-        <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.02em] max-w-4xl mx-auto drop-shadow-md" style={headlineStyle}>
-          {site?.hero_headline || 'Where your vision comes to life.'}
-        </h1>
-        {site?.hero_subhead && (
-          <p className="mt-5 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto opacity-95 drop-shadow-sm" style={subheadStyle}>
-            {site.hero_subhead}
-          </p>
-        )}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
-            {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            to={site?.hero_secondary_cta_href || '/gallery'}
-            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/20 hover:bg-white/30 text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
-            style={secondaryBtnStyle}
-            data-testid="home-hero-secondary-cta"
-          >
-            {site?.hero_secondary_cta_label || 'View the gallery'}
-          </Link>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </section>
   );
 };

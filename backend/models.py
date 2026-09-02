@@ -66,6 +66,11 @@ class SiteContent(Base):
     hero_slideshow_interval: float = 5.0  # seconds each slide holds before fading to the next
     # Overlay intensity for full_bleed hero: 0.0 (none) to 1.0 (fully black). Default gives cream text good legibility.
     hero_overlay_intensity: float = 0.45
+    # Full-bleed hero TEXT placement over the photo/slideshow.
+    #   hero_text_align_x: "left" | "center" | "right" (horizontal anchor + text alignment)
+    #   hero_text_vertical_pos: 0 (top) … 100 (bottom) as a % of hero height. 50 = centered (current default).
+    hero_text_align_x: str = "center"
+    hero_text_vertical_pos: float = 50.0
     hero_primary_cta_label: str = "Start your inquiry"
     hero_primary_cta_href: str = "/inquire"
     hero_secondary_cta_label: str = "View the gallery"

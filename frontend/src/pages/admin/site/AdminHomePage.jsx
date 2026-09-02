@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, memo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star, AlertTriangle, Facebook } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Trash2, ExternalLink, Star, AlertTriangle, Facebook, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { useSiteAdminData, PageHeader, ToggleRow, TextField, TextArea } from './_shared';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { MediaPickerButton } from '@/components/admin/MediaPickerDialog';
@@ -810,6 +810,45 @@ const AdminHomePage = () => {
                 data-testid="admin-hero-overlay"
               />
               <p className="text-xs text-[color:var(--brand-text-muted)]">Softens the photo so the cream headline stays legible. 45% is a good default.</p>
+            </div>
+
+            <div className="pt-3 border-t border-dashed border-[color:var(--brand-border)] space-y-3">
+              <div>
+                <label className="eyebrow block mb-1">TEXT HORIZONTAL POSITION</label>
+                <div className="grid grid-cols-3 gap-2" data-testid="admin-hero-text-alignx">
+                  {[['left', 'Left', AlignLeft], ['center', 'Center', AlignCenter], ['right', 'Right', AlignRight]].map(([val, label, Icon]) => {
+                    const activeX = (data.hero_text_align_x || 'center') === val;
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => set({ hero_text_align_x: val })}
+                        className={`flex items-center justify-center gap-1.5 h-10 rounded-lg border text-sm transition-colors ${activeX ? 'border-[color:var(--brand-sage-deep)] bg-[color:var(--brand-sage-tint)] text-[color:var(--brand-sage-deep)] font-medium' : 'border-[color:var(--brand-border)] hover:bg-[color:var(--brand-sage-tint)]/40'}`}
+                        data-testid={`admin-hero-text-alignx-${val}`}
+                      >
+                        <Icon className="h-4 w-4" /> {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="eyebrow block mb-1">TEXT VERTICAL POSITION</label>
+                <input
+                  type="range"
+                  min="8" max="92" step="1"
+                  value={data.hero_text_vertical_pos ?? 50}
+                  onChange={e => set({ hero_text_vertical_pos: parseFloat(e.target.value) })}
+                  className="w-full accent-[color:var(--brand-sage-deep)]"
+                  data-testid="admin-hero-text-vertical"
+                />
+                <div className="flex justify-between text-xs text-[color:var(--brand-text-muted)]">
+                  <span>Higher</span>
+                  <span>Center</span>
+                  <span>Lower</span>
+                </div>
+                <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Slide toward <em>Lower</em> to pull the wording down into the gradient.</p>
+              </div>
             </div>
           </div>
         )}
