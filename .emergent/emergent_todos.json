@@ -1,22 +1,14 @@
 [
   {
-    "content": "Backend: add hero_text_align_x + hero_text_vertical_pos fields to SiteContent",
+    "content": "Rewrite HeroSlideshow: preload+decode frames, gate cycling until decoded, eager-load, GPU opacity compositing",
     "status": "completed"
   },
   {
-    "content": "Frontend: apply horizontal alignment + percentage vertical position to FullBleedHero text block",
+    "content": "Fix CSS: remove permanent will-change:transform on .hero-perf/.hero-img-perf; add .hero-slide opacity-composite class",
     "status": "completed"
   },
   {
-    "content": "Frontend: make overlay gradient adapt when text moves toward the top",
-    "status": "completed"
-  },
-  {
-    "content": "Admin: add L/C/R buttons + vertical position slider in full-bleed hero controls",
-    "status": "completed"
-  },
-  {
-    "content": "Production build (yarn build) + screenshot verification",
+    "content": "Production build + scroll/transition screenshot verification",
     "status": "completed"
   }
 ]

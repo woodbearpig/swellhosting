@@ -336,19 +336,34 @@ code {
  * force the hero to recalc layout.
  * ========================================================= */
 .hero-perf {
-    will-change: transform;
+    /* Promote to its own compositor layer for smooth scrolling, but WITHOUT a
+     * permanent `will-change` (that keeps large layers resident and actually
+     * hurts scroll perf here since the section is never transformed). */
     transform: translateZ(0);
     contain: layout paint style;
     backface-visibility: hidden;
 }
 
 .hero-img-perf {
-    /* Same GPU-layer treatment applied to the image element itself so
-     * the browser doesn't have to combine main-thread painting with
-     * compositor work when it decodes/repaints the JPEG.  */
-    will-change: transform;
+    /* Give the static hero image a stable GPU layer so decoding/repaint of the
+     * JPEG doesn't stall the main thread. No permanent `will-change` — the
+     * image isn't animated, so translateZ(0) alone is the lighter, correct hint. */
     transform: translateZ(0);
     backface-visibility: hidden;
+}
+
+/* .hero-slide — cross-fade frames for the hero slideshow. We animate ONLY
+ * opacity and scope `will-change` to opacity so the fade runs entirely on the
+ * GPU compositor (no layout/paint), keeping both the transition and page
+ * scrolling smooth even with large photos. */
+.hero-slide {
+    transition: opacity 1000ms ease-in-out;
+    transform: translateZ(0);
+    will-change: opacity;
+    backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+    .hero-slide { transition: none; }
 }
 
 /* Optional but powerful: opt below-fold sections out of layout/paint work

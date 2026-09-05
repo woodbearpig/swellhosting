@@ -391,28 +391,49 @@ const heroFadeIn = {
 /**
  * HeroSlideshow — a gentle cross-fade slideshow for the hero photo.
  *
- * Renders every image absolutely-positioned and stacked, then fades between
- * them by animating `opacity` only (GPU-friendly, no layout thrash). The parent
- * MUST be `position: relative` and define the box size (both hero layouts do).
+ * Performance design:
+ *  • Each frame is a stacked, absolutely-positioned <img> and we animate ONLY
+ *    `opacity` (via the `.hero-slide` class), which the browser runs on the GPU
+ *    compositor — no layout/paint on the main thread during the fade.
+ *  • Every frame is preloaded AND decoded up front (img.decode()) before we
+ *    start cycling, so a transition never stutters while a big JPEG decodes.
+ *  • Frames load eagerly (not lazily) because they all live in the viewport.
  *
  * Accessibility: honors `prefers-reduced-motion` — when the user prefers
- * reduced motion (or fewer than 2 images are provided), it simply holds on the
- * first image with no cycling.
+ * reduced motion (or fewer than 2 images are provided), it holds on the first
+ * image with no cycling.
  */
 const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-cover', eager = false }) => {
   const reduceMotion = useReducedMotion();
   const list = (Array.isArray(images) ? images : []).filter(Boolean);
   const [index, setIndex] = useState(0);
+  const [ready, setReady] = useState(false);
+  const listKey = list.join('|');
+
+  // Preload + decode all frames before cycling, so cross-fades are buttery.
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    const decodes = list.map((src) => {
+      const img = new Image();
+      img.src = publicUrl(src);
+      return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+    });
+    Promise.all(decodes).then(() => { if (!cancelled) setReady(true); });
+    // Fallback: never block cycling forever if decode() hangs on some browser.
+    const t = setTimeout(() => { if (!cancelled) setReady(true); }, 3000);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [listKey]);
 
   // Keep the active index valid if the list length changes (e.g. admin edits).
   useEffect(() => { if (index > list.length - 1) setIndex(0); }, [list.length, index]);
 
   useEffect(() => {
-    if (reduceMotion || list.length < 2) return;
+    if (reduceMotion || list.length < 2 || !ready) return;
     const ms = Math.max(2, Number(interval) || 5) * 1000;
     const id = setInterval(() => setIndex(i => (i + 1) % list.length), ms);
     return () => clearInterval(id);
-  }, [reduceMotion, list.length, interval]);
+  }, [reduceMotion, list.length, interval, ready]);
 
   if (list.length === 0) return null;
 
@@ -424,9 +445,10 @@ const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-
           src={publicUrl(src)}
           alt={i === 0 ? alt : ''}
           aria-hidden={i !== 0}
-          className={`absolute inset-0 h-full w-full ${imgClassName} transition-opacity duration-1000 ease-in-out motion-reduce:transition-none`}
+          draggable={false}
+          className={`hero-slide absolute inset-0 h-full w-full ${imgClassName}`}
           style={{ opacity: i === index ? 1 : 0 }}
-          loading={eager && i === 0 ? 'eager' : 'lazy'}
+          loading="eager"
           decoding="async"
         />
       ))}
@@ -547,7 +569,7 @@ const FullBleedHero = ({ site }) => {
           images={site.hero_slideshow_images}
           interval={site?.hero_slideshow_interval || 5}
           alt="swell design + media hero"
-          imgClassName="object-cover hero-img-perf"
+          imgClassName="object-cover"
           eager
         />
       ) : (
