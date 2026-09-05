@@ -32,8 +32,8 @@ const ServiceDetailPage = () => {
             <p className="font-script text-2xl text-[color:var(--brand-rose)] mt-2">{service.subtitle}</p>
             <p className="text-base text-[color:var(--brand-text-muted)] mt-5 leading-relaxed max-w-lg">{service.description}</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link to="/inquire" className="btn-primary" data-testid="service-inquire-cta">Start an inquiry <ArrowRight className="h-4 w-4" /></Link>
-              <Link to="/inquire" className="btn-secondary">Start your inquiry</Link>
+              <Link to="/inquire" className="btn-primary" data-testid="service-inquire-cta">Start your inquiry <ArrowRight className="h-4 w-4" /></Link>
+              <Link to="/portfolio" className="btn-secondary" data-testid="service-gallery-cta">View the gallery</Link>
               {service.price_from && <span className="badge-soft">From {service.price_from}</span>}
             </div>
           </div>
