@@ -123,7 +123,7 @@ const HomePage = () => {
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-gallery-section">
         <motion.div {...fadeInUp} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <SectionHeader eyebrow={site?.home_gallery_eyebrow || 'RECENT WORK'} title={site?.home_gallery_title || "Moments we've styled"} subtitle={site?.home_gallery_subtitle || "A glimpse into the celebrations we've been lucky to design."} />
-          <Link to="/portfolio" className="btn-secondary self-start">Full gallery <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/portfolio" className="btn-secondary self-start">Full portfolio <ArrowRight className="h-4 w-4" /></Link>
         </motion.div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="home-gallery-preview">
           {gallery.map((g, i) => (
@@ -493,7 +493,7 @@ const SplitHero = ({ site }) => {
           <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
             {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link to={site?.hero_secondary_cta_href || '/gallery'} className="btn-secondary" style={secondaryBtnStyle} data-testid="home-hero-secondary-cta">
+          <Link to={site?.hero_secondary_cta_href || '/portfolio'} className="btn-secondary" style={secondaryBtnStyle} data-testid="home-hero-secondary-cta">
             {site?.hero_secondary_cta_label || 'View the portfolio'}
           </Link>
         </div>
@@ -635,7 +635,7 @@ const FullBleedHero = ({ site }) => {
             {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
-            to={site?.hero_secondary_cta_href || '/gallery'}
+            to={site?.hero_secondary_cta_href || '/portfolio'}
             className="btn-secondary"
             style={secondaryBtnStyle}
             data-testid="home-hero-secondary-cta"

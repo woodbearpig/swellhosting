@@ -444,7 +444,7 @@ async def _startup():
         try:
             sc = await db.site_content.find_one(
                 {"id": "site_content_singleton"},
-                {"_id": 0, "header_nav_items": 1, "hero_secondary_cta_href": 1},
+                {"_id": 0, "header_nav_items": 1, "hero_secondary_cta_href": 1, "hero_secondary_cta_label": 1},
             ) or {}
             update = {}
             nav = list(sc.get("header_nav_items") or [])
@@ -462,6 +462,8 @@ async def _startup():
                 update["header_nav_items"] = nav
             if sc.get("hero_secondary_cta_href") == "/gallery":
                 update["hero_secondary_cta_href"] = "/portfolio"
+            if sc.get("hero_secondary_cta_label") == "View the gallery":
+                update["hero_secondary_cta_label"] = "View the portfolio"
             if update:
                 await db.site_content.update_one(
                     {"id": "site_content_singleton"},

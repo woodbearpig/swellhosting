@@ -384,7 +384,7 @@ const InquiryWizardPage = () => {
             </div>
           )}
           <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
-            <button className="btn-primary" onClick={() => navigate('/gallery')}>Browse the gallery</button>
+            <button className="btn-primary" onClick={() => navigate('/portfolio')}>Browse the portfolio</button>
             <button className="btn-secondary" onClick={() => { setDone(false); setStepIdx(0); setConsultChoice(null); setConsultDT({ date: '', time: '' }); }}>{isPreview ? 'Restart preview' : 'Start another inquiry'}</button>
           </div>
         </motion.div>

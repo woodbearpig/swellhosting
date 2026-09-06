@@ -7,7 +7,7 @@ import { useSite } from '@/context/SiteContext';
 
 const DEFAULT_NAV = [
   { id: 'nav-services', label: 'Services', href: '/services', visible: true, new_tab: false },
-  { id: 'nav-gallery', label: 'Gallery', href: '/gallery', visible: true, new_tab: false },
+  { id: 'nav-gallery', label: 'Portfolio', href: '/portfolio', visible: true, new_tab: false },
   { id: 'nav-about', label: 'About', href: '/about', visible: true, new_tab: false },
   { id: 'nav-testimonials', label: 'Testimonials', href: '/testimonials', visible: true, new_tab: false },
   { id: 'nav-facebook', label: 'Facebook', href: '/facebook', visible: true, new_tab: false },

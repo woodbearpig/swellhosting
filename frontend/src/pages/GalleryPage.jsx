@@ -45,7 +45,7 @@ const GalleryPage = () => {
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="gallery-page">
       {showHeader && (
-        <SectionHeader eyebrow="GALLERY" title="A closer look at our work" subtitle="Filter by event type to explore recent installations." />
+        <SectionHeader eyebrow="PORTFOLIO" title="A closer look at our work" subtitle="Filter by event type to explore recent installations." />
       )}
 
       {showFilters && categories.length > 1 && (

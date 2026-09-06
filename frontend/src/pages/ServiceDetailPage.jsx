@@ -33,7 +33,7 @@ const ServiceDetailPage = () => {
             <p className="text-base text-[color:var(--brand-text-muted)] mt-5 leading-relaxed max-w-lg">{service.description}</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link to="/inquire" className="btn-primary" data-testid="service-inquire-cta">Start your inquiry <ArrowRight className="h-4 w-4" /></Link>
-              <Link to="/portfolio" className="btn-secondary" data-testid="service-gallery-cta">View the gallery</Link>
+              <Link to="/portfolio" className="btn-secondary" data-testid="service-gallery-cta">View the portfolio</Link>
               {service.price_from && <span className="badge-soft">From {service.price_from}</span>}
             </div>
           </div>
@@ -81,7 +81,7 @@ const ServiceDetailPage = () => {
 
       {service.images?.length > 0 && (
         <section className="container-narrow py-10">
-          <h2 className="font-serif text-3xl mb-6">Gallery</h2>
+          <h2 className="font-serif text-3xl mb-6">Portfolio</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {service.images.map((src, i) => (
               <div key={i} className="gallery-image aspect-square"><img src={src} alt={service.title} className="h-full w-full object-cover" /></div>
@@ -109,7 +109,7 @@ const ServiceDetailPage = () => {
         <p className="text-[color:var(--brand-text-muted)] max-w-xl mx-auto mt-3">Share your vision in a quick smart inquiry — we'll get back to you within 1–2 business days.</p>
         <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
           <Link to="/inquire" className="btn-primary">Start your inquiry</Link>
-          <Link to="/portfolio" className="btn-secondary">See the gallery</Link>
+          <Link to="/portfolio" className="btn-secondary">See the portfolio</Link>
         </div>
       </section>
     </div>
