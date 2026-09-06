@@ -1,14 +1,22 @@
 [
   {
-    "content": "Rewrite HeroSlideshow: preload+decode frames, gate cycling until decoded, eager-load, GPU opacity compositing",
+    "content": "Backend: Turnstile verify helper + apply to /inquiries & /auth/login; public-config endpoint",
     "status": "completed"
   },
   {
-    "content": "Fix CSS: remove permanent will-change:transform on .hero-perf/.hero-img-perf; add .hero-slide opacity-composite class",
+    "content": "Backend: login rate-limit + lockout (5 fails/15min, CF-Connecting-IP aware)",
     "status": "completed"
   },
   {
-    "content": "Production build + scroll/transition screenshot verification",
+    "content": "Backend .env + docker-compose passthrough for TURNSTILE keys",
+    "status": "completed"
+  },
+  {
+    "content": "Frontend: TurnstileWidget component + wire into inquiry wizard & admin login",
+    "status": "completed"
+  },
+  {
+    "content": "Production build + browser verification + backend testing agent (10/10 passed)",
     "status": "completed"
   }
 ]

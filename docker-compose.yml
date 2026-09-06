@@ -41,6 +41,8 @@ services:
       PUBLIC_BACKEND_URL: "${PUBLIC_BACKEND_URL:-https://swelldesignla.com}"
       PUBLIC_FRONTEND_URL: "${PUBLIC_FRONTEND_URL:-https://swelldesignla.com}"
       META_GRAPH_VERSION: "${META_GRAPH_VERSION:-v20.0}"
+      TURNSTILE_SITE_KEY: "${TURNSTILE_SITE_KEY:-}"
+      TURNSTILE_SECRET_KEY: "${TURNSTILE_SECRET_KEY:-}"
     volumes:
       - uploads_data:/app/uploads
     networks: [swell-net]

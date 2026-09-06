@@ -22,8 +22,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => { loadMe(); }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  const login = async (email, password, turnstileToken = null) => {
+    const { data } = await api.post('/auth/login', { email, password, turnstile_token: turnstileToken });
     localStorage.setItem('swell_admin_token', data.token);
     setUser(data.user);
     return data.user;

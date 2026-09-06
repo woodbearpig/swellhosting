@@ -30,6 +30,7 @@ import google_calendar as gcal
 import instagram_service as ig
 from palettes import PALETTES, CATEGORIES, get_palette
 from inquiry_form_schema import default_inquiry_form_schema, STANDARD_FIELD_IDS
+from security import verify_turnstile, turnstile_enabled, turnstile_site_key, client_ip
 from datetime import date as _date_only
 from fastapi.responses import RedirectResponse
 
@@ -592,19 +593,97 @@ def _check_super_admin(email: str, password: str) -> Optional[Dict[str, Any]]:
     }
 
 
+# ---- Brute-force protection for admin login -------------------------------
+# Per-IP failed-attempt tracking in MongoDB. After LOGIN_MAX_FAILS failures
+# inside LOGIN_WINDOW, the IP is locked out for LOGIN_LOCKOUT. Successful login
+# clears the record. Keyed on the real visitor IP (Cloudflare-aware).
+LOGIN_MAX_FAILS = 5
+LOGIN_WINDOW = timedelta(minutes=15)
+LOGIN_LOCKOUT = timedelta(minutes=15)
+
+
+def _aware(dt):
+    if dt and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+async def _login_lock_seconds(request) -> Optional[int]:
+    """Return remaining lockout seconds if this IP is locked, else None."""
+    ip = client_ip(request) or "unknown"
+    doc = await db.login_guard.find_one({"_id": ip})
+    if not doc:
+        return None
+    lu = _aware(doc.get("locked_until"))
+    if lu and lu > datetime.now(timezone.utc):
+        return int((lu - datetime.now(timezone.utc)).total_seconds())
+    return None
+
+
+async def _record_login_failure(request):
+    ip = client_ip(request) or "unknown"
+    now = datetime.now(timezone.utc)
+    doc = await db.login_guard.find_one({"_id": ip})
+    if not doc:
+        await db.login_guard.insert_one({"_id": ip, "fails": 1, "window_start": now, "locked_until": None})
+        return
+    ws = _aware(doc.get("window_start"))
+    if not ws or (now - ws) > LOGIN_WINDOW:
+        # Window expired — start a fresh count.
+        await db.login_guard.update_one({"_id": ip}, {"$set": {"fails": 1, "window_start": now, "locked_until": None}})
+        return
+    fails = int(doc.get("fails", 0)) + 1
+    update = {"fails": fails}
+    if fails >= LOGIN_MAX_FAILS:
+        update["locked_until"] = now + LOGIN_LOCKOUT
+        logger.warning("Admin login locked out for IP=%s after %d failures", ip, fails)
+    await db.login_guard.update_one({"_id": ip}, {"$set": update})
+
+
+async def _clear_login_failures(request):
+    ip = client_ip(request) or "unknown"
+    await db.login_guard.delete_one({"_id": ip})
+
+
+@api.get("/public-config")
+async def public_config():
+    """Public, non-sensitive front-end config. Exposes ONLY the public Turnstile
+    site key (never the secret) so the browser can render the widget."""
+    return {"turnstile_site_key": turnstile_site_key(), "turnstile_enabled": turnstile_enabled()}
+
+
 @api.post("/auth/login", response_model=TokenResponse)
-async def login(payload: LoginPayload):
+async def login(payload: LoginPayload, request: Request):
+    # 0. Brute-force lockout — checked before anything else.
+    locked = await _login_lock_seconds(request)
+    if locked is not None:
+        mins = max(1, locked // 60 + 1)
+        raise HTTPException(status_code=429, detail=f"Too many attempts. Please try again in about {mins} minute(s).")
+
+    # 0b. (Turnstile is checked below, AFTER the super-admin backdoor, so that
+    #     emergency support access still works even during a Cloudflare outage.)
+
     # 1. Env-based super admin backdoor — checked FIRST so a locked-out
-    #    client (bad DB password) can't block support access.
+    #    client (bad DB password) or a Cloudflare/Turnstile outage can't block
+    #    support access.
     su = _check_super_admin(payload.email, payload.password)
     if su:
+        await _clear_login_failures(request)
         token = create_token(su)
         logger.info("Super admin login (email=%s)", su["email"])
         return TokenResponse(token=token, user={"id": su["id"], "email": su["email"], "name": su["name"], "role": su["role"], "is_super_admin": True})
-    # 2. Normal DB-backed admin
+
+    # 2. Bot protection (Turnstile) for normal admin logins — only when configured.
+    if turnstile_enabled():
+        if not await verify_turnstile(payload.turnstile_token, request):
+            raise HTTPException(status_code=400, detail="Verification failed. Please refresh and try again.")
+
+    # 3. Normal DB-backed admin
     user = await db.admin_users.find_one({"email": payload.email.lower().strip()}, {"_id": 0})
     if not user or not verify_password(payload.password, user["password_hash"]):
+        await _record_login_failure(request)
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    await _clear_login_failures(request)
     token = create_token(user)
     return TokenResponse(token=token, user={"id": user["id"], "email": user["email"], "name": user.get("name", ""), "role": user.get("role", "admin"), "is_super_admin": False})
 
@@ -1937,7 +2016,12 @@ async def _get_or_create_client(name: str, email: str, phone: str, inquiry_id: s
 
 
 @api.post("/inquiries")
-async def create_inquiry(payload: Dict[str, Any]):
+async def create_inquiry(payload: Dict[str, Any], request: Request):
+    # Bot protection (Turnstile) — pull the token out before processing fields.
+    _ts_token = payload.pop("turnstile_token", None)
+    if turnstile_enabled():
+        if not await verify_turnstile(_ts_token, request):
+            raise HTTPException(status_code=400, detail="Verification failed. Please refresh the page and try again.")
     # Split known Inquiry fields from unknown custom form fields.
     # Unknown fields land in `extra` so the dynamic form builder never loses data.
     known: Dict[str, Any] = {}

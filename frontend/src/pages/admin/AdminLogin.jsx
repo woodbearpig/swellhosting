@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/Logo';
+import { TurnstileWidget, tokenForApi } from '@/components/TurnstileWidget';
 
 const AdminLogin = () => {
   const { login, user, loading } = useAuth();
@@ -11,19 +12,25 @@ const AdminLogin = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [tsToken, setTsToken] = useState('');
   const navigate = useNavigate();
 
   if (!loading && user) return <Navigate to="/admin" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!tsToken) { toast.error('Please wait a moment for the security check to finish.'); return; }
     setBusy(true);
     try {
-      await login(email, password);
+      await login(email, password, tokenForApi(tsToken));
       toast.success('Welcome back!');
       navigate('/admin');
-    } catch (_) {
-      toast.error('Invalid email or password.');
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 429) toast.error(detail || 'Too many attempts. Please try again shortly.');
+      else if (status === 400 && detail) toast.error(detail);
+      else toast.error('Invalid email or password.');
     } finally { setBusy(false); }
   };
 
@@ -59,7 +66,8 @@ const AdminLogin = () => {
               </button>
             </div>
           </div>
-          <button type="submit" disabled={busy} className="btn-primary w-full" data-testid="admin-login-submit">{busy ? 'Signing in…' : 'Sign in'}</button>
+          <TurnstileWidget action="login" onToken={setTsToken} className="flex justify-center" />
+          <button type="submit" disabled={busy || !tsToken} className="btn-primary w-full" data-testid="admin-login-submit">{busy ? 'Signing in…' : 'Sign in'}</button>
           <div className="text-center pt-1">
             <Link
               to="/admin/forgot-password"

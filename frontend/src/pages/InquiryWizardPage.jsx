@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X, Sparkles, Plus, Phone, 
 import { toast } from 'sonner';
 import { api, uploadFile, publicUrl } from '@/lib/api';
 import { ConsultScheduler } from '@/components/ConsultScheduler';
+import { TurnstileWidget, tokenForApi } from '@/components/TurnstileWidget';
 
 const STORAGE_KEY = 'swell_inquiry_draft_v2';
 
@@ -253,6 +254,7 @@ const InquiryWizardPage = () => {
   const [stepIdx, setStepIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [tsToken, setTsToken] = useState('');
   // Consult step state — a "virtual" step appended after the schema's own steps
   const [consultChoice, setConsultChoice] = useState(null); // null | 'schedule' | 'skip'
   const [consultDT, setConsultDT] = useState({ date: '', time: '' });
@@ -328,7 +330,7 @@ const InquiryWizardPage = () => {
     }
     setSubmitting(true);
     try {
-      const payload = { ...values, source: 'wizard' };
+      const payload = { ...values, source: 'wizard', turnstile_token: tokenForApi(tsToken) };
       if (!skipConsult && consultChoice === 'schedule' && consultDT.date && consultDT.time) {
         payload.consult_date = consultDT.date;
         payload.consult_time = consultDT.time;
@@ -505,7 +507,7 @@ const InquiryWizardPage = () => {
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
         {isConsultStep ? (
-          <button type="button" className="btn-primary" onClick={attemptSubmit} disabled={submitting || !consultChoice} data-testid="wizard-submit">
+          <button type="button" className="btn-primary" onClick={attemptSubmit} disabled={submitting || !consultChoice || (!isPreview && !tsToken)} data-testid="wizard-submit">
             {submitting ? 'Submitting…' : (isPreview ? 'Finish preview' : 'Submit inquiry')} <ArrowRight className="h-4 w-4" />
           </button>
         ) : (
@@ -514,6 +516,11 @@ const InquiryWizardPage = () => {
           </button>
         )}
       </div>
+      {isConsultStep && !isPreview && (
+        <div className="mt-4 flex justify-center" data-testid="wizard-turnstile">
+          <TurnstileWidget action="inquiry" onToken={setTsToken} />
+        </div>
+      )}
 
       {/* Skip-consult confirmation modal */}
       <AnimatePresence>
@@ -540,7 +547,7 @@ const InquiryWizardPage = () => {
               </div>
               <div className="mt-5 flex gap-2 justify-end">
                 <button type="button" className="btn-secondary" onClick={() => setShowSkipConfirm(false)} data-testid="skip-modal-back">Back</button>
-                <button type="button" className="btn-primary" onClick={() => doSubmit(true)} disabled={submitting} data-testid="skip-modal-confirm">
+                <button type="button" className="btn-primary" onClick={() => doSubmit(true)} disabled={submitting || (!isPreview && !tsToken)} data-testid="skip-modal-confirm">
                   {submitting ? 'Submitting…' : 'Yes, submit without consult'}
                 </button>
               </div>

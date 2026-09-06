@@ -31,6 +31,7 @@ class AdminUser(Base):
 class LoginPayload(Base):
     email: str
     password: str
+    turnstile_token: Optional[str] = None
 
 
 class TokenResponse(Base):
