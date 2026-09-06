@@ -65,7 +65,6 @@ export const Header = () => {
       ? site.header_nav_items
       : DEFAULT_NAV;
     const servicesDisabled = site?.services_page_active === false;
-    const blogDisabled = site?.blog_page_active === false;
     const faqDisabled = site?.faq_page_active === false;
     const socialDisabled = site?.social_page_active !== true;
     const filtered = configured.filter(n => {
@@ -73,8 +72,6 @@ export const Header = () => {
       // Hide any nav item pointing to /services (or a sub-route) when the
       // owner has disabled the Services page site-wide.
       if (servicesDisabled && typeof n.href === 'string' && n.href.startsWith('/services')) return false;
-      // Same for /blog.
-      if (blogDisabled && typeof n.href === 'string' && n.href.startsWith('/blog')) return false;
       // Same for /faq.
       if (faqDisabled && typeof n.href === 'string' && n.href.startsWith('/faq')) return false;
       // Facebook page is OFF by default — only show when explicitly enabled.
@@ -91,7 +88,7 @@ export const Header = () => {
       else filtered.splice(anchorIdx, 0, fbItem);
     }
     return filtered;
-  }, [site?.header_nav_items, site?.services_page_active, site?.blog_page_active, site?.faq_page_active, site?.social_page_active]);
+  }, [site?.header_nav_items, site?.services_page_active, site?.faq_page_active, site?.social_page_active]);
 
   const showLogo = site?.header_show_logo !== false;
   const showThemeToggle = site?.header_show_theme_toggle !== false;

@@ -3,6 +3,7 @@ import os
 import re
 import uuid
 import shutil
+import tempfile
 import logging
 from pathlib import Path
 from datetime import datetime, timezone, timedelta, date, time as dt_time
@@ -19,7 +20,7 @@ from dotenv import load_dotenv
 
 from models import (
     AdminUser, LoginPayload, TokenResponse,
-    SiteContent, Service, GalleryItem, Testimonial, Backdrop, ReplyTemplate, FAQ, BlogPost,
+    SiteContent, Service, GalleryItem, Testimonial, Backdrop, ReplyTemplate, FAQ,
     Inquiry, Client, Consultation, Availability, NewsletterSubscriber,
     CustomPalette,
 )
@@ -379,24 +380,6 @@ async def _startup():
         except Exception as e:
             logger.warning("Media library migration failed: %s", e)
 
-        # Rename any legacy "Journal" nav item to "Blog" (one-time, safe if already renamed)
-        try:
-            sc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0, "header_nav_items": 1}) or {}
-            nav = sc.get("header_nav_items") or []
-            changed = False
-            for item in nav:
-                if isinstance(item, dict) and item.get("id") == "nav-blog" and item.get("label") == "Journal":
-                    item["label"] = "Blog"
-                    changed = True
-            if changed:
-                await db.site_content.update_one(
-                    {"id": "site_content_singleton"},
-                    {"$set": {"header_nav_items": nav}},
-                )
-                logger.info("Renamed legacy 'Journal' nav item to 'Blog'")
-        except Exception as e:
-            logger.warning("Journal->Blog nav rename failed: %s", e)
-
         # Ensure a "Backdrops & Designs" nav item exists (idempotent) — inserted right after Services if missing.
         # If a legacy "Backdrops" item exists, rename its label in place.
         try:
@@ -428,6 +411,33 @@ async def _startup():
                 logger.info("Nav 'Backdrops & Designs' upserted")
         except Exception as e:
             logger.warning("Backdrops nav upsert failed: %s", e)
+
+        # Blog removal cleanup (idempotent) — the Blog feature was fully removed
+        # in favour of the dedicated Facebook page. Drop the now-unused
+        # `blog_page_active` field and strip any leftover "nav-blog" / "/blog"
+        # items from a custom saved header nav so nothing references it anywhere.
+        try:
+            sc = await db.site_content.find_one(
+                {"id": "site_content_singleton"}, {"_id": 0, "header_nav_items": 1}
+            ) or {}
+            nav = list(sc.get("header_nav_items") or [])
+            cleaned = [
+                it for it in nav
+                if not (isinstance(it, dict) and (it.get("id") == "nav-blog" or (isinstance(it.get("href"), str) and it.get("href", "").startswith("/blog"))))
+            ]
+            update: Dict[str, Any] = {"$unset": {"blog_page_active": ""}}
+            if len(cleaned) != len(nav):
+                update["$set"] = {"header_nav_items": cleaned}
+            await db.site_content.update_one({"id": "site_content_singleton"}, update)
+            # Drop the legacy blog collection if it exists (data no longer used).
+            try:
+                await db.blog_posts.drop()
+            except Exception:
+                pass
+            logger.info("Blog cleanup migration applied")
+        except Exception as e:
+            logger.warning("Blog cleanup migration failed: %s", e)
+
 
         # Rename any legacy "/gallery" URLs → "/portfolio" (folder path polish). Safe & idempotent.
         # Updates header_nav_items[].href/label AND hero_secondary_cta_href in-place.
@@ -1220,20 +1230,26 @@ async def upload_file(file: UploadFile = File(...)):
     name = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOAD_DIR / name
 
-    # Save raw first
-    tmp_path = UPLOAD_DIR / f".tmp_{name}"
-    with tmp_path.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    # Stage the incoming stream in the OS temp dir (transient scratch space),
+    # then persist the final, processed file into UPLOAD_DIR (the persistent
+    # media volume). Keeping the raw staging buffer out of UPLOAD_DIR avoids
+    # leaving partial/temp artifacts in the served media directory.
+    fd, tmp_name = tempfile.mkstemp(suffix=ext)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            shutil.copyfileobj(file.file, f)
 
-    meta = {"width": 0, "height": 0, "size_bytes": tmp_path.stat().st_size}
-    if ext in IMAGE_EXTS:
-        meta = _process_image(tmp_path, dest)
+        meta = {"width": 0, "height": 0, "size_bytes": tmp_path.stat().st_size}
+        if ext in IMAGE_EXTS:
+            meta = _process_image(tmp_path, dest)
+        else:
+            shutil.move(str(tmp_path), str(dest))
+    finally:
         try:
             tmp_path.unlink(missing_ok=True)
         except Exception:
             pass
-    else:
-        tmp_path.rename(dest)
 
     url = f"/api/uploads/{name}"
 
@@ -1314,7 +1330,7 @@ async def delete_media(mid: str, admin=Depends(require_admin)):
 
 
 async def _migrate_media_library() -> int:
-    """One-time index of pre-existing images (SiteContent, Services, Gallery, Blog) into media_library.
+    """One-time index of pre-existing images (SiteContent, Services, Gallery) into media_library.
     Idempotent — only inserts records for URLs not already indexed.
     """
     indexed_urls = set()
@@ -1352,9 +1368,6 @@ async def _migrate_media_library() -> int:
 
     async for g in db.gallery.find({}, {"_id": 0}):
         maybe_add(g.get("image_url", ""), tag="gallery")
-
-    async for b in db.blog_posts.find({}, {"_id": 0}):
-        maybe_add(b.get("cover_image_url", ""), tag="blog")
 
     if to_index:
         await db.media_library.insert_many(to_index)
@@ -1933,51 +1946,6 @@ async def update_faq(fid: str, payload: Dict[str, Any], admin=Depends(require_ad
 @api.delete("/admin/faqs/{fid}")
 async def delete_faq(fid: str, admin=Depends(require_admin)):
     await db.faqs.delete_one({"id": fid})
-    return {"ok": True}
-
-
-# =========================================================
-# Blog
-# =========================================================
-@api.get("/blog")
-async def list_blog(published: Optional[bool] = True):
-    query: Dict[str, Any] = {}
-    if published is not None:
-        query["published"] = published
-    docs = await db.blog_posts.find(query, {"_id": 0}).sort("published_at", -1).to_list(500)
-    return docs
-
-
-@api.get("/blog/{slug}")
-async def get_blog(slug: str):
-    doc = await db.blog_posts.find_one({"slug": slug}, {"_id": 0})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return doc
-
-
-@api.post("/admin/blog")
-async def create_blog(payload: Dict[str, Any], admin=Depends(require_admin)):
-    if not payload.get("slug"):
-        payload["slug"] = slugify(payload.get("title", "post"))
-    obj = BlogPost(**payload)
-    await db.blog_posts.insert_one(to_doc(obj.model_dump()))
-    return await db.blog_posts.find_one({"id": obj.id}, {"_id": 0})
-
-
-@api.put("/admin/blog/{bid}")
-async def update_blog(bid: str, payload: Dict[str, Any], admin=Depends(require_admin)):
-    if "title" in payload and not payload.get("slug"):
-        payload["slug"] = slugify(payload["title"])
-    r = await db.blog_posts.update_one({"id": bid}, {"$set": to_doc(payload)})
-    if r.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Not found")
-    return await db.blog_posts.find_one({"id": bid}, {"_id": 0})
-
-
-@api.delete("/admin/blog/{bid}")
-async def delete_blog(bid: str, admin=Depends(require_admin)):
-    await db.blog_posts.delete_one({"id": bid})
     return {"ok": True}
 
 
@@ -3122,7 +3090,6 @@ async def get_system_stats(_su=Depends(require_super_admin)):
         "backdrops": await db.backdrops.count_documents({}),
         "testimonials": await db.testimonials.count_documents({}),
         "faqs": await db.faqs.count_documents({}),
-        "blog_posts": await db.blog_posts.count_documents({}),
         "media_assets": await db.media_library.count_documents({}),
         "admin_users": await db.admin_users.count_documents({}),
         "newsletter_subscribers": await db.newsletter_subscribers.count_documents({}),

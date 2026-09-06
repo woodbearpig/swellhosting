@@ -288,12 +288,7 @@ class SiteContent(Base):
     # their configuration.
     services_page_active: bool = True
 
-    # Blog — off by default. Most event stylists don't blog, or use their IG
-    # feed as their "blog". When false: /blog and /blog/:slug redirect to home,
-    # the "Blog" item is hidden from header & footer nav. Owner can flip it on
-    # anytime; her existing blog posts are preserved.
-    blog_page_active: bool = False
-    # Dedicated Facebook page (replaces the old Blog). OFF by default — flip
+    # Dedicated Facebook page. OFF by default — flip
     # social_page_active on to reveal the /facebook route, the header nav item,
     # the footer link, and the "See all of our Facebook" button on the homepage.
     social_page_active: bool = False
@@ -354,7 +349,6 @@ class SiteContent(Base):
         {"id": "nav-gallery", "label": "Portfolio", "href": "/portfolio", "visible": True, "new_tab": False},
         {"id": "nav-about", "label": "About", "href": "/about", "visible": True, "new_tab": False},
         {"id": "nav-testimonials", "label": "Testimonials", "href": "/testimonials", "visible": True, "new_tab": False},
-        {"id": "nav-blog", "label": "Blog", "href": "/blog", "visible": True, "new_tab": False},
         {"id": "nav-faq", "label": "FAQ", "href": "/faq", "visible": True, "new_tab": False},
         {"id": "nav-contact", "label": "Contact", "href": "/contact", "visible": True, "new_tab": False},
     ])
@@ -574,24 +568,6 @@ class FAQ(Base):
     question: str
     answer: str
     order: int = 0
-
-
-# =========================
-# Blog
-# =========================
-class BlogPost(Base):
-    id: str = Field(default_factory=_uid)
-    slug: str
-    title: str
-    excerpt: str = ""
-    content: str = ""
-    cover_image_url: str = ""
-    tags: List[str] = Field(default_factory=list)
-    featured: bool = False   # if True, gets a bigger 2x2 tile in the public grid
-    author: str = "swell design + media"
-    published: bool = True
-    published_at: datetime = Field(default_factory=_now)
-    created_at: datetime = Field(default_factory=_now)
 
 
 # =========================

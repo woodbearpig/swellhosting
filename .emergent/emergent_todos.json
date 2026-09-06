@@ -1,26 +1,30 @@
 [
   {
-    "content": "Backend: add social_page_* fields (active off by default, heading, intro, snippet, button label)",
-    "status": "in_progress"
+    "content": "Backend: remove BlogPost model, blog_page_active field, nav-blog default item (models.py)",
+    "status": "completed"
   },
   {
-    "content": "App.js: add SocialGuard + /facebook route + FacebookPage component",
-    "status": "pending"
+    "content": "Backend: remove /blog routes, BlogPost import, blog migration & metrics refs (server.py)",
+    "status": "completed"
   },
   {
-    "content": "Header + Footer: replace Blog nav with Facebook (gated by social_page_active)",
-    "status": "pending"
+    "content": "Frontend: remove Blog imports, /blog routes, BlogGuard, admin blog route (App.js)",
+    "status": "completed"
   },
   {
-    "content": "HomeEmbedSection: add 'See all of our Facebook' button under widget (when active)",
-    "status": "pending"
+    "content": "Frontend: remove BlogListPage/BlogDetailPage/BlogTile (StaticPages.jsx)",
+    "status": "completed"
   },
   {
-    "content": "Admin: Facebook page card (toggle, heading, intro, snippet, button label)",
-    "status": "pending"
+    "content": "Frontend: remove blogDisabled logic (Header.jsx) & Blog nav item (AdminLayout.jsx); delete AdminBlog.jsx",
+    "status": "completed"
   },
   {
-    "content": "Build + verify (page off by default; on when toggled)",
-    "status": "pending"
+    "content": "Cleanup: remove blog from seed.py + idempotent DB migration (unset field, drop collection, strip nav)",
+    "status": "completed"
+  },
+  {
+    "content": "Verify: esbuild compile, backend restart, screenshot check of nav + homepage intact",
+    "status": "completed"
   }
 ]

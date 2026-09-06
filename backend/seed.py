@@ -10,7 +10,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 from auth import hash_password  # noqa: E402
-from models import SiteContent, Service, ServicePackage, ServiceFAQ, GalleryItem, Testimonial, FAQ, BlogPost, Availability  # noqa: E402
+from models import SiteContent, Service, ServicePackage, ServiceFAQ, GalleryItem, Testimonial, FAQ, Availability  # noqa: E402
 
 
 def iso(v):
@@ -233,38 +233,6 @@ async def seed():
         for f in faqs:
             await db.faqs.insert_one(doc_from_model(f))
         print(f"Seeded {len(faqs)} FAQs")
-
-    # ---- Blog ----
-    if await db.blog_posts.count_documents({}) == 0:
-        posts = [
-            BlogPost(
-                slug="choosing-a-balloon-palette",
-                title="Choosing a Balloon Palette That Feels Like You",
-                excerpt="A calm, considered approach to color — no more overwhelming Pinterest boards.",
-                content="Choosing a palette can feel overwhelming — but it doesn't have to. Start with a swatch you love (a fabric, a flower, a nursery paint chip) and build from there. We usually recommend one anchor color, two supporting tones, and a subtle accent...\n\nThe rest of the process should feel like storytelling — not stress.",
-                cover_image_url="https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85",
-                tags=["palette", "design tips"],
-            ),
-            BlogPost(
-                slug="planning-a-first-birthday",
-                title="Planning a First Birthday That's Beautiful (and Sane)",
-                excerpt="Our favorite way to keep first birthdays sweet, styled, and stress-free.",
-                content="First birthdays are magical — but they can also feel like a lot. Here's how we approach them at swell design + media...",
-                cover_image_url="https://images.unsplash.com/photo-1758870041148-31d28fdf34d9?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85",
-                tags=["birthday", "planning"],
-            ),
-            BlogPost(
-                slug="organic-vs-classic-garlands",
-                title="Organic vs. Classic: Which Garland Style is Right for You?",
-                excerpt="The difference is more than aesthetic — here's how to choose.",
-                content="Organic garlands feel loose, artful, and unstructured — perfect for garden weddings and dreamy showers. Classic garlands are uniform and architectural — ideal for corporate events...",
-                cover_image_url="https://images.unsplash.com/photo-1758738181955-3f917d756275?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85",
-                tags=["design tips"],
-            ),
-        ]
-        for p in posts:
-            await db.blog_posts.insert_one(doc_from_model(p))
-        print(f"Seeded {len(posts)} blog posts")
 
     print("Seed complete.")
     client.close()

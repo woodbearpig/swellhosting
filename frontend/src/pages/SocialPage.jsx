@@ -3,7 +3,7 @@ import { useSite } from '@/context/SiteContext';
 import { EmbedWidget, WidgetPlaceholder } from '@/components/EmbedWidget';
 
 /**
- * SocialPage — the dedicated Facebook page (replaces the old Blog).
+ * SocialPage — the dedicated Facebook page.
  *
  * Renders an admin-controlled heading + intro, then the Elfsight "Facebook
  * Feed" grid widget pasted into social_page_snippet. When the snippet is empty
