@@ -451,6 +451,38 @@ const EmbedWidgetCard = memo(function EmbedWidgetCard({ data, set }) {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="eyebrow block mb-1">BUTTON LABEL</label>
+              <TextField
+                value={data.home_widget_cta_label || ''}
+                onCommit={v => set({ home_widget_cta_label: v })}
+                placeholder="Follow on Facebook"
+                data-testid="admin-home-widget-cta-label"
+              />
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">BUTTON LINK (leave blank to hide)</label>
+              <TextField
+                value={data.home_widget_cta_url || ''}
+                onCommit={v => set({ home_widget_cta_url: v })}
+                placeholder="https://www.facebook.com/yourpage/"
+                data-testid="admin-home-widget-cta-url"
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="accent-[color:var(--brand-sage-deep)] h-4 w-4"
+              checked={data.home_widget_band !== false}
+              onChange={e => set({ home_widget_band: e.target.checked })}
+              data-testid="admin-home-widget-band"
+            />
+            <span className="text-sm">Soft background band behind the section (follows the current palette)</span>
+          </label>
+
           <div className="border-t border-[color:var(--brand-border)] pt-4 space-y-3">
             <div className="flex items-start gap-2 rounded-xl bg-[color:var(--brand-blush-tint)] p-3">
               <AlertTriangle className="h-4 w-4 text-[color:var(--brand-text)] mt-0.5 shrink-0" />
