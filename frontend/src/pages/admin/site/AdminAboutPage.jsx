@@ -17,6 +17,16 @@ const AdminAboutPage = () => {
       />
 
       <div className="card-cream p-6 space-y-4">
+        <p className="font-serif text-xl">Page header (/about)</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)] -mt-2">The eyebrow, title, and subtitle at the top of your About page. Leave the eyebrow or subtitle blank to hide it.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="eyebrow block mb-1">EYEBROW</label><TextField value={data.about_page_eyebrow ?? ''} onCommit={v => set({ about_page_eyebrow: v })} placeholder="ABOUT" data-testid="about-page-eyebrow" /></div>
+          <div><label className="eyebrow block mb-1">TITLE</label><TextField value={data.about_page_title ?? ''} onCommit={v => set({ about_page_title: v })} placeholder="About swell design + media" data-testid="about-page-title" /></div>
+        </div>
+        <div><label className="eyebrow block mb-1">SUBTITLE</label><TextArea rows={2} value={data.about_page_subtitle ?? ''} onCommit={v => set({ about_page_subtitle: v })} placeholder="A boutique LA-based studio dedicated to thoughtful, custom event styling." data-testid="about-page-subtitle" /></div>
+      </div>
+
+      <div className="card-cream p-6 space-y-4">
         <div><label className="eyebrow block mb-1">ABOUT SHORT (home)</label><TextArea rows={2} value={data.about_short || ''} onCommit={v => set({ about_short: v })} /></div>
         <div><label className="eyebrow block mb-1">ABOUT FULL (About page)</label><TextArea rows={6} value={data.about_full || ''} onCommit={v => set({ about_full: v })} /></div>
         <div>

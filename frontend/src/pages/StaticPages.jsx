@@ -66,7 +66,11 @@ export const AboutPage = () => {
 
   return (
     <div className="container-narrow py-14 sm:py-20" data-testid="about-page">
-      <SectionHeader eyebrow="ABOUT" title="About swell design + media" subtitle="A boutique LA-based studio dedicated to thoughtful, custom event styling." />
+      <SectionHeader
+        eyebrow={site?.about_page_eyebrow ?? 'ABOUT'}
+        title={site?.about_page_title || 'About swell design + media'}
+        subtitle={site?.about_page_subtitle ?? 'A boutique LA-based studio dedicated to thoughtful, custom event styling.'}
+      />
       {isStacked ? (
         <div className="mt-10 space-y-10">
           {ImageBlock}
