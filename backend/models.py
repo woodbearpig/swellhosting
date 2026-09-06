@@ -74,7 +74,7 @@ class SiteContent(Base):
     hero_text_vertical_pos: float = 50.0
     hero_primary_cta_label: str = "Start your inquiry"
     hero_primary_cta_href: str = "/inquire"
-    hero_secondary_cta_label: str = "View the gallery"
+    hero_secondary_cta_label: str = "View the portfolio"
     hero_secondary_cta_href: str = "/portfolio"
     # Small chip badges below the hero CTA buttons ("Fully custom", "On-site install", etc.)
     hero_badges_active: bool = True

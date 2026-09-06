@@ -494,7 +494,7 @@ const SplitHero = ({ site }) => {
             {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
           </Link>
           <Link to={site?.hero_secondary_cta_href || '/gallery'} className="btn-secondary" style={secondaryBtnStyle} data-testid="home-hero-secondary-cta">
-            {site?.hero_secondary_cta_label || 'View the gallery'}
+            {site?.hero_secondary_cta_label || 'View the portfolio'}
           </Link>
         </div>
         <HeroBadges site={site} />
@@ -640,7 +640,7 @@ const FullBleedHero = ({ site }) => {
             style={secondaryBtnStyle}
             data-testid="home-hero-secondary-cta"
           >
-            {site?.hero_secondary_cta_label || 'View the gallery'}
+            {site?.hero_secondary_cta_label || 'View the portfolio'}
           </Link>
         </div>
       </div>
