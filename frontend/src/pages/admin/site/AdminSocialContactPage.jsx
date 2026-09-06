@@ -16,11 +16,12 @@ const AdminSocialContactPage = () => {
 
       <div className="card-cream p-6 space-y-4">
         <p className="font-serif text-xl">Contact info</p>
+        <p className="text-xs text-[color:var(--brand-text-muted)] -mt-2">Leave any field blank to hide it from the site (don't type "N/A").</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="eyebrow block mb-1">EMAIL</label><TextField value={data.contact_email || ''} onCommit={v => set({ contact_email: v })} /></div>
-          <div><label className="eyebrow block mb-1">PHONE</label><TextField value={data.contact_phone || ''} onCommit={v => set({ contact_phone: v })} /></div>
-          <div><label className="eyebrow block mb-1">LOCATION</label><TextField value={data.contact_location || ''} onCommit={v => set({ contact_location: v })} /></div>
-          <div><label className="eyebrow block mb-1">HOURS</label><TextField value={data.contact_hours || ''} onCommit={v => set({ contact_hours: v })} /></div>
+          <div><label className="eyebrow block mb-1">EMAIL</label><TextField value={data.contact_email || ''} onCommit={v => set({ contact_email: v })} placeholder="Leave blank to hide" /></div>
+          <div><label className="eyebrow block mb-1">PHONE</label><TextField value={data.contact_phone || ''} onCommit={v => set({ contact_phone: v })} placeholder="Leave blank to hide" /></div>
+          <div><label className="eyebrow block mb-1">LOCATION</label><TextField value={data.contact_location || ''} onCommit={v => set({ contact_location: v })} placeholder="Leave blank to hide" /></div>
+          <div><label className="eyebrow block mb-1">HOURS</label><TextField value={data.contact_hours || ''} onCommit={v => set({ contact_hours: v })} placeholder="Leave blank to hide" /></div>
         </div>
       </div>
 
