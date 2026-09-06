@@ -146,7 +146,7 @@ const HomePage = () => {
       <section className="container-narrow py-14 sm:py-18 lg:py-24" data-testid="home-backdrops-section">
         <motion.div {...fadeInUp} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <SectionHeader eyebrow={site?.home_backdrops_eyebrow || 'BUILDING BLOCKS'} title={site?.home_backdrops_title || 'Backdrops'} subtitle={site?.home_backdrops_subtitle || 'The standalone pieces that anchor an install.'} />
-          <Link to="/backdrops" className="btn-secondary self-start">See all backdrops <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/backdrops" className="btn-secondary self-start">See all backdrops &amp; designs <ArrowRight className="h-4 w-4" /></Link>
         </motion.div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="home-backdrops-grid">
           {backdrops.map(b => <BackdropCard key={b.id} b={b} />)}
