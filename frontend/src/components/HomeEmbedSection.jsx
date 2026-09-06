@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Facebook } from 'lucide-react';
 import { useSite } from '@/context/SiteContext';
+import { SectionHeader } from '@/components/SectionEyebrow';
 import { EmbedWidget, WidgetPlaceholder } from '@/components/EmbedWidget';
 
 const fadeInUp = {
@@ -34,12 +34,8 @@ export const HomeEmbedSection = ({ at }) => {
   const heading = (site?.home_widget_heading || '').trim();
   const subheading = (site?.home_widget_subheading || '').trim();
   const snippet = (site?.home_widget_snippet || '').trim();
-  const ctaLabel = (site?.home_widget_cta_label || 'Follow on Facebook').trim();
-  const ctaUrl = (site?.home_widget_cta_url || '').trim();
   // Default true when the field is missing (back-compat with old docs).
   const showHeader = site?.home_widget_show_header !== false;
-  const showBand = site?.home_widget_band !== false;
-  const hasLeftText = showHeader && (eyebrow || heading || subheading);
 
   // Are we viewing via a preview link (client review) or as public? Preview
   // sessions get the placeholder so the client can visualize placement even
@@ -53,58 +49,24 @@ export const HomeEmbedSection = ({ at }) => {
   // hide the entire section. The placeholder is only useful during preview.
   if (!snippet && !isPreviewSession) return null;
 
-  const widget = snippet
-    ? <EmbedWidget snippet={snippet} />
-    : <WidgetPlaceholder label="Facebook feed will appear here" />;
-
-  // If there's no side content at all, fall back to a simple centered widget.
-  const hasSideColumn = hasLeftText || !!ctaUrl;
-
   return (
     <section
-      className={`py-14 sm:py-18 lg:py-24 ${showBand ? 'bg-[color:var(--brand-sage-tint)]' : ''}`}
+      className="container-narrow py-14 sm:py-18 lg:py-24"
       data-testid="home-embed-widget-section"
       data-widget-position={at}
     >
-      <div className="max-w-6xl mx-auto px-6">
-        {hasSideColumn ? (
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            {/* Left — heading + call to action */}
-            <motion.div {...fadeInUp} className="text-center lg:text-left">
-              {eyebrow && <div className="eyebrow mb-3">{eyebrow}</div>}
-              {heading && (
-                <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-[-0.01em]">
-                  {heading}
-                </h2>
-              )}
-              {subheading && (
-                <p className="mt-4 text-[color:var(--brand-text-muted)] leading-relaxed max-w-md mx-auto lg:mx-0">
-                  {subheading}
-                </p>
-              )}
-              {ctaUrl && (
-                <a
-                  href={ctaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary mt-7 inline-flex"
-                  data-testid="home-widget-cta"
-                >
-                  <Facebook className="h-4 w-4" /> {ctaLabel}
-                </a>
-              )}
-            </motion.div>
-            {/* Right — the (now responsive) widget, kept to a comfortable width */}
-            <motion.div {...fadeInUp} className="w-full flex justify-center lg:justify-end">
-              <div className="w-full max-w-[560px]">{widget}</div>
-            </motion.div>
-          </div>
+      {showHeader && (eyebrow || heading || subheading) && (
+        <motion.div {...fadeInUp} className="mb-10">
+          <SectionHeader eyebrow={eyebrow} title={heading} subtitle={subheading} />
+        </motion.div>
+      )}
+      <motion.div {...fadeInUp}>
+        {snippet ? (
+          <EmbedWidget snippet={snippet} />
         ) : (
-          <motion.div {...fadeInUp} className="w-full flex justify-center">
-            <div className="w-full max-w-[560px]">{widget}</div>
-          </motion.div>
+          <WidgetPlaceholder label="Facebook feed will appear here" />
         )}
-      </div>
+      </motion.div>
     </section>
   );
 };

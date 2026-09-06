@@ -320,12 +320,6 @@ class SiteContent(Base):
     home_widget_subheading: str = ""
     home_widget_snippet: str = ""            # Raw HTML paste (script + div)
     home_widget_position: str = "after-testimonials"  # after-hero | after-services | after-portfolio | after-backdrops | after-testimonials | after-designer | after-faq | before-cta
-    # Optional call-to-action shown beside the widget in the two-column desktop
-    # layout. Button is hidden when the URL is empty.
-    home_widget_cta_label: str = "Follow on Facebook"
-    home_widget_cta_url: str = ""
-    # Soft palette-driven background band behind the widget section.
-    home_widget_band: bool = True
 
     # Footer element visibility + copyright override
     footer_show_logo: bool = True
