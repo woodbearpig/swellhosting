@@ -560,6 +560,7 @@ const FullBleedHero = ({ site }) => {
   const topScrim = vPos < 45 ? ((45 - vPos) / 45) * (overlay + 0.1) : 0;
 
   return (
+    <>
     <section
       className="relative overflow-hidden isolate min-h-[70vh] sm:min-h-[75vh] lg:min-h-[80vh] bg-neutral-900 hero-perf"
       data-testid="home-hero-section-fullbleed"
@@ -621,22 +622,29 @@ const FullBleedHero = ({ site }) => {
               {site.hero_subhead}
             </p>
           )}
-          <div className={`mt-8 flex flex-wrap items-center ${btnJustify} gap-3`}>
-            <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
-              {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to={site?.hero_secondary_cta_href || '/gallery'}
-              className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/20 hover:bg-white/30 text-[color:var(--brand-cream)] px-5 py-2.5 text-sm font-medium transition-colors"
-              style={secondaryBtnStyle}
-              data-testid="home-hero-secondary-cta"
-            >
-              {site?.hero_secondary_cta_label || 'View the gallery'}
-            </Link>
-          </div>
         </motion.div>
       </div>
-    </section>
+      </section>
+
+      {/* Hero CTAs — placed directly beneath the slideshow (not overlaid) so
+          the headline can sit as low as the owner wants without the buttons
+          crowding the bottom edge of the photo. */}
+      <div className="bg-[color:var(--brand-cream)] border-b border-[color:var(--brand-border)]" data-testid="home-hero-cta-bar">
+        <div className={`container-narrow py-5 flex flex-wrap items-center ${btnJustify} gap-3`}>
+          <Link to={site?.hero_primary_cta_href || '/inquire'} className="btn-primary" style={primaryBtnStyle} data-testid="home-hero-primary-cta">
+            {site?.hero_primary_cta_label || 'Start your inquiry'} <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            to={site?.hero_secondary_cta_href || '/gallery'}
+            className="btn-secondary"
+            style={secondaryBtnStyle}
+            data-testid="home-hero-secondary-cta"
+          >
+            {site?.hero_secondary_cta_label || 'View the gallery'}
+          </Link>
+        </div>
+      </div>
+    </>
   );
 };
 
