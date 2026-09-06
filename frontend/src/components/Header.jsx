@@ -99,7 +99,7 @@ export const Header = () => {
       <div className="container-narrow flex items-center justify-between h-16 sm:h-20">
         {showLogo ? (
           <Link to="/" data-testid="header-logo-link" className="flex items-center">
-            <Logo size={44} />
+            <Logo size={44} responsive />
           </Link>
         ) : (
           <span aria-hidden="true" className="w-11" />

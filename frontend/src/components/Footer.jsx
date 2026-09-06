@@ -48,7 +48,7 @@ export const Footer = () => {
       <div className={`container-narrow py-14 grid grid-cols-1 md:grid-cols-${Math.max(cols, 1)} gap-10`}>
         {site.footer_show_logo !== false && (
           <div className="md:col-span-1" data-testid="footer-logo-col">
-            <Logo size={50} />
+            <Logo size={50} responsive />
             <p className="mt-4 text-sm text-[color:var(--brand-text-muted)] leading-relaxed max-w-xs">
               {site.footer_blurb || 'Custom event styling & balloon installations. Los Angeles.'}
             </p>

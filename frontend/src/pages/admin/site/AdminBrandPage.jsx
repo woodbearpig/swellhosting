@@ -33,6 +33,25 @@ const AdminBrandPage = () => {
           </div>
           <TextField className="mt-2" placeholder="Or paste URL" value={data.logo_url || ''} onCommit={v => set({ logo_url: v })} />
         </div>
+        <div>
+          <label className="eyebrow block mb-1">LOGO SIZE (WORDMARK)</label>
+          <p className="text-xs text-[color:var(--brand-text-muted)] mb-2">Adjusts the text logo size in the header &amp; footer (grows on desktop). It stays perfectly crisp at any size.</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="range" min="0.7" max="1.8" step="0.05"
+              value={data.logo_text_scale ?? 1}
+              onChange={e => set({ logo_text_scale: parseFloat(e.target.value) })}
+              className="w-full accent-[color:var(--brand-sage-deep)]"
+              data-testid="brand-logo-scale"
+              aria-label="Logo wordmark size"
+            />
+            <span className="text-sm tabular-nums w-14 text-right text-[color:var(--brand-text-muted)]" data-testid="brand-logo-scale-value">{Math.round((data.logo_text_scale ?? 1) * 100)}%</span>
+          </div>
+          <div className="mt-3 card-cream p-5 flex items-baseline gap-1.5" data-testid="brand-logo-preview">
+            <span className="font-script leading-none text-[color:var(--brand-sage-deep)]" style={{ fontSize: `calc(${data.logo_text_scale ?? 1} * 2.5rem)` }}>swell</span>
+            <span className="font-serif tracking-wide text-[color:var(--brand-text-muted)]" style={{ fontSize: `calc(${data.logo_text_scale ?? 1} * 1rem)` }}>design + media</span>
+          </div>
+        </div>
       </div>
 
       <div className="card-cream p-6 space-y-6">

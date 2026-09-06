@@ -47,6 +47,9 @@ class SiteContent(Base):
     business_name: str = "swell design + media"
     tagline: str = "Custom balloon installations & event styling in Los Angeles"
     logo_url: str = ""
+    # Multiplier for the text wordmark size in the public header/footer.
+    # 1.0 = default. Only affects the text logo (crisp at any size).
+    logo_text_scale: float = 1.0
 
     # Hero
     hero_eyebrow: str = "LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING"
