@@ -1,4 +1,6 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import { useSite } from '@/context/SiteContext';
 import { SectionHeader } from '@/components/SectionEyebrow';
 import { EmbedWidget, WidgetPlaceholder } from '@/components/EmbedWidget';
@@ -67,6 +69,13 @@ export const HomeEmbedSection = ({ at }) => {
           <WidgetPlaceholder label="Facebook feed will appear here" />
         )}
       </motion.div>
+      {site?.social_page_active === true && (
+        <motion.div {...fadeInUp} className="mt-8 flex justify-center">
+          <Link to="/facebook" className="btn-secondary" data-testid="home-widget-social-button">
+            {(site?.social_button_label || 'See all of our Facebook').trim()} <ArrowRight className="h-4 w-4" />
+          </Link>
+        </motion.div>
+      )}
     </section>
   );
 };

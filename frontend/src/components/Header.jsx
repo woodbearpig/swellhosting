@@ -10,7 +10,7 @@ const DEFAULT_NAV = [
   { id: 'nav-gallery', label: 'Gallery', href: '/gallery', visible: true, new_tab: false },
   { id: 'nav-about', label: 'About', href: '/about', visible: true, new_tab: false },
   { id: 'nav-testimonials', label: 'Testimonials', href: '/testimonials', visible: true, new_tab: false },
-  { id: 'nav-blog', label: 'Blog', href: '/blog', visible: true, new_tab: false },
+  { id: 'nav-facebook', label: 'Facebook', href: '/facebook', visible: true, new_tab: false },
   { id: 'nav-faq', label: 'FAQ', href: '/faq', visible: true, new_tab: false },
   { id: 'nav-contact', label: 'Contact', href: '/contact', visible: true, new_tab: false },
 ];
@@ -67,7 +67,8 @@ export const Header = () => {
     const servicesDisabled = site?.services_page_active === false;
     const blogDisabled = site?.blog_page_active === false;
     const faqDisabled = site?.faq_page_active === false;
-    return configured.filter(n => {
+    const socialDisabled = site?.social_page_active !== true;
+    const filtered = configured.filter(n => {
       if (!n || n.visible === false || !n.label || !n.href) return false;
       // Hide any nav item pointing to /services (or a sub-route) when the
       // owner has disabled the Services page site-wide.
@@ -76,9 +77,21 @@ export const Header = () => {
       if (blogDisabled && typeof n.href === 'string' && n.href.startsWith('/blog')) return false;
       // Same for /faq.
       if (faqDisabled && typeof n.href === 'string' && n.href.startsWith('/faq')) return false;
+      // Facebook page is OFF by default — only show when explicitly enabled.
+      if (socialDisabled && typeof n.href === 'string' && n.href.startsWith('/facebook')) return false;
       return true;
     });
-  }, [site?.header_nav_items, site?.services_page_active, site?.blog_page_active, site?.faq_page_active]);
+    // Auto-include the Facebook link when the page is enabled, even if the
+    // owner has a custom saved nav that predates this feature. Inserted before
+    // FAQ/Contact when present, otherwise appended.
+    if (!socialDisabled && !filtered.some(n => typeof n.href === 'string' && n.href.startsWith('/facebook'))) {
+      const fbItem = { id: 'nav-facebook', label: 'Facebook', href: '/facebook', visible: true, new_tab: false };
+      const anchorIdx = filtered.findIndex(n => n.href === '/faq' || n.href === '/contact');
+      if (anchorIdx === -1) filtered.push(fbItem);
+      else filtered.splice(anchorIdx, 0, fbItem);
+    }
+    return filtered;
+  }, [site?.header_nav_items, site?.services_page_active, site?.blog_page_active, site?.faq_page_active, site?.social_page_active]);
 
   const showLogo = site?.header_show_logo !== false;
   const showThemeToggle = site?.header_show_theme_toggle !== false;

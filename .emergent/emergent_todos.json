@@ -1,22 +1,26 @@
 [
   {
-    "content": "Backend: Turnstile verify helper + apply to /inquiries & /auth/login; public-config endpoint",
-    "status": "completed"
+    "content": "Backend: add social_page_* fields (active off by default, heading, intro, snippet, button label)",
+    "status": "in_progress"
   },
   {
-    "content": "Backend: login rate-limit + lockout (5 fails/15min, CF-Connecting-IP aware)",
-    "status": "completed"
+    "content": "App.js: add SocialGuard + /facebook route + FacebookPage component",
+    "status": "pending"
   },
   {
-    "content": "Backend .env + docker-compose passthrough for TURNSTILE keys",
-    "status": "completed"
+    "content": "Header + Footer: replace Blog nav with Facebook (gated by social_page_active)",
+    "status": "pending"
   },
   {
-    "content": "Frontend: TurnstileWidget component + wire into inquiry wizard & admin login",
-    "status": "completed"
+    "content": "HomeEmbedSection: add 'See all of our Facebook' button under widget (when active)",
+    "status": "pending"
   },
   {
-    "content": "Production build + browser verification + backend testing agent (10/10 passed)",
-    "status": "completed"
+    "content": "Admin: Facebook page card (toggle, heading, intro, snippet, button label)",
+    "status": "pending"
+  },
+  {
+    "content": "Build + verify (page off by default; on when toggled)",
+    "status": "pending"
   }
 ]

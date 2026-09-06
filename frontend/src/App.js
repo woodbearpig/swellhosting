@@ -16,6 +16,7 @@ import GalleryPage from '@/pages/GalleryPage';
 import ContactPage from '@/pages/ContactPage';
 import InquiryWizardPage from '@/pages/InquiryWizardPage';
 import { AboutPage, TestimonialsPage, FAQPage, BlogListPage, BlogDetailPage } from '@/pages/StaticPages';
+import SocialPage from '@/pages/SocialPage';
 import { BackdropsPage, LeaveReviewPage } from '@/pages/BackdropsAndReviews';
 import { NotFoundPage, PrivacyPage, TermsPage } from '@/pages/UtilityPages';
 
@@ -77,6 +78,19 @@ const BlogGuard = ({ children }) => {
 };
 
 /**
+ * SocialGuard — gates the dedicated /facebook page. OFF by default; flip
+ * social_page_active on to reveal the page, nav link, footer link, and the
+ * homepage button all at once.
+ */
+const SocialGuard = ({ children }) => {
+  const { site } = useSite();
+  if (site && site.social_page_active !== true) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+/**
  * FaqGuard — same pattern for /faq. Off by default; the client will populate
  * Q&As when she's ready. Homepage FAQ preview section is governed separately.
  */
@@ -113,6 +127,7 @@ function App() {
                   <Route path="/faq" element={<FaqGuard><FAQPage /></FaqGuard>} />
                   <Route path="/blog" element={<BlogGuard><BlogListPage /></BlogGuard>} />
                   <Route path="/blog/:slug" element={<BlogGuard><BlogDetailPage /></BlogGuard>} />
+                  <Route path="/facebook" element={<SocialGuard><SocialPage /></SocialGuard>} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/inquire" element={<InquiryWizardPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />

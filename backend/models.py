@@ -293,6 +293,14 @@ class SiteContent(Base):
     # the "Blog" item is hidden from header & footer nav. Owner can flip it on
     # anytime; her existing blog posts are preserved.
     blog_page_active: bool = False
+    # Dedicated Facebook page (replaces the old Blog). OFF by default — flip
+    # social_page_active on to reveal the /facebook route, the header nav item,
+    # the footer link, and the "See all of our Facebook" button on the homepage.
+    social_page_active: bool = False
+    social_page_heading: str = "Follow us on Facebook"
+    social_page_intro: str = "See our latest installs, reveals, and behind-the-scenes."
+    social_page_snippet: str = ""
+    social_button_label: str = "See all of our Facebook"
 
     # FAQ — off by default until the client fills in her Q&As. When false:
     # /faq redirects to home, the "FAQ" item is hidden from header & footer.

@@ -906,10 +906,10 @@ const AdminHomePage = () => {
               onChange={v => set({ services_page_active: v })}
             />
             <ToggleRow
-              label="Blog (whole site)"
-              hint="Off by default. Governs /blog, individual posts, and the nav item. Content is preserved when off."
-              checked={data.blog_page_active === true}
-              onChange={v => set({ blog_page_active: v })}
+              label="Facebook page (whole site)"
+              hint="Off by default. Turns on the /facebook page, its nav + footer links, and the button under the homepage feed — all at once. Paste the Elfsight grid snippet below first."
+              checked={data.social_page_active === true}
+              onChange={v => set({ social_page_active: v })}
             />
             <ToggleRow
               label="FAQ page (whole site)"
@@ -918,6 +918,53 @@ const AdminHomePage = () => {
               onChange={v => set({ faq_page_active: v })}
             />
           </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Facebook page" subtitle="The dedicated /facebook page (replaces the old Blog). Paste the Elfsight grid feed snippet, then flip 'Facebook page (whole site)' on above.">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="eyebrow block mb-1">PAGE HEADING</label>
+            <TextField
+              value={data.social_page_heading || ''}
+              onCommit={v => set({ social_page_heading: v })}
+              placeholder="Follow us on Facebook"
+              data-testid="admin-social-heading"
+            />
+          </div>
+          <div>
+            <label className="eyebrow block mb-1">HOMEPAGE BUTTON LABEL</label>
+            <TextField
+              value={data.social_button_label || ''}
+              onCommit={v => set({ social_button_label: v })}
+              placeholder="See all of our Facebook"
+              data-testid="admin-social-button-label"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="eyebrow block mb-1">INTRO (optional)</label>
+            <TextField
+              value={data.social_page_intro || ''}
+              onCommit={v => set({ social_page_intro: v })}
+              placeholder="A short line under the page heading — leave blank to hide."
+              data-testid="admin-social-intro"
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-[color:var(--brand-border)] pt-4 mt-4">
+          <label className="eyebrow block mb-1">FACEBOOK GRID SNIPPET (Elfsight "Full Width Posts" / "Facebook Posts")</label>
+          <TextArea
+            rows={6}
+            value={data.social_page_snippet || ''}
+            onCommit={v => set({ social_page_snippet: v })}
+            placeholder={'Paste the Elfsight grid-feed snippet here, e.g.\n<script src="https://static.elfsight.com/..." async></script>\n<div class="elfsight-app-xxxx" data-elfsight-app-lazy></div>'}
+            className="font-mono text-xs"
+            data-testid="admin-social-snippet"
+          />
+          <p className="text-xs text-[color:var(--brand-text-muted)] mt-1.5">
+            Until this is added, the page shows a friendly placeholder. Keep the whole page off with the <strong>Facebook page (whole site)</strong> toggle above until you're ready.
+          </p>
         </div>
       </SectionCard>
 
