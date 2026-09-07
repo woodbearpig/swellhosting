@@ -403,7 +403,7 @@ const heroFadeIn = {
  * reduced motion (or fewer than 2 images are provided), it holds on the first
  * image with no cycling.
  */
-const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-cover', eager = false }) => {
+const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-cover', eager = false, fit = 'cover' }) => {
   const reduceMotion = useReducedMotion();
   const list = (Array.isArray(images) ? images : []).filter(Boolean);
   const [index, setIndex] = useState(0);
@@ -439,19 +439,37 @@ const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-
 
   return (
     <>
-      {list.map((src, i) => (
-        <img
-          key={`${src}-${i}`}
-          src={publicUrl(src)}
-          alt={i === 0 ? alt : ''}
-          aria-hidden={i !== 0}
-          draggable={false}
-          className={`hero-slide absolute inset-0 h-full w-full ${imgClassName}`}
-          style={{ opacity: i === index ? 1 : 0 }}
-          loading="eager"
-          decoding="async"
-        />
-      ))}
+      {list.map((src, i) => {
+        const url = publicUrl(src);
+        return (
+          <div
+            key={`${src}-${i}`}
+            className="hero-slide absolute inset-0 h-full w-full"
+            style={{ opacity: i === index ? 1 : 0 }}
+            aria-hidden={i !== index}
+          >
+            {fit === 'contain' && (
+              <img
+                src={url}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-60"
+                loading="eager"
+                decoding="async"
+              />
+            )}
+            <img
+              src={url}
+              alt={i === 0 ? alt : ''}
+              draggable={false}
+              className={`absolute inset-0 h-full w-full ${fit === 'contain' ? 'object-contain' : imgClassName}`}
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        );
+      })}
     </>
   );
 };
@@ -480,7 +498,7 @@ const SplitHero = ({ site }) => {
     <div className="blob b-peach" style={{ width: 220, height: 220, top: -40, left: -60 }} />
     <div className="blob b-sage" style={{ width: 180, height: 180, bottom: -30, right: 40 }} />
 
-    <div className="container-narrow pt-14 pb-16 sm:pt-20 sm:pb-24 lg:pt-24 lg:pb-32 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+    <div className="container-narrow pt-10 pb-12 sm:pt-14 sm:pb-16 lg:pt-16 lg:pb-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
       <motion.div className="lg:col-span-7" {...heroFadeIn}>
         <div className="eyebrow mb-4" style={eyebrowStyle}>{site?.hero_eyebrow || 'LOS ANGELES • BALLOON INSTALLATIONS • EVENT STYLING'}</div>
         <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em]" style={headlineStyle}>
@@ -514,13 +532,15 @@ const SplitHero = ({ site }) => {
               <img src={publicUrl(site?.hero_image_url) || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Editorial event styling by swell design + media" className="h-full w-full object-cover" />
             )}
           </div>
-          <div className="absolute -bottom-6 -left-6 card-cream p-4 hidden sm:block">
-            <div className="flex items-center gap-2 text-sm">
-              <Star className="h-4 w-4 text-[color:var(--brand-gold)]" fill="currentColor" />
-              <span className="font-medium">5.0</span>
-              <span className="text-[color:var(--brand-text-muted)]">from every client, always</span>
+          {site?.hero_rating_active !== false && (site?.hero_rating_value || site?.hero_rating_text) && (
+            <div className="absolute -bottom-6 -left-6 card-cream p-4 hidden sm:block" data-testid="hero-rating-badge">
+              <div className="flex items-center gap-2 text-sm">
+                <Star className="h-4 w-4 text-[color:var(--brand-gold)]" fill="currentColor" />
+                {site?.hero_rating_value && <span className="font-medium">{site.hero_rating_value}</span>}
+                {site?.hero_rating_text && <span className="text-[color:var(--brand-text-muted)]">{site.hero_rating_text}</span>}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </motion.div>
     </div>
@@ -531,6 +551,7 @@ const SplitHero = ({ site }) => {
 const FullBleedHero = ({ site }) => {
   const bgUrl = site?.hero_background_image_url || site?.hero_image_url || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
   const overlay = Math.max(0, Math.min(1, site?.hero_overlay_intensity ?? 0.45));
+  const heroFit = site?.hero_image_fit === 'contain' ? 'contain' : 'cover';
   const cream = 'var(--brand-cream)';
   // Font overrides via CSS variables set by FontContext.applyHeroFonts. If
   // no hero-specific font is chosen, the variable resolves to `inherit` and
@@ -571,8 +592,28 @@ const FullBleedHero = ({ site }) => {
           interval={site?.hero_slideshow_interval || 5}
           alt="swell design + media hero"
           imgClassName="object-cover"
+          fit={heroFit}
           eager
         />
+      ) : heroFit === 'contain' ? (
+        <>
+          <img
+            src={publicUrl(bgUrl)}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60 hero-img-perf"
+            loading="eager"
+            decoding="async"
+          />
+          <img
+            src={publicUrl(bgUrl)}
+            alt="swell design + media hero"
+            className="absolute inset-0 w-full h-full object-contain hero-img-perf"
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </>
       ) : (
         <img
           src={publicUrl(bgUrl)}

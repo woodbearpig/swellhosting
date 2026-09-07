@@ -58,6 +58,10 @@ class SiteContent(Base):
     hero_image_url: str = "https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85"
     # Hero layout: "split" (current: text-left, portrait-right) or "full_bleed" (Canva-style: photo behind headline)
     hero_layout_mode: str = "split"
+    # Full-bleed hero image display: "cover" fills the frame (may crop tall
+    # photos), "contain" shows the WHOLE photo with a soft blurred fill behind
+    # it (great for mixed portrait/landscape slideshow images).
+    hero_image_fit: str = "cover"
     # Only used in full_bleed mode — the wide background photo. If empty, falls back to hero_image_url.
     hero_background_image_url: str = ""
 
@@ -82,6 +86,10 @@ class SiteContent(Base):
     # Small chip badges below the hero CTA buttons ("Fully custom", "On-site install", etc.)
     hero_badges_active: bool = True
     hero_badges: List[str] = Field(default_factory=lambda: ["Fully custom", "On-site install", "LA + surrounding"])
+    # Rating/review snippet badge on the split-hero image. Toggle off to hide.
+    hero_rating_active: bool = True
+    hero_rating_value: str = "5.0"
+    hero_rating_text: str = "from every client, always"
 
     # Hero text & button color overrides (applies to BOTH layout modes).
     # Empty string = use theme defaults (Full-bleed defaults to cream, Split uses standard body text color).

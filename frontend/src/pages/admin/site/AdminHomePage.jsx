@@ -789,6 +789,29 @@ const AdminHomePage = () => {
         {data.hero_layout_mode === 'full_bleed' && (
           <div className="rounded-xl border border-[color:var(--brand-border)] p-4 space-y-3 bg-[color:var(--brand-sage-tint)]/30" data-testid="admin-hero-fullbleed-controls">
             <p className="eyebrow">FULL-WIDTH BACKGROUND</p>
+            <div data-testid="admin-hero-image-fit">
+              <label className="eyebrow block mb-1">IMAGE DISPLAY</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label className={`card-cream p-3 cursor-pointer transition-colors ${(data.hero_image_fit || 'cover') === 'cover' ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`}>
+                  <div className="flex items-start gap-2">
+                    <input type="radio" name="hero_image_fit" value="cover" checked={(data.hero_image_fit || 'cover') === 'cover'} onChange={() => set({ hero_image_fit: 'cover' })} className="mt-1" data-testid="admin-hero-fit-cover" />
+                    <div>
+                      <p className="font-medium text-sm">Fill the frame</p>
+                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Edge-to-edge. Best for wide landscape photos — may crop tall/portrait ones.</p>
+                    </div>
+                  </div>
+                </label>
+                <label className={`card-cream p-3 cursor-pointer transition-colors ${data.hero_image_fit === 'contain' ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`}>
+                  <div className="flex items-start gap-2">
+                    <input type="radio" name="hero_image_fit" value="contain" checked={data.hero_image_fit === 'contain'} onChange={() => set({ hero_image_fit: 'contain' })} className="mt-1" data-testid="admin-hero-fit-contain" />
+                    <div>
+                      <p className="font-medium text-sm">Fit whole photo</p>
+                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Shows the entire photo with a soft blurred fill behind it. Best when slideshow photos are different shapes.</p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
             <div>
               <label className="eyebrow block mb-1">BACKGROUND IMAGE (wide landscape works best)</label>
               {data.hero_background_image_url && <img src={publicUrl(data.hero_background_image_url)} alt="background" className="h-32 w-auto rounded-lg mb-2" />}
@@ -879,6 +902,16 @@ const AdminHomePage = () => {
               <button type="button" className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[color:var(--brand-border)] text-red-600 hover:bg-red-50" onClick={() => set({ hero_badges: badges.filter((_, i) => i !== idx) })}><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           ))}
+        </div>
+
+        <div className="pt-2 border-t border-[color:var(--brand-border)] space-y-3">
+          <p className="eyebrow">REVIEW / RATING BADGE</p>
+          <p className="text-xs text-[color:var(--brand-text-muted)] -mt-1">The little star badge on the hero image (split layout). Shows a rating value + short line.</p>
+          <ToggleRow label="Show rating badge" hint="Turn off to hide the star badge entirely." checked={data.hero_rating_active !== false} onChange={v => set({ hero_rating_active: v })} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div><label className="eyebrow block mb-1">RATING VALUE</label><TextField value={data.hero_rating_value ?? ''} onCommit={v => set({ hero_rating_value: v })} placeholder="5.0" data-testid="hero-rating-value" /></div>
+            <div className="sm:col-span-2"><label className="eyebrow block mb-1">RATING TEXT</label><TextField value={data.hero_rating_text ?? ''} onCommit={v => set({ hero_rating_text: v })} placeholder="from every client, always" data-testid="hero-rating-text" /></div>
+          </div>
         </div>
       </SectionCard>
 
