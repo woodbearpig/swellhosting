@@ -403,7 +403,52 @@ const heroFadeIn = {
  * reduced motion (or fewer than 2 images are provided), it holds on the first
  * image with no cycling.
  */
-const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-cover', eager = false, fit = 'cover' }) => {
+/**
+ * HeroPhoto — renders a single hero photo with a chosen fit:
+ *   • "cover"   → fills the frame edge-to-edge (may crop tall photos)
+ *   • "contain" → shows the WHOLE photo with a soft blurred fill behind it
+ *   • "auto"    → decides per-image: landscape/square fills, portrait fits.
+ * Because "auto" reads the image's natural dimensions on load, it works for
+ * any photo already in the slideshow the moment it renders — no per-photo setup.
+ */
+const HeroPhoto = ({ url, alt = '', fit = 'cover', eager = false, priority = false }) => {
+  const [autoFit, setAutoFit] = useState(null);
+  const resolved = fit === 'auto' ? (autoFit || 'cover') : (fit === 'contain' ? 'contain' : 'cover');
+  const handleLoad = (e) => {
+    if (fit !== 'auto') return;
+    const w = e.target?.naturalWidth || 0;
+    const h = e.target?.naturalHeight || 0;
+    // Portrait (meaningfully taller than wide) → fit whole; else fill.
+    if (w && h) setAutoFit(h > w * 1.05 ? 'contain' : 'cover');
+  };
+  return (
+    <>
+      {resolved === 'contain' && (
+        <img
+          src={url}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-60"
+          loading={eager ? 'eager' : 'lazy'}
+          decoding="async"
+        />
+      )}
+      <img
+        src={url}
+        alt={alt}
+        draggable={false}
+        onLoad={handleLoad}
+        className={`absolute inset-0 h-full w-full ${resolved === 'contain' ? 'object-contain' : 'object-cover'} hero-img-perf`}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        {...(priority ? { fetchpriority: 'high' } : {})}
+      />
+    </>
+  );
+};
+
+const HeroSlideshow = ({ images, interval = 5, alt = '', eager = false, fit = 'cover' }) => {
   const reduceMotion = useReducedMotion();
   const list = (Array.isArray(images) ? images : []).filter(Boolean);
   const [index, setIndex] = useState(0);
@@ -448,25 +493,7 @@ const HeroSlideshow = ({ images, interval = 5, alt = '', imgClassName = 'object-
             style={{ opacity: i === index ? 1 : 0 }}
             aria-hidden={i !== index}
           >
-            {fit === 'contain' && (
-              <img
-                src={url}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-60"
-                loading="eager"
-                decoding="async"
-              />
-            )}
-            <img
-              src={url}
-              alt={i === 0 ? alt : ''}
-              draggable={false}
-              className={`absolute inset-0 h-full w-full ${fit === 'contain' ? 'object-contain' : imgClassName}`}
-              loading="eager"
-              decoding="async"
-            />
+            <HeroPhoto url={url} alt={i === 0 ? alt : ''} fit={fit} eager={eager} priority={i === 0} />
           </div>
         );
       })}
@@ -526,7 +553,6 @@ const SplitHero = ({ site }) => {
                 images={site.hero_slideshow_images}
                 interval={site?.hero_slideshow_interval || 5}
                 alt="Editorial event styling by swell design + media"
-                imgClassName="object-cover"
               />
             ) : (
               <img src={publicUrl(site?.hero_image_url) || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85'} alt="Editorial event styling by swell design + media" className="h-full w-full object-cover" />
@@ -551,7 +577,7 @@ const SplitHero = ({ site }) => {
 const FullBleedHero = ({ site }) => {
   const bgUrl = site?.hero_background_image_url || site?.hero_image_url || 'https://images.unsplash.com/photo-1649615644622-6d83f48e69c5?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
   const overlay = Math.max(0, Math.min(1, site?.hero_overlay_intensity ?? 0.45));
-  const heroFit = site?.hero_image_fit === 'contain' ? 'contain' : 'cover';
+  const heroFit = ['contain', 'auto'].includes(site?.hero_image_fit) ? site.hero_image_fit : 'cover';
   const cream = 'var(--brand-cream)';
   // Font overrides via CSS variables set by FontContext.applyHeroFonts. If
   // no hero-specific font is chosen, the variable resolves to `inherit` and
@@ -591,38 +617,11 @@ const FullBleedHero = ({ site }) => {
           images={site.hero_slideshow_images}
           interval={site?.hero_slideshow_interval || 5}
           alt="swell design + media hero"
-          imgClassName="object-cover"
           fit={heroFit}
           eager
         />
-      ) : heroFit === 'contain' ? (
-        <>
-          <img
-            src={publicUrl(bgUrl)}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60 hero-img-perf"
-            loading="eager"
-            decoding="async"
-          />
-          <img
-            src={publicUrl(bgUrl)}
-            alt="swell design + media hero"
-            className="absolute inset-0 w-full h-full object-contain hero-img-perf"
-            loading="eager"
-            decoding="async"
-            fetchpriority="high"
-          />
-        </>
       ) : (
-        <img
-          src={publicUrl(bgUrl)}
-          alt="swell design + media hero"
-          className="absolute inset-0 w-full h-full object-cover hero-img-perf"
-          loading="eager"
-          decoding="async"
-          fetchpriority="high"
-        />
+        <HeroPhoto url={publicUrl(bgUrl)} alt="swell design + media hero" fit={heroFit} eager priority />
       )}
       {/* Overlay: soft dark-to-transparent gradient from the bottom + subtle vignette for legibility */}
       <div

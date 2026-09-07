@@ -791,13 +791,22 @@ const AdminHomePage = () => {
             <p className="eyebrow">FULL-WIDTH BACKGROUND</p>
             <div data-testid="admin-hero-image-fit">
               <label className="eyebrow block mb-1">IMAGE DISPLAY</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label className={`card-cream p-3 cursor-pointer transition-colors ${data.hero_image_fit === 'auto' ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`}>
+                  <div className="flex items-start gap-2">
+                    <input type="radio" name="hero_image_fit" value="auto" checked={data.hero_image_fit === 'auto'} onChange={() => set({ hero_image_fit: 'auto' })} className="mt-1" data-testid="admin-hero-fit-auto" />
+                    <div>
+                      <p className="font-medium text-sm">Automatic <span className="text-[color:var(--brand-sage-deep)]">(recommended)</span></p>
+                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Picks the best display for each photo automatically — wide photos fill, tall photos show in full. Great for mixed slideshows.</p>
+                    </div>
+                  </div>
+                </label>
                 <label className={`card-cream p-3 cursor-pointer transition-colors ${(data.hero_image_fit || 'cover') === 'cover' ? 'ring-2 ring-[color:var(--brand-sage-deep)]' : ''}`}>
                   <div className="flex items-start gap-2">
                     <input type="radio" name="hero_image_fit" value="cover" checked={(data.hero_image_fit || 'cover') === 'cover'} onChange={() => set({ hero_image_fit: 'cover' })} className="mt-1" data-testid="admin-hero-fit-cover" />
                     <div>
                       <p className="font-medium text-sm">Fill the frame</p>
-                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Edge-to-edge. Best for wide landscape photos — may crop tall/portrait ones.</p>
+                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Edge-to-edge for every photo. May crop tall/portrait ones.</p>
                     </div>
                   </div>
                 </label>
@@ -806,7 +815,7 @@ const AdminHomePage = () => {
                     <input type="radio" name="hero_image_fit" value="contain" checked={data.hero_image_fit === 'contain'} onChange={() => set({ hero_image_fit: 'contain' })} className="mt-1" data-testid="admin-hero-fit-contain" />
                     <div>
                       <p className="font-medium text-sm">Fit whole photo</p>
-                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Shows the entire photo with a soft blurred fill behind it. Best when slideshow photos are different shapes.</p>
+                      <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5">Always shows the entire photo with a soft blurred fill behind it.</p>
                     </div>
                   </div>
                 </label>
