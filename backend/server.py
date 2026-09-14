@@ -473,6 +473,42 @@ async def _startup():
         except Exception as e:
             logger.warning("/gallery -> /portfolio rename failed: %s", e)
 
+        # Location rename (idempotent): the studio serves Louisiana, not Los Angeles.
+        # Replace the literal phrase "Los Angeles" -> "Louisiana" in any text field
+        # that still contains it. Fields already customised to something else are
+        # left untouched. This keeps social share previews + on-site copy correct
+        # on existing databases (the committed index.html is regenerated from these).
+        try:
+            sc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+            LOCATION_TEXT_FIELDS = (
+                "tagline", "share_title", "share_description",
+                "about_full", "footer_blurb", "contact_location",
+                "coming_soon_message", "seo_title", "meta_description",
+            )
+            loc_updates = {}
+            # Ordered replacements: handle "City, State" combos before the bare city
+            # so we don't leave a dangling ", California" / ", CA" after the swap.
+            LOC_REPLACEMENTS = (
+                ("Los Angeles, California", "Louisiana"),
+                ("Los Angeles, CA", "Louisiana"),
+                ("Los Angeles", "Louisiana"),
+            )
+            for f in LOCATION_TEXT_FIELDS:
+                v = sc.get(f)
+                if isinstance(v, str) and "Los Angeles" in v:
+                    new_v = v
+                    for old, new in LOC_REPLACEMENTS:
+                        new_v = new_v.replace(old, new)
+                    loc_updates[f] = new_v
+            if loc_updates:
+                await db.site_content.update_one(
+                    {"id": "site_content_singleton"},
+                    {"$set": loc_updates},
+                )
+                logger.info("Location migration: 'Los Angeles' -> 'Louisiana' in %s", list(loc_updates.keys()))
+        except Exception as e:
+            logger.warning("Los Angeles -> Louisiana migration failed: %s", e)
+
         # Seed default Reply Templates on first boot (idempotent — only inserts if collection is empty).
         try:
             existing_count = await db.reply_templates.count_documents({})
