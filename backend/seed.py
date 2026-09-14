@@ -100,7 +100,7 @@ async def seed():
                     ServiceFAQ(question="Do you match specific colors?", answer="Yes — send us a swatch, invitation, or Pinterest board and we'll build a palette to match."),
                 ],
                 related_slugs=["weddings", "birthday-parties"],
-                seo_title="Custom Balloon Installations in Los Angeles | swell design + media",
+                seo_title="Custom Balloon Installations in Louisiana | swell design + media",
                 seo_description="Organic balloon garlands, arches, and installations custom-designed for weddings, showers, birthdays, and corporate events in LA.",
                 order=1,
             ),
@@ -227,7 +227,7 @@ async def seed():
             FAQ(category="Design", question="Do you offer floral additions?", answer="Yes — we collaborate with a small circle of trusted LA florists to weave real florals into balloon installs when the vision calls for it.", order=4),
             FAQ(category="Logistics", question="Do you install on-site?", answer="Yes, always. Every installation is delivered and built on-site by our team. Takedown is available for an added fee.", order=5),
             FAQ(category="Logistics", question="How long do balloons last outdoors?", answer="In shaded, mild conditions, 8-24 hours. In direct sun or high heat, quality can be affected within a few hours — we'll always advise the best plan for your venue.", order=6),
-            FAQ(category="Areas", question="Where do you serve?", answer="Los Angeles and surrounding areas — including Malibu, Santa Monica, Pasadena, Long Beach, and the Valley. Beyond a 25-mile radius from DTLA, a small travel fee applies.", order=7),
+            FAQ(category="Areas", question="Where do you serve?", answer="Louisiana and surrounding areas. A small travel fee may apply for longer distances.", order=7),
             FAQ(category="Pricing", question="How much does an installation cost?", answer="Custom garlands start at $450. Statement installs typically range $950–$2,400. Full-service events start around $2,400 and scale with scope. Every quote is custom.", order=8),
         ]
         for f in faqs:

@@ -50,7 +50,7 @@ export const Footer = () => {
           <div className="md:col-span-1" data-testid="footer-logo-col">
             <Logo size={50} responsive />
             <p className="mt-4 text-sm text-[color:var(--brand-text-muted)] leading-relaxed max-w-xs">
-              {site.footer_blurb || 'Custom event styling & balloon installations. Los Angeles.'}
+              {site.footer_blurb || 'Custom event styling & balloon installations. Louisiana.'}
             </p>
           </div>
         )}

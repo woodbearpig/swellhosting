@@ -45,7 +45,7 @@ class TokenResponse(Base):
 class SiteContent(Base):
     id: str = Field(default_factory=lambda: "site_content_singleton")
     business_name: str = "swell design + media"
-    tagline: str = "Custom balloon installations & event styling in Los Angeles"
+    tagline: str = "Custom balloon installations & event styling in Louisiana"
     logo_url: str = ""
     # Multiplier for the text wordmark size in the public header/footer.
     # 1.0 = default. Only affects the text logo (crisp at any size).
@@ -114,7 +114,7 @@ class SiteContent(Base):
     about_page_eyebrow: str = "ABOUT"
     about_page_title: str = "About swell design + media"
     about_page_subtitle: str = "A boutique LA-based studio dedicated to thoughtful, custom event styling."
-    about_full: str = "swell design + media is a boutique event styling studio based in Los Angeles. We specialize in custom balloon installations, thoughtful florals, and full-service event decor for weddings, birthdays, baby & bridal showers, corporate gatherings, grand openings, and holiday celebrations. Every design is made just for you — no cookie-cutter kits, no rushing. Just a calm, collaborative process from first inquiry to the moment your guests walk in."
+    about_full: str = "swell design + media is a boutique event styling studio based in Louisiana. We specialize in custom balloon installations, thoughtful florals, and full-service event decor for weddings, birthdays, baby & bridal showers, corporate gatherings, grand openings, and holiday celebrations. Every design is made just for you — no cookie-cutter kits, no rushing. Just a calm, collaborative process from first inquiry to the moment your guests walk in."
     about_image_url: str = "https://images.unsplash.com/photo-1649615644613-758b850399c1?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85"
     # Same ratio + fit knobs as the Meet-the-Designer photo, applied to the
     # About page hero image. Defaults kept safe for the current image.
@@ -160,7 +160,7 @@ class SiteContent(Base):
     # Contact
     contact_email: str = "hello@swelldesignla.com"
     contact_phone: str = "(310) 555-0134"
-    contact_location: str = "Los Angeles, CA & surrounding"
+    contact_location: str = "Louisiana & surrounding"
     contact_hours: str = "Tue–Sat • by appointment"
 
     # Social
@@ -170,7 +170,7 @@ class SiteContent(Base):
     tiktok_url: str = ""
 
     # Footer
-    footer_blurb: str = "Custom event styling & balloon installations. Los Angeles, California."
+    footer_blurb: str = "Custom event styling & balloon installations. Louisiana."
 
     # Newsletter
     newsletter_title: str = "Stay in the loop"
@@ -187,7 +187,7 @@ class SiteContent(Base):
     coming_soon_eyebrow: str = "SOMETHING BEAUTIFUL IS COMING"
     coming_soon_title: str = "We\u2019re styling something dreamy."
     coming_soon_script: str = "stay tuned"
-    coming_soon_message: str = "A boutique event styling studio launching soon in Los Angeles \u2014 custom balloon installations, thoughtful florals, and dreamy details for weddings, showers, birthdays, and brand moments."
+    coming_soon_message: str = "A boutique event styling studio launching soon in Louisiana \u2014 custom balloon installations, thoughtful florals, and dreamy details for weddings, showers, birthdays, and brand moments."
     coming_soon_launch_date: str = ""
 
     # Coming Soon page — independent visibility toggles + custom content

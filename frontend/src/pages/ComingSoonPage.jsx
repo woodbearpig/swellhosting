@@ -37,7 +37,7 @@ const ComingSoonPage = () => {
   const showContactRow = showEmail || showPhone || showInstagram;
 
   const footerText = (site.coming_soon_footer_text || '').trim();
-  const autoFooter = `© ${new Date().getFullYear()} ${site.business_name || 'swell design + media'} · ${site.contact_location || 'Los Angeles'}`;
+  const autoFooter = `© ${new Date().getFullYear()} ${site.business_name || 'swell design + media'} · ${site.contact_location || 'Louisiana'}`;
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-[color:var(--brand-cream)] px-4 py-16" data-testid="coming-soon-page">
