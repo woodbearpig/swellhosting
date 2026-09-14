@@ -280,15 +280,12 @@ async def render_public_index() -> bool:
         # resolvable at all, we omit the og:image tag entirely.
         og_image = f"{base}/api/og-image?v={cache_key}" if share_image_raw else ""
 
-        favicon_url = _abs_url(favicon_raw, base) if favicon_raw else "/favicon.ico"
-        if favicon_raw:
-            favicon_url = f"{favicon_url}{'&' if '?' in favicon_url else '?'}v={cache_key}"
-
-        # apple-touch-icon prefers a PNG at 180x180. If the admin uploaded a
-        # square logo, reuse it. Otherwise use the built-in default.
-        apple_url = _abs_url(favicon_raw, base) if favicon_raw else "/apple-touch-icon.png"
-        if favicon_raw:
-            apple_url = f"{apple_url}{'&' if '?' in apple_url else '?'}v={cache_key}"
+        # Favicon + apple-touch-icon: point at the dynamic /api/favicon endpoint
+        # so an admin-uploaded favicon shows up without a rebuild (same reasoning
+        # as og:image above). The endpoint falls back to the logo, then the
+        # shipped default favicon.ico when nothing is set.
+        favicon_url = f"{base}/api/favicon?v={cache_key}"
+        apple_url = f"{base}/api/favicon?v={cache_key}"
 
         # HTML-escape any user-provided text before injecting into attributes
         def esc(s: str) -> str:
@@ -1376,6 +1373,33 @@ async def og_image():
 
     # Fallback: redirect to the absolute form of whatever path we have.
     return RedirectResponse(_abs_url(raw, _public_base_url()), status_code=302)
+
+
+@api.get("/favicon")
+async def dynamic_favicon():
+    """Dynamic favicon. The public index.html points its <link rel=icon> at this
+    stable URL so the admin-uploaded favicon shows up WITHOUT a rebuild (in
+    production index.html is a static file frozen at build time). Falls back to
+    the logo image, then the shipped default favicon.ico."""
+    doc = await db.site_content.find_one(
+        {"id": "site_content_singleton"}, {"_id": 0, "favicon_url": 1, "logo_url": 1}
+    ) or {}
+    raw = (doc.get("favicon_url") or "").strip() or (doc.get("logo_url") or "").strip()
+
+    if raw:
+        if raw.startswith("http://") or raw.startswith("https://"):
+            return RedirectResponse(raw, status_code=302)
+        name = raw.rstrip("/").split("/")[-1].split("?")[0]
+        dest = UPLOAD_DIR / name
+        if dest.exists() and dest.is_file():
+            return FileResponse(str(dest), headers={"Cache-Control": "public, max-age=300"})
+        return RedirectResponse(_abs_url(raw, _public_base_url()), status_code=302)
+
+    # Nothing set -> serve the shipped default favicon if present, else 404.
+    default_ico = _FRONTEND_PUBLIC_DIR / "favicon.ico"
+    if default_ico.exists():
+        return FileResponse(str(default_ico))
+    raise HTTPException(status_code=404, detail="No favicon configured")
 
 
 # ---- Media Library CRUD ----
