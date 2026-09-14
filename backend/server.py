@@ -271,21 +271,26 @@ async def render_public_index() -> bool:
 
         cache_key = hashlib.md5((share_image_raw + favicon_raw + share_title + share_desc).encode("utf-8")).hexdigest()[:8]
 
-        # OG image: instead of baking a specific image URL (which would freeze at
-        # Docker build time in production and never reflect admin edits), we point
-        # at a STABLE dynamic endpoint. /api/og-image resolves the current share
-        # image (share_image_url -> logo -> hero background -> hero -> slideshow)
-        # from the LIVE database at request time, so link previews always show
-        # whatever the admin uploaded WITHOUT requiring a rebuild. If nothing is
-        # resolvable at all, we omit the og:image tag entirely.
-        og_image = f"{base}/api/og-image?v={cache_key}" if share_image_raw else ""
+        # OG image + favicon: point at STABLE dynamic endpoints using ROOT-RELATIVE
+        # URLs. This is critical: index.html is generated here (which may be a
+        # preview/build environment) and then served statically in production. If
+        # we baked an ABSOLUTE base URL, it would freeze to the build environment's
+        # domain (e.g. the preview domain) and social scrapers would fetch images
+        # from the wrong site/database. Root-relative URLs always resolve against
+        # whatever domain is actually serving the page -> the live site -> the live
+        # database -> the admin's real uploads. Works in preview and production.
+        og_image = f"/api/og-image?v={cache_key}" if share_image_raw else ""
+        favicon_url = f"/api/favicon?v={cache_key}"
+        apple_url = f"/api/favicon?v={cache_key}"
 
-        # Favicon + apple-touch-icon: point at the dynamic /api/favicon endpoint
-        # so an admin-uploaded favicon shows up without a rebuild (same reasoning
-        # as og:image above). The endpoint falls back to the logo, then the
-        # shipped default favicon.ico when nothing is set.
-        favicon_url = f"{base}/api/favicon?v={cache_key}"
-        apple_url = f"{base}/api/favicon?v={cache_key}"
+        # og:url canonical: must be absolute, but must NEVER be the preview/build
+        # domain. Prefer an explicit env override; otherwise use the resolved base
+        # only when it isn't a preview/emergent host. If we can't determine a safe
+        # canonical URL, omit the tag entirely so scrapers fall back to the actual
+        # fetched URL (the live domain), which is always correct.
+        canonical = (os.environ.get("SITE_CANONICAL_URL") or "").strip().rstrip("/") or base
+        if any(h in canonical for h in ("emergentagent.com", "preview", "localhost", "127.0.0.1")):
+            canonical = ""
 
         # HTML-escape any user-provided text before injecting into attributes
         def esc(s: str) -> str:
@@ -298,7 +303,7 @@ async def render_public_index() -> bool:
             "{{FAVICON_URL}}":       esc(favicon_url),
             "{{APPLE_ICON_URL}}":    esc(apple_url),
             "{{BRAND_NAME}}":        esc(brand),
-            "{{SITE_URL}}":          esc(base),
+            "{{SITE_URL}}":          esc(canonical),
         }
         rendered = tpl
         for k, v in replacements.items():
@@ -309,6 +314,12 @@ async def render_public_index() -> bool:
         if not og_image:
             rendered = re.sub(r"[ \t]*<meta property=\"og:image[^>]*/>\n?", "", rendered)
             rendered = re.sub(r"[ \t]*<meta name=\"twitter:image[^>]*/>\n?", "", rendered)
+
+        # If we couldn't determine a safe canonical URL, drop the og:url tag so
+        # scrapers fall back to the actual fetched (live) URL instead of leaking
+        # the build/preview domain.
+        if not canonical:
+            rendered = re.sub(r"[ \t]*<meta property=\"og:url[^>]*/>\n?", "", rendered)
 
         _HTML_OUT_PATH.write_text(rendered, encoding="utf-8")
         logger.info("[render_public_index] Rewrote %s (og_title=%r, og_image=%r, favicon=%r)",
