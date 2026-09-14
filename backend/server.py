@@ -218,6 +218,30 @@ def _abs_url(path_or_url: str, base: str) -> str:
     return base + p
 
 
+def _resolve_share_image_raw(doc: dict) -> str:
+    """Resolve the best available share/OG image path from SiteContent using a
+    branded fallback chain: dedicated share image -> logo -> hero background ->
+    hero image -> first slideshow image. Returns the raw stored value (which may
+    be a relative /api/uploads/... path or an absolute URL), or "" if none set.
+
+    Used by BOTH the static index.html renderer and the dynamic /api/og-image
+    endpoint so link previews always show a real branded image."""
+    raw = (doc.get("share_image_url") or "").strip()
+    if raw:
+        return raw
+    slideshow = doc.get("hero_slideshow_images") or []
+    first_slide = next((s for s in slideshow if isinstance(s, str) and s.strip()), "")
+    for candidate in (
+        doc.get("logo_url"),
+        doc.get("hero_background_image_url"),
+        doc.get("hero_image_url"),
+        first_slide,
+    ):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
 async def render_public_index() -> bool:
     """Regenerate /app/frontend/public/index.html from the template using the
     current SiteContent. Returns True on success. Safe to call any time.
@@ -240,17 +264,19 @@ async def render_public_index() -> bool:
 
         # Resolve image URLs to absolute + attach cache-buster so message
         # apps refetch after admin edits (they cache aggressively by URL).
-        share_image_raw = (doc.get("share_image_url") or "").strip()
+        share_image_raw = _resolve_share_image_raw(doc)
         favicon_raw = (doc.get("favicon_url") or "").strip()
 
         cache_key = hashlib.md5((share_image_raw + favicon_raw + share_title + share_desc).encode("utf-8")).hexdigest()[:8]
 
-        # Absolute OG image URL. Empty share_image means we have no OG image —
-        # in that case we omit the tag by pointing at a small transparent
-        # placeholder rather than a hard-coded "los angeles" fallback.
-        og_image = _abs_url(share_image_raw, base) if share_image_raw else ""
-        if og_image:
-            og_image = f"{og_image}{'&' if '?' in og_image else '?'}v={cache_key}"
+        # OG image: instead of baking a specific image URL (which would freeze at
+        # Docker build time in production and never reflect admin edits), we point
+        # at a STABLE dynamic endpoint. /api/og-image resolves the current share
+        # image (share_image_url -> logo -> hero background -> hero -> slideshow)
+        # from the LIVE database at request time, so link previews always show
+        # whatever the admin uploaded WITHOUT requiring a rebuild. If nothing is
+        # resolvable at all, we omit the og:image tag entirely.
+        og_image = f"{base}/api/og-image?v={cache_key}" if share_image_raw else ""
 
         favicon_url = _abs_url(favicon_raw, base) if favicon_raw else "/favicon.ico"
         if favicon_raw:
@@ -1317,6 +1343,37 @@ async def get_upload(name: str):
     if not dest.exists() or not dest.is_file():
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(str(dest))
+
+
+@api.get("/og-image")
+async def og_image():
+    """Dynamic Open Graph / social-share image.
+
+    The public index.html points its <meta og:image> at this stable URL. We
+    resolve the CURRENT share image from the live database on every request
+    (share_image_url -> logo -> hero background -> hero -> first slideshow
+    image), so link previews always reflect whatever the admin has uploaded —
+    even in production where index.html is a static file frozen at build time.
+
+    Local uploads are streamed directly (most reliable for social scrapers);
+    external URLs (e.g. stock defaults) are handled via redirect."""
+    doc = await db.site_content.find_one({"id": "site_content_singleton"}, {"_id": 0}) or {}
+    raw = _resolve_share_image_raw(doc)
+    if not raw:
+        raise HTTPException(status_code=404, detail="No share image configured")
+
+    # External absolute URL -> redirect the scraper to it.
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return RedirectResponse(raw, status_code=302)
+
+    # Local upload (e.g. /api/uploads/<name>) -> serve the bytes directly.
+    name = raw.rstrip("/").split("/")[-1].split("?")[0]
+    dest = UPLOAD_DIR / name
+    if dest.exists() and dest.is_file():
+        return FileResponse(str(dest), headers={"Cache-Control": "public, max-age=300"})
+
+    # Fallback: redirect to the absolute form of whatever path we have.
+    return RedirectResponse(_abs_url(raw, _public_base_url()), status_code=302)
 
 
 # ---- Media Library CRUD ----
