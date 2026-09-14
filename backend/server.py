@@ -220,9 +220,10 @@ def _abs_url(path_or_url: str, base: str) -> str:
 
 def _resolve_share_image_raw(doc: dict) -> str:
     """Resolve the best available share/OG image path from SiteContent using a
-    branded fallback chain: dedicated share image -> logo -> hero background ->
-    hero image -> first slideshow image. Returns the raw stored value (which may
-    be a relative /api/uploads/... path or an absolute URL), or "" if none set.
+    branded fallback chain: dedicated share image -> About-page image -> logo ->
+    hero background -> hero image -> first slideshow image. Returns the raw
+    stored value (which may be a relative /api/uploads/... path or an absolute
+    URL), or "" if none set.
 
     Used by BOTH the static index.html renderer and the dynamic /api/og-image
     endpoint so link previews always show a real branded image."""
@@ -232,6 +233,7 @@ def _resolve_share_image_raw(doc: dict) -> str:
     slideshow = doc.get("hero_slideshow_images") or []
     first_slide = next((s for s in slideshow if isinstance(s, str) and s.strip()), "")
     for candidate in (
+        doc.get("about_image_url"),
         doc.get("logo_url"),
         doc.get("hero_background_image_url"),
         doc.get("hero_image_url"),
