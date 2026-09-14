@@ -1,4 +1,4 @@
-# plan.md — swell design + media (V12)
+# plan.md — swell design + media (V13)
 
 ## 1) Objectives
 - Ship a **presentable, luxury public website** + **100% white‑labeled client management platform** for **swell design + media**.
@@ -28,7 +28,7 @@
   - No references to any third-party builder brand in UI/content
   - Automatically purge any non-owned hosted asset URLs from SiteContent
 
-**Updated objectives (current milestone)**
+**Updated objectives (current milestone / deploy-ready)**
 - Enable safe pre-launch review and social proof:
   - **Coming Soon preview link**: public sees Coming Soon; private `/?preview=<token>` bypass works; token is never exposed publicly.
   - **Homepage social widget slot**: admin can paste an embed snippet (Elfsight Facebook feed or other) and place it on the homepage.
@@ -40,9 +40,25 @@
     - No public `/blog` routes
     - No admin Blog section
     - No Blog model/endpoints
+- Improve launch-day polish and admin control:
+  - **Hero CTAs moved under the hero** (side-by-side), freeing hero text placement
+  - **Site-wide “Gallery” → “Portfolio”** naming consistency
+  - **Desktop wordmark/logo sizing** improved (responsive) + admin slider
+  - **About page header editable** (eyebrow/title/subtitle)
+  - **Contact fields optional** and clearer in admin (blank hides)
+  - **Hero rating badge editable** (split hero)
+  - **Full-bleed hero image display modes** cover/contain/auto (admin-controlled)
+- Add owner-requested automation:
+  - **Instant inquiry auto-reply** uses an **owner-selected Reply Template** (toggle + template selection), with placeholder rendering.
 
-**Important architectural decision (confirmed)**
-- **VPS local uploads remain** (persistent Docker volume `uploads_data` on AlmaLinux VPS). Do **not** migrate to Emergent object storage.
+**Important architectural decisions (confirmed)**
+- **VPS local uploads remain** (persistent Docker volume `uploads_data` on AlmaLinux VPS).
+  - To satisfy platform checks while keeping VPS persistence, raw upload staging now uses OS temp dir; final processed files still persist to the Docker volume.
+- **Deploy safety**: startup migration only adds **missing fields** (does not overwrite existing live settings).
+
+**Email testing note (important)**
+- Preview environment has **no SMTP host/user**, so emails are **skipped and logged** in preview.
+- Live VPS SMTP is configured (Hostinger) and will send after deploy.
 
 ---
 
@@ -84,225 +100,194 @@
   - Admin credentials change.
 - Deployment
   - Docker-based deploy scripts working on AlmaLinux 10 VPS.
-  - `deploy.sh` fails loudly on git auth failures and prints PAT instructions.
 
 ---
 
 ### Phase A (P0) — Palette wiring + dynamic Home Page & Footer editors (COMPLETED ✅)
-**Goal:** Enable site-wide seasonal/holiday/wedding color themes and make Home/Footer sections fully editable & toggleable from admin.
-
-**Completed work**
-- Palettes provider wired + `/admin/palettes` route + nav.
-- Home page dynamic content/toggles + process steps editor.
-- Footer visibility toggles + copyright override.
-- Expanded palette library (US holidays/seasons/wedding).
-
-**Testing**
-- `/app/test_reports/iteration_6.json`
+(unchanged)
 
 ---
 
 ### Phase B (P1) — FOUC fix + Site-wide hide toggles + Custom Nav Bar (COMPLETED ✅)
-**Goal:** Remove Coming Soon flash-of-content and let the owner hide/show core public sections and fully customize header navigation.
-
-**Completed work**
-- FOUC fix via `PublicLayout` neutral splash until SiteContent loads.
-- Per-section hide toggles for Header/About/Services/Gallery/Contact.
-- CMS-driven nav items (internal/external + new tab).
+(unchanged)
 
 ---
 
 ### Phase C (P1) — Season Auto‑Switch (Scheduled palettes) (COMPLETED ✅)
-- Schedule rules stored in `SiteContent.palette_schedules`.
-- `/api/palettes/active` computes effective palette by date rules.
+(unchanged)
 
 ---
 
 ### Phase D (P1/P2) — Palette From Photo (COMPLETED ✅)
-- On-device extraction using ColorThief.
-- Custom palettes stored in `custom_palettes` and merged into `/api/palettes`.
+(unchanged)
 
 ---
 
 ### Phase E (P0/P1) — Admin Credentials + Dynamic Inquiry Form Builder (COMPLETED ✅)
-**Goal:** Owner can change admin login safely + fully customize the inquiry wizard.
-
-**Completed work**
-- Admin credentials change flow in `/admin/settings` with current-password verification.
-- Seed logic updated so password isn’t overwritten on restart (emergency `ADMIN_FORCE_RESET=1`).
-- Inquiry form schema stored in `SiteContent.inquiry_form_schema` with:
-  - Public endpoint: `GET /api/inquiry-form`
-  - Admin endpoints: `PUT /api/admin/inquiry-form`, `POST /api/admin/inquiry-form/reset`
-- InquiryWizardPage renders from schema.
-- Unknown custom fields stored in `Inquiry.extra`.
+(unchanged)
 
 ---
 
 ### Phase F (P1) — Typography + Hero Badges (COMPLETED ✅)
-- Typography selector in Site Content:
-  - `font_serif_id`, `font_sans_id`, `font_script_id`
-  - Google Fonts loaded dynamically via FontProvider
-- Hero badges now editable:
-  - `hero_badges_active`, `hero_badges[]`
+(unchanged)
 
 ---
 
 ### Phase G (P0) — White‑label asset purge (COMPLETED ✅)
-**Goal:** Ensure no non-owned hosted asset URLs remain in live content.
-
-**Completed work**
-- Default `logo_url` no longer points to any third-party builder CDN.
-- Startup migration clears legacy hosted URLs from: `logo_url`, `hero_image_url`, `about_image_url`, `coming_soon_bg_url`, `og_image_url`, `favicon_url`.
+(unchanged)
 
 ---
 
 ## 3) Client-Requested Enhancements (Delivered)
 
 ### Phase H (P0) — Google Calendar “one-click connect” polish (COMPLETED ✅)
-**Goal:** Owner connects Google Calendar by clicking “Sign in with Google”.
-
-**Completed work**
-- OAuth redirect + token storage/refresh.
-- Busy-time blocking in availability.
-- Consult booking creates Google Calendar events.
-- Added setup guide: `/app/OAUTH_SETUP.md`.
-
-**Exit criteria met**
-- She clicks “Sign in with Google” → chooses Gmail → Allow → admin shows Connected.
+(unchanged)
 
 ---
 
 ### Phase I (P0) — Consultation becomes last step of inquiry (phone-only) (COMPLETED ✅)
-**Goal:** Replace standalone `/book` with an optional final inquiry step to schedule a phone consult.
-
-**Completed work**
-- Removed standalone booking route.
-- InquiryWizard final step can schedule consult or skip with confirmation.
-- Booking rules enforced (lead time, buffer, window, daily max, blocked dates).
-- `.ics` calendar invites attached to confirmation emails.
-- Admin includes “Scheduled calls” view.
+(unchanged)
 
 ---
 
 ### Phase J (P1) — Media Library (uploads hub) (COMPLETED ✅)
-**Goal:** One central upload library to reuse media anywhere, with tags and compression.
-
-**Completed work**
-- New `media_library` collection (MediaAsset model).
-- `/api/uploads` auto-compresses images via Pillow and indexes assets.
-- Admin endpoints:
-  - `GET /api/admin/media` (search + tag filter)
-  - `PATCH /api/admin/media/{id}`
-  - `DELETE /api/admin/media/{id}`
-- Admin page `/admin/media` with upload, grid, tags, delete.
-- Reusable picker UI (“Insert from library”) integrated into all existing admin image fields.
+(unchanged)
 
 ---
 
 ### Phase K (P0/P1) — Session Enhancements (COMPLETED ✅)
-All items were implemented and validated (curl + browser automation screenshots). No known regressions.
-
-#### K1 — Admin Integrations: downloadable OAuth PDF guide (P0) (COMPLETED ✅)
-- Produced the client-facing guide PDF:
-  - `/app/deploy/Google_Calendar_Setup_Guide.pdf` (client-ready)
-- Added a download link in `/admin/integrations`:
-  - Label: **“OAuth setup guide for client (PDF)”**
-
-#### K2 — Inquiry CSV Export (P1) (COMPLETED ✅)
-- Added **Export CSV** button to `/admin/inquiries`.
-- Added backend endpoint `GET /api/admin/inquiries.csv` with `?status=` filter and `extra_*` field flattening.
-
-#### K3 — Media Library picker integration (P0) (COMPLETED ✅)
-- Implemented reusable picker component `MediaPickerDialog.jsx`.
-- Wired the picker into all existing admin image fields (7 total).
-
-#### K4 — Conditional Logic in Inquiry Form Builder (SIMPLE mode) (P1) (COMPLETED ✅)
-- Added `field.conditional = { field, equals }`.
-- Backend sanitizer preserves `conditional`.
-- Wizard runtime hides fields + removes hidden required fields from validation.
+(unchanged)
 
 ---
 
-### Phase M (P0/P1) — Admin performance refactor + Portfolio clarity + Instagram polish + Media bulk actions (COMPLETED ✅)
-**Goal:** Eliminate laggy mega “Site content” page, make homepage media sources clearer, and improve Media Library operations.
-
-(unchanged; see V11)
-
----
-
-### Phase N (P0) — Admin input keystroke lag elimination (COMPLETED ✅)
-(unchanged; see V11)
-
----
-
-### Phase O (P0) — Admin scroll performance fix (CSS compositor pressure) (COMPLETED ✅ → READY FOR VPS DEPLOY)
-(unchanged; see V11)
-
----
-
-### Phase P (P0) — Backdrops & Designs split + Quick Reply Templates + Hero color controls (COMPLETED ✅)
-(unchanged; see V11)
-
----
-
-### Phase Q (P0) — Coming Soon **Preview Token Bypass** (COMPLETED ✅)
-(unchanged; see V11)
-
----
-
-### Phase R (P1) — Homepage **Embed Widget / Elfsight Facebook Feed** (COMPLETED ✅)
-(unchanged; see V11)
-
----
-
-### Phase S (P1) — **Drag-and-Drop Portfolio Reordering** (COMPLETED ✅)
-(unchanged; see V11)
+### Phase M/N/O/P/Q/R/S (COMPLETED ✅)
+(unchanged; see earlier versions)
 
 ---
 
 ### Phase T (P0) — Blog removal + Dedicated Facebook Page (COMPLETED ✅)
 **Goal:** Remove Blog entirely, and provide a dedicated Facebook page that is OFF by default and fully white-labeled.
 
-**Important confirmations (from this session)**
-- **VPS local upload storage remains** (Docker volume backed). No migration to hosted object storage.
-- The dedicated Facebook page is **completely separate** from the homepage widget:
-  - Homepage embed widget uses: `home_widget_active` + `home_widget_snippet`
-  - Dedicated Facebook page uses: `social_page_active` + `social_page_snippet`
-  - They do not share toggles, fields, or components.
+**Important confirmations**
+- **VPS local upload storage remains** (Docker volume backed).
+- Dedicated Facebook page is **completely separate** from the homepage widget:
+  - Homepage widget: `home_widget_active` + `home_widget_snippet`
+  - Dedicated Facebook page: `social_page_active` + `social_page_snippet`
 
 **What shipped**
-- Dedicated Facebook page (public):
-  - Route: `/facebook`
-  - Gated via `social_page_active` (default **false**)
-  - Uses `social_page_heading`, `social_page_intro`, `social_page_snippet`
-  - Header/footer nav links only appear when enabled
-  - Placeholder renders when enabled but snippet is blank
-- Admin:
-  - `/admin/home` includes dedicated Facebook page controls/snippet
-- Blog removal (full-stack):
-  - Backend:
-    - Removed `BlogPost` model
-    - Removed `blog_page_active`
-    - Removed all `/blog` and `/admin/blog` endpoints
-    - Removed blog-related media indexing + metrics references
-  - Frontend:
-    - Removed public blog pages and routes
-    - Removed admin blog page + sidebar nav item
-    - Removed blog-specific header filtering logic
-  - Seed:
-    - Removed blog seeding and BlogPost import
-- Data cleanup on deploy (idempotent startup migration):
-  - `$unset` legacy `blog_page_active` from `site_content`
-  - Remove any leftover `nav-blog` / `/blog*` items from `header_nav_items`
-  - Drop `blog_posts` collection (no longer used)
+- Dedicated Facebook page (public): `/facebook` gated by `social_page_active` (default false)
+- Full Blog removal (backend + frontend + seed)
+- Idempotent DB cleanup migration on deploy:
+  - `$unset` legacy `blog_page_active`
+  - remove leftover `/blog*` nav items
+  - drop `blog_posts` collection
 
-**Verification (completed)**
-- Frontend build compiles clean.
-- Backend restarts clean.
-- `GET /api/blog` returns **404**.
-- `GET /api/site-content` no longer contains `blog_page_active`.
-- Homepage renders; nav shows no Blog; Facebook link hidden while `social_page_active=false`.
-- White-labeling maintained (no branding leaks introduced).
+---
+
+### Phase U (P0) — Portfolio naming consistency (COMPLETED ✅)
+**Goal:** Ensure the site consistently uses “Portfolio” (not “Gallery”) in user-facing copy.
+
+**Shipped**
+- Updated public labels/copy:
+  - Hero secondary CTA default now “View the portfolio”
+  - Recent work section link “Full portfolio”
+  - Portfolio page eyebrow “PORTFOLIO”
+  - Services/inquiry/utility copy updated accordingly
+- Startup migration updates stored values:
+  - Nav item label/href `/gallery` → `/portfolio`
+  - Hero CTA label “View the gallery” → “View the portfolio”
+
+---
+
+### Phase V (P0) — Hero CTA bar under full-bleed hero (COMPLETED ✅)
+**Goal:** Prevent hero overlay crowding and allow the owner to lower hero text freely.
+
+**Shipped**
+- Hero primary/secondary buttons moved **below** the full-bleed slideshow in a bar.
+- Buttons are side-by-side on desktop and wrap gracefully on small screens.
+
+---
+
+### Phase W (P0) — Responsive wordmark/logo size + admin slider (COMPLETED ✅)
+**Goal:** Make the text wordmark feel appropriately sized on desktop without quality loss.
+
+**Shipped**
+- `logo_text_scale` multiplier stored in `SiteContent`.
+- Public Header/Footer wordmark scales via `clamp()` and remains crisp.
+- Admin slider: **Brand & fonts → Logo size (wordmark)**.
+
+---
+
+### Phase X (P0) — About header editable (COMPLETED ✅)
+**Goal:** Make the About page header sentence (“boutique LA…”) editable in admin.
+
+**Shipped**
+- New SiteContent fields:
+  - `about_page_eyebrow`, `about_page_title`, `about_page_subtitle`
+- Admin UI: **Admin → About page → Page header (/about)**.
+- Eyebrow/subtitle blank = hidden.
+
+---
+
+### Phase Y (P0) — Contact fields optional clarity (COMPLETED ✅)
+**Goal:** Allow hiding phone/hours/etc by leaving blank.
+
+**Shipped**
+- Confirmed behavior: blank `contact_*` fields are not rendered publicly.
+- Admin helper copy + placeholders: “Leave blank to hide (don’t type N/A)”.
+
+---
+
+### Phase Z (P1) — Hero rating badge editable (COMPLETED ✅)
+**Goal:** Let owner edit/hide the rating snippet on split-hero image.
+
+**Shipped**
+- New SiteContent fields:
+  - `hero_rating_active`, `hero_rating_value`, `hero_rating_text`
+- Admin controls added under Hero settings.
+
+---
+
+### Phase AA (P1) — Full-bleed hero image fit modes (COMPLETED ✅)
+**Goal:** Address mixed portrait/landscape hero images with admin-controlled fit.
+
+**Shipped**
+- New `hero_image_fit` values:
+  - `cover` (Fill the frame)
+  - `contain` (Fit whole photo with blurred fill)
+  - `auto` (Automatic per-photo decision: landscape fills, portrait fits)
+- Admin control under Full-width background.
+
+**Known limitation / UX note (deferred)**
+- Mixed portrait images may still look visually busy in contain/auto due to blurred fill.
+- Recommended operational workaround: use wide/landscape hero photos for the full-bleed hero.
+- Future (optional): add focal-point controls (top/center/bottom) + “hide hero text overlay” toggle.
+
+---
+
+### Phase AB (P0) — Instant inquiry auto-reply via chosen template (COMPLETED ✅ → READY FOR LIVE TEST)
+**Goal:** Send a client-facing automatic reply on inquiry submit using an owner-selected Reply Template.
+
+**Shipped**
+- New `SiteContent` fields:
+  - `auto_reply_active` (default true)
+  - `auto_reply_template_id` (default empty = use built-in confirmation)
+- Backend:
+  - On `POST /api/inquiries`, if `auto_reply_active` and a template is selected, send that template to the client (placeholders substituted identically to manual Reply-with).
+  - Falls back to the existing built-in confirmation email when no template is chosen.
+  - Owner “New inquiry” notification remains unchanged.
+- Email rendering:
+  - Added `template_email_html()` wrapper for consistent branded email styling.
+  - Placeholder substitution mirrors `ReplyWithTemplateButton.jsx`.
+- Admin UI:
+  - **Admin → Settings → Quick reply templates** now includes:
+    - Auto-reply On/Off toggle
+    - Template dropdown
+
+**Testing notes**
+- Preview environment does not send real emails (SMTP not configured) — emails are logged as skipped.
+- Live VPS SMTP is configured (Hostinger), so delivery can be verified post-deploy.
+- Test address provided: `wfamaccounts@protonmail.me`.
 
 ---
 
@@ -317,13 +302,13 @@ All items were implemented and validated (curl + browser automation screenshots)
   - Backdrops/Designs split
   - Reply templates CRUD + inquiry reply button
   - Hero color override end-to-end
-  - **Preview token bypass** (Coming Soon staging)
-  - **Homepage embed widget** (Elfsight / third-party)
-  - **Drag-and-drop portfolio reordering** (category-slot preservation)
-  - **Blog removal + dedicated Facebook page gating**
-
-**Latest report**
-- `/app/test_reports/iteration_25.json`
+  - Preview token bypass
+  - Homepage embed widget
+  - Drag-and-drop portfolio reordering
+  - Blog removal + dedicated Facebook page gating
+  - New builds compile:
+    - `esbuild` bundle OK
+    - backend files parse OK
 
 ---
 
@@ -339,7 +324,15 @@ cd /var/www/swell && ./deploy.sh
   ```bash
   cd /var/www/swell && docker compose restart nginx
   ```
-- (Optional future improvement) add an nginx restart into `deploy.sh` after containers update to avoid any post-deploy upstream caching issues.
+
+**Post-deploy validation checklist (recommended)**
+1. Visit admin → confirm no Blog section exists.
+2. Confirm nav shows “Portfolio” (not “Gallery”).
+3. Home hero CTA bar shows “View the portfolio”.
+4. Settings → Quick reply templates → configure Auto-reply:
+   - Turn On
+   - Choose “Thanks for your inquiry”
+5. Submit a test inquiry (with your test email `wfamaccounts@protonmail.me`). Confirm email arrives.
 
 ---
 
@@ -355,22 +348,12 @@ cd /var/www/swell && ./deploy.sh
   - Configure homepage Instagram feed text + count, with server-side caching.
   - Manage **Backdrops & Designs** separately.
   - Reply to inquiries quickly using **Gmail compose templates**.
+  - Enable an **instant automatic inquiry reply** using a chosen template (optional).
   - Ensure hero readability by adjusting **Hero headline/subhead/button colors**.
-  - **Paste a Facebook feed (Elfsight) or other widget snippet into Admin → Home and have it render on the homepage**.
-  - **Use a separate dedicated Facebook page** at `/facebook` when ready:
-    - OFF by default
-    - Controlled by a single toggle (`social_page_active`)
-    - Uses its own separate widget snippet (`social_page_snippet`) independent of the homepage
-  - **Use the admin comfortably**:
-    - Typing is responsive (no keystroke lag)
-    - Scrolling is smooth across page editors and lists on the VPS
-    - Navigation between admin sections updates content immediately and reliably
-  - **Keep the public site in Coming Soon while sharing a private preview link**:
-    - Public sees Coming Soon
-    - `/?preview=<token>` bypass works
-    - Token can be rotated anytime
-    - No token leakage in public JSON
-- Blog is **fully removed** (no public routes, no admin section, DB cleaned).
+  - Paste a Facebook feed (Elfsight) or other widget snippet into Admin → Home and have it render on the homepage.
+  - Use a separate dedicated Facebook page at `/facebook` when ready (OFF by default).
+  - Keep the public site in Coming Soon while sharing a private preview link.
+- Blog is fully removed (no public routes, no admin section, DB cleaned).
 - Strict white-labeling maintained.
 - Docker deployment remains one-command and stable on AlmaLinux 10 VPS.
 
@@ -390,6 +373,10 @@ cd /var/www/swell && ./deploy.sh
   - `harden.sh` (fail2ban, automatic updates, basic hardening).
 
 ### Other deferred items
-- Bulk inquiry actions (P2)
-- Twilio SMS Notifications (P3)
-- Backend refactor of `server.py` into routers (recommended but deferred unless requested)
+- Hero portrait handling polish:
+  - focal point control (top/center/bottom)
+  - optional “hide hero text overlay” toggle
+- Stage-based automated follow-ups (pipeline-triggered emails)
+- Bulk inquiry actions
+- Twilio SMS Notifications
+- Backend refactor of `server.py` into routers

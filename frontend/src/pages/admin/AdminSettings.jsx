@@ -427,12 +427,19 @@ const ReplyTemplatesCard = () => {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [autoActive, setAutoActive] = useState(true);
+  const [autoTemplateId, setAutoTemplateId] = useState('');
 
   const load = async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/admin/reply-templates');
       setItems(data || []);
+      try {
+        const sc = await api.get('/site-content');
+        setAutoActive(sc.data?.auto_reply_active !== false);
+        setAutoTemplateId(sc.data?.auto_reply_template_id || '');
+      } catch { /* non-fatal */ }
     } catch {
       toast.error('Failed to load templates');
     } finally {
@@ -440,6 +447,19 @@ const ReplyTemplatesCard = () => {
     }
   };
   useEffect(() => { load(); }, []);
+
+  const saveAuto = async (patch) => {
+    const next = { autoActive, autoTemplateId, ...patch };
+    setAutoActive(next.autoActive);
+    setAutoTemplateId(next.autoTemplateId);
+    try {
+      await api.put('/admin/site-content', {
+        auto_reply_active: next.autoActive,
+        auto_reply_template_id: next.autoTemplateId,
+      });
+      toast.success('Auto-reply settings saved');
+    } catch { toast.error('Could not save auto-reply settings'); }
+  };
 
   const save = async () => {
     if (!editing?.name?.trim() || !editing?.subject?.trim()) {
@@ -508,6 +528,29 @@ const ReplyTemplatesCard = () => {
           </div>
         </div>
       )}
+
+      <div className="mb-5 rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-sage-tint)]/40 p-4" data-testid="admin-auto-reply">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="font-medium text-sm">Automatic reply to new inquiries</p>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-0.5 max-w-md">When on, the client is automatically emailed the chosen template the moment they submit the inquiry form. Requires email (SMTP) to be set up.</p>
+          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+            <input type="checkbox" checked={autoActive} onChange={e => saveAuto({ autoActive: e.target.checked })} data-testid="admin-auto-reply-toggle" className="h-4 w-4 accent-[color:var(--brand-sage-deep)]" />
+            <span className="text-sm font-medium">{autoActive ? 'On' : 'Off'}</span>
+          </label>
+        </div>
+        {autoActive && (
+          <div className="mt-3">
+            <label className="eyebrow block mb-1">TEMPLATE TO SEND AUTOMATICALLY</label>
+            <select className="input-cream w-full" value={autoTemplateId} onChange={e => saveAuto({ autoTemplateId: e.target.value })} data-testid="admin-auto-reply-template">
+              <option value="">Built-in default confirmation</option>
+              {items.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <p className="text-xs text-[color:var(--brand-text-muted)] mt-1">Placeholders like <code className="font-mono text-[11px]">{'{first_name}'}</code> are filled in automatically. Choose "Built-in default" to use the standard confirmation email.</p>
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <p className="text-sm text-[color:var(--brand-text-muted)] italic py-6 text-center">Loading templates…</p>

@@ -91,6 +91,12 @@ class SiteContent(Base):
     hero_rating_value: str = "5.0"
     hero_rating_text: str = "from every client, always"
 
+    # Automatic instant reply to new inquiries (client-facing). When active and
+    # a template is chosen, the client is emailed that template the moment they
+    # submit. If no template is chosen, the built-in confirmation email is used.
+    auto_reply_active: bool = True
+    auto_reply_template_id: str = ""
+
     # Hero text & button color overrides (applies to BOTH layout modes).
     # Empty string = use theme defaults (Full-bleed defaults to cream, Split uses standard body text color).
     # These are especially useful in Full-bleed mode where the background photo can clash with default text colors.

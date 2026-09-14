@@ -166,6 +166,34 @@ def inquiry_confirmation_html(name: str, event_type: str, consult_date: str = ""
     """
 
 
+def template_email_html(body: str, consult_date: str = "", consult_time: str = "") -> str:
+    """Wrap a plain-text reply-template body in the branded email shell.
+    Preserves paragraphs (blank line = new paragraph) and single line breaks."""
+    import html as _html
+    safe = _html.escape(body or "")
+    paras = [p.strip() for p in safe.split("\n\n") if p.strip()]
+    para_html = "".join(
+        '<p style="line-height:1.6; color:#3A3A37; margin:0 0 16px 0;">{}</p>'.format(p.replace("\n", "<br>"))
+        for p in paras
+    )
+    consult_block = ""
+    if consult_date and consult_time:
+        consult_block = f"""
+        <div style="margin:0 0 20px 0; padding:16px 20px; background:#EFEAE1; border-radius:12px;">
+          <p style="margin:0 0 6px 0; font-weight:600;">Your phone consultation is scheduled</p>
+          <p style="margin:0; color:#5E5A55;"><strong>{_format_date_long(consult_date)}</strong> at <strong>{_format_time_12h(consult_time)}</strong></p>
+          <p style="margin:8px 0 0 0; color:#5E5A55; font-size:14px;">A calendar invite is attached to this email.</p>
+        </div>
+        """
+    return f"""
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; color:#1F1E1C; background:#FBF6EF; padding: 32px; border-radius: 20px;">
+      {consult_block}
+      {para_html}
+    </div>
+    """
+
+
+
 def consultation_confirmation_html(name: str, date: str, time: str, ctype: str = "phone") -> str:
     label = {"phone": "phone consultation", "video": "video consultation", "in_person": "in-person consultation"}.get(ctype, "consultation")
     return f"""

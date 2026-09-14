@@ -25,7 +25,7 @@ from models import (
     CustomPalette,
 )
 from auth import hash_password, verify_password, create_token, require_admin, require_super_admin
-from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html, make_ics, owner_new_inquiry_html
+from email_service import send_email, inquiry_confirmation_html, consultation_confirmation_html, make_ics, owner_new_inquiry_html, template_email_html
 from crypto_utils import encrypt, decrypt
 import google_calendar as gcal
 import instagram_service as ig
@@ -1985,6 +1985,28 @@ async def _get_or_create_client(name: str, email: str, phone: str, inquiry_id: s
     return obj.id
 
 
+def _render_inquiry_template(text: str, inq, business_name: str = "") -> str:
+    """Substitute {placeholders} in a reply template using inquiry data.
+    Mirrors the frontend 'Reply with…' substitution exactly so the auto-reply
+    and manual replies read identically."""
+    if not text:
+        return ""
+    full = (getattr(inq, "client_name", "") or "").strip()
+    first = (full.split()[0] if full else "there") or "there"
+    guests = getattr(inq, "guest_count", "") or ""
+    mapping = {
+        "client_name": full or "there",
+        "first_name": first,
+        "event_type": (getattr(inq, "event_type", "") or "event").replace("_", " "),
+        "event_date": getattr(inq, "event_date", None) or "[the event date]",
+        "guest_count": str(guests) if guests else "[guest count]",
+        "venue": getattr(inq, "venue_name", "") or "[the venue]",
+        "business_name": business_name or "swell design + media",
+    }
+    return re.sub(r"\{(\w+)\}", lambda m: mapping.get(m.group(1), m.group(0)), text)
+
+
+
 @api.post("/inquiries")
 async def create_inquiry(payload: Dict[str, Any], request: Request):
     # Bot protection (Turnstile) — pull the token out before processing fields.
@@ -2095,19 +2117,47 @@ async def create_inquiry(payload: Dict[str, Any], request: Request):
 
     # Send client confirmation email
     if obj.client_email:
-        send_email(
-            to=obj.client_email,
-            subject="We received your inquiry — swell design + media",
-            html=inquiry_confirmation_html(
-                obj.client_name or "friend",
-                obj.event_type or "",
-                obj.consult_date or "",
-                obj.consult_time or "",
-            ),
-            ics_content=ics_content,
-            ics_filename="phone-consultation.ics",
-            reply_to=os.environ.get("BUSINESS_EMAIL", None),
-        )
+        # Auto-reply settings: if active + a template is chosen, send that
+        # (rendered with the same placeholders as the manual "Reply with…"
+        # feature). Otherwise fall back to the built-in confirmation email.
+        ar = await db.site_content.find_one(
+            {"id": "site_content_singleton"},
+            {"_id": 0, "auto_reply_active": 1, "auto_reply_template_id": 1, "business_name": 1},
+        ) or {}
+        auto_active = ar.get("auto_reply_active", True)
+        chosen = None
+        if auto_active and ar.get("auto_reply_template_id"):
+            chosen = await db.reply_templates.find_one({"id": ar["auto_reply_template_id"]}, {"_id": 0})
+
+        if not auto_active:
+            pass  # Owner turned the automatic client reply off entirely.
+        elif chosen:
+            biz = ar.get("business_name") or "swell design + media"
+            subject = _render_inquiry_template(chosen.get("subject", ""), obj, biz) or "Thanks for your inquiry"
+            body = _render_inquiry_template(chosen.get("body", ""), obj, biz)
+            send_email(
+                to=obj.client_email,
+                subject=subject,
+                html=template_email_html(body, obj.consult_date or "", obj.consult_time or ""),
+                text=body,
+                ics_content=ics_content,
+                ics_filename="phone-consultation.ics",
+                reply_to=os.environ.get("BUSINESS_EMAIL", None),
+            )
+        else:
+            send_email(
+                to=obj.client_email,
+                subject="We received your inquiry — swell design + media",
+                html=inquiry_confirmation_html(
+                    obj.client_name or "friend",
+                    obj.event_type or "",
+                    obj.consult_date or "",
+                    obj.consult_time or "",
+                ),
+                ics_content=ics_content,
+                ics_filename="phone-consultation.ics",
+                reply_to=os.environ.get("BUSINESS_EMAIL", None),
+            )
 
     # Notify owner
     biz_email = os.environ.get("BUSINESS_EMAIL", "")
