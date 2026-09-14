@@ -80,6 +80,13 @@ code {
         --border: 30 12% 20%;
         --input: 30 12% 20%;
         --ring: 145 22% 72%;
+        /* Palettes inject --brand-* as INLINE styles on <html>, which override
+           normal class rules. In dark mode those palette text colors (tuned for
+           light backgrounds) end up dark-on-dark. Force readable neutral text
+           with !important so every palette stays legible at night. Accent
+           colors (sage, gold, etc.) are intentionally left to the palette. */
+        --brand-text: #F4EFE8 !important;
+        --brand-text-muted: #C4BEB3 !important;
     }
     .dark body {
         background: #141312;
